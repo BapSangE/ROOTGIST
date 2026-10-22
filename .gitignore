@@ -50,3 +50,7 @@ app.*.map.json
 # Secrets
 .env
 .env.*
+
+# 배치 워커 출력: 실제 초록·번역·LLM 원본 응답(권리 검토 전, HANDOFF 0.1) — 커밋 금지
+/worker/out/
+__pycache__/

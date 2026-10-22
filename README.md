@@ -14,4 +14,5 @@ Hugging Face Daily Papers에서 매일 상위 10편을 골라, 초록만 근거�
 ## 상태
 
 M3(예외 상태·로컬 저장) 완료. 다음은 M4 백엔드(Supabase·배치 워커). 진행 단계는 `docs/HANDOFF.md` 11장.
+배치 워커(`worker/`, Python): `pip install -r worker/requirements.txt` 후 레포 루트에서 `python -m worker.run --limit 1`. 결과는 `worker/out/`(git 제외, 실제 초록·번역 포함이라 공유 금지).
 디버그 빌드의 설정 화면 맨 아래 「개발용 · fixture 상태」로 로딩·오류·오프라인·지연·없음 상태를 띄울 수 있다.
