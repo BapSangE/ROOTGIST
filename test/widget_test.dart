@@ -9,6 +9,7 @@ import 'package:rootgist/data/repository.dart';
 import 'package:rootgist/debug/widget_gallery.dart';
 import 'package:rootgist/design/typography.dart';
 import 'package:rootgist/features/home/home_screen.dart';
+import 'package:rootgist/features/reader/reader_screen.dart';
 import 'package:rootgist/main.dart';
 
 // 에셋 읽기는 실제 I/O라 fake async 안에서 시작하면 끝나지 않고, rootBundle이 그 미완료 Future를 캐시해
@@ -132,6 +133,40 @@ void main() {
     router.push('/paper/0000.00004');
     await settle(tester);
     expect(find.text('Example Lab'), findsOneWidget);
+  });
+
+  test('S03: 용어 하이라이트는 highlight=true만, 용어당 처음 1회', () async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    final p = await repository.getPaper('0000.00001');
+    final h = firstHighlights(p);
+    expect(h.keys, unorderedEquals(['A01', 'A03'])); // Benchmark(highlight=false)는 없음
+    expect(h['A01']!.single.$2.term, 'inference-time compute');
+    expect(h['A01']!.single.$1, 'For large language models, '.length);
+  });
+
+  testWidgets('S03: 모드 전환, 용어 탭 → C02', (tester) async {
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+
+    router.push('/paper/0000.00001/reader?s=A03');
+    await settle(tester);
+    final ko = keepAll('본 연구는 입력 복잡도에 따라 추론 연산을 동적으로 배분하는 방법을 제안한다.');
+    expect(find.text(ko), findsOneWidget);
+    expect(find.text('Benchmark'), findsNothing);
+
+    await tester.tap(find.bySemanticsLabel('용어 설명: compute budget'));
+    await tester.pumpAndSettle();
+    expect(find.text('이 논문에서의 뜻'), findsOneWidget);
+    expect(find.text(keepAll('학습이나 추론에 쓸 수 있도록 미리 정해 둔 계산량의 한도.')), findsOneWidget);
+    await tester.tap(find.text('닫기'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('원문'));
+    await tester.pumpAndSettle();
+    expect(find.text(ko), findsNothing);
+    expect(find.bySemanticsLabel('용어 설명: inference-time compute'), findsOneWidget);
   });
 
   testWidgets('위젯 갤러리: 세그먼트·북마크·시트가 동작한다', (tester) async {

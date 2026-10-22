@@ -10,6 +10,7 @@ import 'design/widgets/rg_bottom_tab_bar.dart';
 import 'debug/widget_gallery.dart';
 import 'features/home/home_screen.dart';
 import 'features/paper/paper_screen.dart';
+import 'features/reader/reader_screen.dart';
 
 const _tabs = [
   RgTab('홈', 'house'),
@@ -41,16 +42,12 @@ final router = GoRouter(
       path: '/paper/:id',
       builder: (_, state) => PaperScreen(paperId: state.pathParameters['id']!),
       routes: [
-        // ponytail: S03 단계에서 실제 리더로 교체. ?s=문장ID 로 스크롤 위치를 받는다.
+        // ?s=문장ID: C01에서 들어오면 그 문장 쌍으로 스크롤
         GoRoute(
           path: 'reader',
-          builder: (_, state) => Scaffold(
-            body: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(RgSpace.gutterText),
-                child: Text('S03 준비 중\n${state.uri.queryParameters['s'] ?? ''}', style: RgText.titleDetail),
-              ),
-            ),
+          builder: (_, state) => ReaderScreen(
+            paperId: state.pathParameters['id']!,
+            initialSentenceId: state.uri.queryParameters['s'],
           ),
         ),
       ],

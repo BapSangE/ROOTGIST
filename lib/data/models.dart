@@ -59,6 +59,18 @@ class Sentence {
   final String? translation;
 }
 
+class GlossaryTerm {
+  GlossaryTerm.fromJson(Map<String, dynamic> j)
+      : term = j['term'],
+        definition = j['definition_ko'] ?? '',
+        sentenceIds = List<String>.from(j['sentence_ids'] ?? const []),
+        highlight = j['highlight'] == true;
+  final String term;
+  final String definition; // G3: C02 본문은 definition_ko. context_ko는 MVP 미표시
+  final List<String> sentenceIds;
+  final bool highlight; // 서버 검증 결과(8.4). false면 강조하지 않는다
+}
+
 class PaperDetail {
   PaperDetail.fromJson(Map<String, dynamic> j)
       : id = j['paper_id'],
@@ -77,7 +89,8 @@ class PaperDetail {
           for (final k in j['key_points'] ?? const [])
             if ((k['evidence_sentence_ids'] as List?)?.isNotEmpty ?? false) KeyPoint.fromJson(k),
         ],
-        sentences = [for (final s in j['sentences'] ?? const []) Sentence.fromJson(s)];
+        sentences = [for (final s in j['sentences'] ?? const []) Sentence.fromJson(s)],
+        glossary = [for (final g in j['glossary'] ?? const []) GlossaryTerm.fromJson(g)];
 
   final String id;
   final String titleEn;
@@ -92,6 +105,7 @@ class PaperDetail {
   final String? summary;
   final List<KeyPoint> keyPoints;
   final List<Sentence> sentences;
+  final List<GlossaryTerm> glossary;
 
   String get title => ready ? (titleKo ?? titleEn) : titleEn;
   String? get topicLabel => ready ? topicLabels[topic] : null;
