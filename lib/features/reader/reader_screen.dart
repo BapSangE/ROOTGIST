@@ -9,6 +9,7 @@ import '../../design/typography.dart';
 import '../../design/widgets/rg_buttons.dart';
 import '../../design/widgets/rg_pressable.dart';
 import '../../design/widgets/rg_segmented.dart';
+import '../../design/widgets/rg_states.dart';
 import 'term_sheet.dart';
 import 'text_size_sheet.dart';
 
@@ -24,15 +25,17 @@ class ReaderScreen extends StatefulWidget {
 }
 
 class _ReaderScreenState extends State<ReaderScreen> {
-  late final _paper = repository.getPaper(widget.paperId).then((p) {
-    if (widget.initialSentenceId case final id?) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final ctx = _keys[id]?.currentContext;
-        if (ctx != null) Scrollable.ensureVisible(ctx);
-      });
-    }
-    return p;
-  });
+  late final _req = Reloadable(
+    () => repository.getPaper(widget.paperId).then((p) {
+      if (widget.initialSentenceId case final id?) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final ctx = _keys[id]?.currentContext;
+          if (ctx != null) Scrollable.ensureVisible(ctx);
+        });
+      }
+      return p;
+    }),
+  );
   final _keys = <String, GlobalKey>{}; // 문장 순서대로 들어간다
   final _scroll = ScrollController();
   var _mode = readerDefaultMode.value;
@@ -47,6 +50,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
   void dispose() {
     readerScale.removeListener(_onScale);
     _scroll.dispose();
+    _req.dispose();
     super.dispose();
   }
 
@@ -82,82 +86,127 @@ class _ReaderScreenState extends State<ReaderScreen> {
     final mq = MediaQuery.of(context);
     return Scaffold(
       backgroundColor: RgColors.bgReading,
-      body: Column(children: [
-        // 상단 바는 스크롤 밖에 두어 고정한다.
-        Container(
-          color: RgColors.bgReading,
-          padding: EdgeInsets.only(top: padding.top),
-          height: padding.top + RgSpace.topBar,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
-            child: Row(spacing: RgSpace.s8, children: [
-              RgCircleButton(
-                semanticLabel: '뒤로',
-                icon: 'chevron-left',
-                variant: RgCircleVariant.neutral,
-                onTap: () => context.pop(),
-              ),
-              Expanded(
-                child: RgSegmented(
-                  options: const [
-                    (ReaderMode.together, '함께'),
-                    (ReaderMode.translation, '번역'),
-                    (ReaderMode.original, '원문'),
-                  ],
-                  value: _mode,
-                  onChanged: (m) => _keepPosition(() => setState(() => _mode = m)),
-                ),
-              ),
-              RgCircleButton(
-                semanticLabel: '글자 크기',
-                text: '가',
-                variant: RgCircleVariant.neutral,
-                onTap: () => showTextSizeSheet(context),
-              ),
-            ]),
-          ),
-        ),
-        Expanded(
-          child: FutureBuilder(
-            future: _paper,
-            builder: (context, snap) {
-              final p = snap.data;
-              if (p == null) return const SizedBox.shrink();
-              final highlights = firstHighlights(p);
-              return SingleChildScrollView(
-                controller: _scroll,
-                padding: EdgeInsets.fromLTRB(RgSpace.gutterReader, RgSpace.s20, RgSpace.gutterReader, 40 + padding.bottom),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('초록 · 원문과 번역', style: RgText.caption.copyWith(color: RgColors.textSecondary)),
-                    const SizedBox(height: RgSpace.s6),
-                    Semantics(header: true, child: Text(keepAll(p.title), style: RgText.titleReader)),
-                    const SizedBox(height: RgSpace.s28),
-                    // 글자 크기 단계는 본문에만, 시스템 글자 크기와 곱해서 적용한다.
-                    MediaQuery(
-                      data: mq.copyWith(textScaler: TextScaler.linear(mq.textScaler.scale(1) * readerScale.value)),
-                      child: Column(
-                        spacing: RgSpace.s28,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          for (final s in p.sentences.where((s) => s.kind == 'text'))
-                            _Pair(
-                              key: _keys.putIfAbsent(s.id, GlobalKey.new),
-                              sentence: s,
-                              mode: _mode,
-                              highlights: highlights[s.id] ?? const [],
-                            ),
-                        ],
-                      ),
+      body: Column(
+        children: [
+          // 상단 바는 스크롤 밖에 두어 고정한다.
+          Container(
+            color: RgColors.bgReading,
+            padding: EdgeInsets.only(top: padding.top),
+            height: padding.top + RgSpace.topBar,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
+              child: Row(
+                spacing: RgSpace.s8,
+                children: [
+                  RgCircleButton(
+                    semanticLabel: '뒤로',
+                    icon: 'chevron-left',
+                    variant: RgCircleVariant.neutral,
+                    onTap: () => context.pop(),
+                  ),
+                  Expanded(
+                    child: RgSegmented(
+                      options: const [
+                        (ReaderMode.together, '함께'),
+                        (ReaderMode.translation, '번역'),
+                        (ReaderMode.original, '원문'),
+                      ],
+                      value: _mode,
+                      onChanged: (m) => _keepPosition(() => setState(() => _mode = m)),
                     ),
-                  ],
-                ),
-              );
-            },
+                  ),
+                  RgCircleButton(
+                    semanticLabel: '글자 크기',
+                    text: '가',
+                    variant: RgCircleVariant.neutral,
+                    onTap: () => showTextSizeSheet(context),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
-      ]),
+          Expanded(
+            child: ListenableBuilder(
+              listenable: _req,
+              builder: (context, _) => FutureBuilder(
+                future: _req.future,
+                builder: (context, snap) {
+                  final p = snap.data;
+                  if (snap.hasError) {
+                    return ListView(
+                      padding: const EdgeInsets.only(top: RgSpace.s20),
+                      children: [RgErrorCard(error: snap.error, onRetry: _req.reload)],
+                    );
+                  }
+                  if (p == null) {
+                    // 짧은 화면에서 넘치지 않게 스크롤 없는 목록에 넣어 잘라 낸다.
+                    return ListView(
+                      physics: const NeverScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(RgSpace.gutterReader, RgSpace.s20, RgSpace.gutterReader, 0),
+                      children: [
+                        RgSkeleton(
+                          child: Column(
+                            children: [
+                              const RgBar(lineHeight: 16, widthFactor: 0.3),
+                              const SizedBox(height: RgSpace.s6),
+                              const RgBar(lineHeight: 31, widthFactor: 0.8),
+                              const SizedBox(height: RgSpace.s28),
+                              for (var i = 0; i < 3; i++) ...const [
+                                RgBar(lineHeight: 29),
+                                RgBar(lineHeight: 29, widthFactor: 0.6),
+                                SizedBox(height: RgSpace.s8),
+                                RgBar(lineHeight: 25),
+                                RgBar(lineHeight: 25, widthFactor: 0.75),
+                                SizedBox(height: RgSpace.s28),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                  final highlights = firstHighlights(p);
+                  return SingleChildScrollView(
+                    controller: _scroll,
+                    padding: EdgeInsets.fromLTRB(
+                      RgSpace.gutterReader,
+                      RgSpace.s20,
+                      RgSpace.gutterReader,
+                      40 + padding.bottom,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('초록 · 원문과 번역', style: RgText.caption.copyWith(color: RgColors.textSecondary)),
+                        const SizedBox(height: RgSpace.s6),
+                        Semantics(header: true, child: Text(keepAll(p.title), style: RgText.titleReader)),
+                        const SizedBox(height: RgSpace.s28),
+                        // 글자 크기 단계는 본문에만, 시스템 글자 크기와 곱해서 적용한다.
+                        MediaQuery(
+                          data: mq.copyWith(textScaler: TextScaler.linear(mq.textScaler.scale(1) * readerScale.value)),
+                          child: Column(
+                            spacing: RgSpace.s28,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              for (final s in p.sentences.where((s) => s.kind == 'text'))
+                                _Pair(
+                                  key: _keys.putIfAbsent(s.id, GlobalKey.new),
+                                  sentence: s,
+                                  mode: _mode,
+                                  highlights: highlights[s.id] ?? const [],
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -192,11 +241,13 @@ class _Pair extends StatelessWidget {
     var at = 0;
     for (final (start, t) in highlights) {
       spans.add(TextSpan(text: text.substring(at, start)));
-      spans.add(WidgetSpan(
-        alignment: PlaceholderAlignment.baseline,
-        baseline: TextBaseline.alphabetic,
-        child: _Term(term: t, style: style),
-      ));
+      spans.add(
+        WidgetSpan(
+          alignment: PlaceholderAlignment.baseline,
+          baseline: TextBaseline.alphabetic,
+          child: _Term(term: t, style: style),
+        ),
+      );
       at = start + t.term.length;
     }
     spans.add(TextSpan(text: text.substring(at)));

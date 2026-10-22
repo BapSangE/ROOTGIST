@@ -7,8 +7,9 @@ import '../../design/tokens.dart';
 import '../../design/typography.dart';
 import '../../design/widgets/rg_buttons.dart';
 import '../../design/widgets/rg_card.dart';
+import '../../design/widgets/rg_states.dart';
 
-// S01 오늘의 연구 (HANDOFF 7.1). 로딩·오류·지연 카드는 M3.
+// S01 오늘의 연구 (HANDOFF 7.1). 로딩·오류·지연·빈 상태는 8.1.
 // S04에서 지난 날짜로 들어오면 같은 레이아웃에 뒤로 버튼만 더한다(7.6).
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, this.date});
@@ -19,24 +20,64 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  late final _digest = repository.getDigest(widget.date);
+  late final _req = Reloadable(() => repository.getDigest(widget.date));
   String? _topic; // null = 전체
 
   @override
+  void dispose() {
+    _req.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: _digest,
-      builder: (context, snap) {
-        if (snap.connectionState != ConnectionState.done) return const SizedBox.shrink();
-        return ValueListenableBuilder(
-          valueListenable: bookmarks,
-          builder: (context, saved, _) => _body(snap.data, saved),
-        );
-      },
+    return ListenableBuilder(
+      listenable: _req,
+      builder: (context, _) => FutureBuilder(
+        future: _req.future,
+        builder: (context, snap) {
+          final children = switch (snap) {
+            AsyncSnapshot(hasError: true) => [
+              const SizedBox(height: RgSpace.s20),
+              RgErrorCard(error: snap.error, onRetry: _req.reload),
+            ],
+            AsyncSnapshot(connectionState: ConnectionState.done) => null,
+            _ => const [_HomeSkeleton()],
+          };
+          return ListView(
+            padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top, bottom: RgSpace.bottomScrollInset),
+            children: [
+              _topBar(context),
+              ...?children,
+              if (children == null)
+                ValueListenableBuilder(
+                  valueListenable: bookmarks,
+                  builder: (context, saved, _) =>
+                      Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: _body(snap.data, saved)),
+                ),
+            ],
+          );
+        },
+      ),
     );
   }
 
-  Widget _body(Digest? digest, Map<String, Bookmark> saved) {
+  Widget _topBar(BuildContext context) => SizedBox(
+    height: RgSpace.topBar,
+    child: Padding(
+      padding: EdgeInsets.symmetric(horizontal: widget.date == null ? RgSpace.gutterText : RgSpace.gutterCard),
+      child: Row(
+        spacing: RgSpace.s12,
+        children: [
+          if (widget.date != null)
+            RgCircleButton(semanticLabel: '뒤로', icon: 'chevron-left', onTap: () => context.pop()),
+          Text('ROOTGIST', style: RgText.wordmark),
+        ],
+      ),
+    ),
+  );
+
+  List<Widget> _body(Digest? digest, Map<String, Bookmark> saved) {
     final view = HomeView(digest?.papers ?? const [], _topic);
     final status = digest?.status;
     final headline = switch (status) {
@@ -46,70 +87,79 @@ class _HomeScreenState extends State<HomeScreen> {
     };
     final date = digest?.date ?? DateTime.now();
 
-    return ListView(
-      padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top, bottom: RgSpace.bottomScrollInset),
-      children: [
-        SizedBox(
-          height: RgSpace.topBar,
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: widget.date == null ? RgSpace.gutterText : RgSpace.gutterCard),
-            child: Row(spacing: RgSpace.s12, children: [
-              if (widget.date != null)
-                RgCircleButton(semanticLabel: '뒤로', icon: 'chevron-left', onTap: () => context.pop()),
-              Text('ROOTGIST', style: RgText.wordmark),
-            ]),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s4, RgSpace.gutterText, 0),
-          child: Semantics(
-            header: true,
-            child: Text.rich(TextSpan(children: [
-              TextSpan(text: '${koreanDate(date)}\n', style: const TextStyle(color: RgColors.textTertiary)),
-              TextSpan(text: keepAll(headline)),
-            ]), style: RgText.displayHome),
-          ),
-        ),
-        if (view.chips.isNotEmpty) ...[
-          // 칩 시각 높이 36, 터치 44. 시안의 위아래 20은 시각 기준이라 4씩 덜어낸다.
-          const SizedBox(height: RgSpace.s16),
-          SizedBox(
-            height: RgSpace.minTouch,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
-              itemCount: view.chips.length + 1,
-              separatorBuilder: (_, _) => const SizedBox(width: RgSpace.s8),
-              itemBuilder: (_, i) {
-                final topic = i == 0 ? null : view.chips[i - 1];
-                return RgFilterChip(
-                  label: topic == null ? '전체' : topicLabels[topic]!,
-                  selected: _topic == topic,
-                  onTap: () => setState(() => _topic = topic),
-                );
-              },
-            ),
-          ),
-        ],
-        if (view.featured case final p?) ...[
-          SizedBox(height: view.chips.isEmpty ? RgSpace.s20 : RgSpace.s16),
-          _FeaturedCard(paper: p, saved: saved.containsKey(p.id)),
-        ],
-        if (view.list.isNotEmpty) ...[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s28, RgSpace.gutterText, RgSpace.s12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              spacing: RgSpace.s8,
+    return [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s4, RgSpace.gutterText, 0),
+        child: Semantics(
+          header: true,
+          child: Text.rich(
+            TextSpan(
               children: [
-                Semantics(header: true, child: Text('새로 올라온 연구', style: RgText.titleSection)),
-                Text('${view.list.length}편', style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
+                TextSpan(
+                  text: '${koreanDate(date)}\n',
+                  style: const TextStyle(color: RgColors.textTertiary),
+                ),
+                TextSpan(text: keepAll(headline)),
               ],
             ),
+            style: RgText.displayHome,
           ),
-          RgCard(
-            child: Column(children: [
+        ),
+      ),
+      if (view.chips.isNotEmpty) ...[
+        // 칩 시각 높이 36, 터치 44. 시안의 위아래 20은 시각 기준이라 4씩 덜어낸다.
+        const SizedBox(height: RgSpace.s16),
+        SizedBox(
+          height: RgSpace.minTouch,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
+            itemCount: view.chips.length + 1,
+            separatorBuilder: (_, _) => const SizedBox(width: RgSpace.s8),
+            itemBuilder: (_, i) {
+              final topic = i == 0 ? null : view.chips[i - 1];
+              return RgFilterChip(
+                label: topic == null ? '전체' : topicLabels[topic]!,
+                selected: _topic == topic,
+                onTap: () => setState(() => _topic = topic),
+              );
+            },
+          ),
+        ),
+      ],
+      if (view.featured case final p?) ...[
+        SizedBox(height: view.chips.isEmpty ? RgSpace.s20 : RgSpace.s16),
+        _FeaturedCard(paper: p, saved: saved.containsKey(p.id)),
+      ],
+      // 8.1 당일 지연: 추천 카드 자리에 마지막 수집 시각 안내.
+      if (status == 'delayed') ...[
+        const SizedBox(height: RgSpace.s20),
+        RgCard(
+          padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s18),
+          child: Text(
+            keepAll(
+              [if (digest?.lastSuccessAt case final t?) '마지막 정상 수집 ${kstDateTime(t)}.', '모이는 대로 이 화면에 올라와요.'].join(' '),
+            ),
+            style: RgText.bodySmall.copyWith(color: RgColors.textSecondary),
+          ),
+        ),
+      ],
+      if (view.list.isNotEmpty) ...[
+        Padding(
+          padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s28, RgSpace.gutterText, RgSpace.s12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            spacing: RgSpace.s8,
+            children: [
+              Semantics(header: true, child: Text('새로 올라온 연구', style: RgText.titleSection)),
+              Text('${view.list.length}편', style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
+            ],
+          ),
+        ),
+        RgCard(
+          child: Column(
+            children: [
               for (final (i, p) in view.list.indexed)
                 RgListRow(
                   showDivider: i < view.list.length - 1,
@@ -119,20 +169,82 @@ class _HomeScreenState extends State<HomeScreen> {
                     variant: RgCircleVariant.plain,
                     onTap: () => toggleBookmark(p.id, p.title),
                   ),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    if (_topic == null && p.topicLabel != null) ...[
-                      Text(p.topicLabel!, style: RgText.caption.copyWith(color: RgColors.textSecondary)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (_topic == null && p.topicLabel != null) ...[
+                        Text(p.topicLabel!, style: RgText.caption.copyWith(color: RgColors.textSecondary)),
+                        const SizedBox(height: RgSpace.s4),
+                      ],
+                      Text(keepAll(p.title), style: RgText.titleList),
                       const SizedBox(height: RgSpace.s4),
+                      Text('${p.date} · ${p.authors}', style: RgText.meta.copyWith(color: RgColors.textSecondary)),
                     ],
-                    Text(keepAll(p.title), style: RgText.titleList),
-                    const SizedBox(height: RgSpace.s4),
-                    Text('${p.date} · ${p.authors}', style: RgText.meta.copyWith(color: RgColors.textSecondary)),
-                  ]),
+                  ),
                 ),
-            ]),
+            ],
           ),
-        ],
+        ),
       ],
+    ];
+  }
+}
+
+// 헤드라인 2줄 + 칩 + 추천 카드 + 목록 행 모양.
+class _HomeSkeleton extends StatelessWidget {
+  const _HomeSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return RgSkeleton(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s4, RgSpace.gutterText, 0),
+            child: Column(
+              children: [RgBar(lineHeight: 39, widthFactor: 0.5), RgBar(lineHeight: 39, widthFactor: 0.85)],
+            ),
+          ),
+          const SizedBox(height: RgSpace.s20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
+            child: Row(
+              spacing: RgSpace.s8,
+              children: [
+                for (final w in const [56.0, 88.0, 80.0])
+                  Container(
+                    width: w,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: RgColors.fillNeutral,
+                      borderRadius: BorderRadius.circular(RgRadius.pill),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: RgSpace.s20),
+          const RgCard(
+            padding: EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s18),
+            child: Column(
+              spacing: RgSpace.s6,
+              children: [
+                RgBar(lineHeight: 24, widthFactor: 0.4),
+                RgBar(lineHeight: 29, widthFactor: 0.9),
+                RgBar(lineHeight: 18, widthFactor: 0.45),
+                SizedBox(height: RgSpace.s8),
+                RgBar(lineHeight: 23),
+                RgBar(lineHeight: 23, widthFactor: 0.7),
+                SizedBox(height: RgSpace.s12),
+                RgBar(lineHeight: 48, barHeight: 48),
+              ],
+            ),
+          ),
+          const SizedBox(height: RgSpace.s28 + 25 + RgSpace.s12),
+          const RgSkeletonRows(count: 2),
+        ],
+      ),
     );
   }
 }
@@ -150,10 +262,13 @@ class _FeaturedCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(spacing: RgSpace.s8, children: [
-            if (paper.topicLabel != null) RgBadge(label: paper.topicLabel!),
-            Text('오늘의 주요 연구', style: RgText.caption.copyWith(color: RgColors.textSecondary)),
-          ]),
+          Row(
+            spacing: RgSpace.s8,
+            children: [
+              if (paper.topicLabel != null) RgBadge(label: paper.topicLabel!),
+              Text('오늘의 주요 연구', style: RgText.caption.copyWith(color: RgColors.textSecondary)),
+            ],
+          ),
           const SizedBox(height: RgSpace.s12),
           Text(keepAll(paper.title), style: RgText.titleFeatured),
           const SizedBox(height: RgSpace.s6),
@@ -175,17 +290,24 @@ class _FeaturedCard extends StatelessWidget {
                         margin: const EdgeInsets.only(top: RgSpace.s10),
                         decoration: const BoxDecoration(color: RgColors.textBody, shape: BoxShape.circle),
                       ),
-                      Expanded(child: Text(keepAll(b), style: RgText.bodySummary.copyWith(color: RgColors.textBody))),
+                      Expanded(
+                        child: Text(keepAll(b), style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
+                      ),
                     ],
                   ),
               ],
             ),
           ],
           const SizedBox(height: RgSpace.s18),
-          Row(spacing: RgSpace.s8, children: [
-            Expanded(child: RgPrimaryButton(label: '자세히 읽기', onTap: () => context.push('/paper/${paper.id}'))),
-            RgBookmarkButton(saved: saved, size: 48, onTap: () => toggleBookmark(paper.id, paper.title)),
-          ]),
+          Row(
+            spacing: RgSpace.s8,
+            children: [
+              Expanded(
+                child: RgPrimaryButton(label: '자세히 읽기', onTap: () => context.push('/paper/${paper.id}')),
+              ),
+              RgBookmarkButton(saved: saved, size: 48, onTap: () => toggleBookmark(paper.id, paper.title)),
+            ],
+          ),
         ],
       ),
     );
@@ -195,10 +317,16 @@ class _FeaturedCard extends StatelessWidget {
 // 필터·주요 연구 선정 규칙(7.1, G6, G9, G14). 화면과 떼어 테스트한다.
 class HomeView {
   HomeView(List<PaperItem> papers, String? topic) : total = papers.length {
-    chips = [for (final t in topicLabels.keys) if (papers.any((p) => p.ready && p.topic == t)) t];
+    chips = [
+      for (final t in topicLabels.keys)
+        if (papers.any((p) => p.ready && p.topic == t)) t,
+    ];
     final shown = topic == null ? papers : papers.where((p) => p.ready && p.topic == topic).toList();
     featured = shown.where((p) => p.ready && p.keyPoints.isNotEmpty).firstOrNull;
-    list = [for (final p in shown) if (p != featured) p];
+    list = [
+      for (final p in shown)
+        if (p != featured) p,
+    ];
   }
 
   final int total; // 헤드라인 편수는 필터와 무관

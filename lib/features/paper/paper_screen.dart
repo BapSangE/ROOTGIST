@@ -12,10 +12,12 @@ import '../../design/typography.dart';
 import '../../design/widgets/rg_buttons.dart';
 import '../../design/widgets/rg_card.dart';
 import '../../design/widgets/rg_pressable.dart';
+import '../../design/widgets/rg_states.dart';
 import '../settings/ai_notice_sheet.dart';
 import 'evidence_sheet.dart';
 
-// S02 논문 상세 (HANDOFF 7.2). ready가 아닐 때의 준비 중·오류 카드와 로딩 스켈레톤은 M3.
+// S02 논문 상세 (HANDOFF 7.2). 8.1 상태: 로딩 스켈레톤, 오류(보관함 제목이 있으면 제목 블록만 남김),
+// ai_status가 ready가 아니면 제목 블록 + 준비 중/실패 카드(4.3).
 class PaperScreen extends StatefulWidget {
   const PaperScreen({super.key, required this.paperId});
   final String paperId;
@@ -25,39 +27,62 @@ class PaperScreen extends StatefulWidget {
 }
 
 class _PaperScreenState extends State<PaperScreen> {
-  late final _paper = repository.getPaper(widget.paperId);
+  late final _req = Reloadable(() => repository.getPaper(widget.paperId));
+
+  @override
+  void dispose() {
+    _req.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final bottom = math.max(RgSpace.floatingBottom, MediaQuery.paddingOf(context).bottom);
     return Scaffold(
-      body: FutureBuilder(
-        future: _paper,
-        builder: (context, snap) {
-          final p = snap.data;
-          return Stack(children: [
-            Positioned.fill(
-              child: ListView(
-                padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top, bottom: RgSpace.bottomScrollInset),
-                children: [
-                  _TopBar(paper: p),
-                  if (p != null) ..._content(context, p),
-                ],
-              ),
-            ),
-            if (p != null && p.ready)
-              Positioned(
-                left: RgSpace.gutterCard,
-                right: RgSpace.gutterCard,
-                bottom: bottom,
-                child: RgPrimaryButton(
-                  label: '번역과 함께 초록 읽기',
-                  floating: true,
-                  onTap: () => context.push('/paper/${p.id}/reader'),
+      body: ListenableBuilder(
+        listenable: _req,
+        builder: (context, _) => FutureBuilder(
+          future: _req.future,
+          builder: (context, snap) {
+            final p = snap.data;
+            final savedTitle = bookmarks.value[widget.paperId]?.title; // 7.7 오프라인에서 보관함으로 들어온 경우
+            return Stack(
+              children: [
+                Positioned.fill(
+                  child: ListView(
+                    padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top, bottom: RgSpace.bottomScrollInset),
+                    children: [
+                      _TopBar(paper: p),
+                      if (p != null)
+                        ..._content(context, p)
+                      else if (snap.hasError) ...[
+                        if (savedTitle != null)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s12, RgSpace.gutterText, 0),
+                            child: Semantics(header: true, child: Text(keepAll(savedTitle), style: RgText.titleDetail)),
+                          ),
+                        const SizedBox(height: RgSpace.s24),
+                        RgErrorCard(error: snap.error, onRetry: _req.reload),
+                      ] else
+                        const _PaperSkeleton(),
+                    ],
+                  ),
                 ),
-              ),
-          ]);
-        },
+                if (p != null && p.ready)
+                  Positioned(
+                    left: RgSpace.gutterCard,
+                    right: RgSpace.gutterCard,
+                    bottom: bottom,
+                    child: RgPrimaryButton(
+                      label: '번역과 함께 초록 읽기',
+                      floating: true,
+                      onTap: () => context.push('/paper/${p.id}/reader'),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -70,7 +95,10 @@ class _PaperScreenState extends State<PaperScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (p.topicLabel != null) ...[RgBadge(label: p.topicLabel!, onCard: false), const SizedBox(height: RgSpace.s14)],
+            if (p.topicLabel != null) ...[
+              RgBadge(label: p.topicLabel!, onCard: false),
+              const SizedBox(height: RgSpace.s14),
+            ],
             Semantics(header: true, child: Text(keepAll(p.title), style: RgText.titleDetail)),
             if (p.ready && p.titleKo != null) ...[
               const SizedBox(height: RgSpace.s8),
@@ -81,6 +109,20 @@ class _PaperScreenState extends State<PaperScreen> {
           ],
         ),
       ),
+      if (!p.ready) ...[
+        const SizedBox(height: RgSpace.s24),
+        RgCard(
+          padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(p.aiStatus == 'failed' ? '해설을 만들지 못했어요' : '해설을 준비하고 있어요', style: RgText.titleCard),
+              const SizedBox(height: RgSpace.s6),
+              Text('다음 수집 때 다시 만들어요. 원문은 아래 링크에서 볼 수 있어요.', style: secondary),
+            ],
+          ),
+        ),
+      ],
       if (p.ready) ...[
         const SizedBox(height: RgSpace.s24),
         RgCard(
@@ -139,17 +181,63 @@ class _PaperScreenState extends State<PaperScreen> {
       const SizedBox(height: RgSpace.s28),
       RgCard(
         padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s4),
-        child: Column(children: [
-          _InfoRow(
-            label: '원문 출처',
-            value: 'arXiv · ${p.id}',
-            onTap: () => launchUrl(Uri.parse(p.arxivUrl), mode: LaunchMode.externalApplication),
-          ),
-          if (p.orgName != null) _InfoRow(label: '게시 조직', value: p.orgName!), // G8
-          _InfoRow(label: '발행일', value: p.date, last: true),
-        ]),
+        child: Column(
+          children: [
+            _InfoRow(
+              label: '원문 출처',
+              value: 'arXiv · ${p.id}',
+              onTap: () => launchUrl(Uri.parse(p.arxivUrl), mode: LaunchMode.externalApplication),
+            ),
+            if (p.orgName != null) _InfoRow(label: '게시 조직', value: p.orgName!), // G8
+            _InfoRow(label: '발행일', value: p.date, last: true),
+          ],
+        ),
       ),
     ];
+  }
+}
+
+// 제목 블록 + AI 카드 모양.
+class _PaperSkeleton extends StatelessWidget {
+  const _PaperSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const RgSkeleton(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s12, RgSpace.gutterText, 0),
+            child: Column(
+              children: [
+                RgBar(lineHeight: 24, widthFactor: 0.25),
+                SizedBox(height: RgSpace.s14),
+                RgBar(lineHeight: 35, widthFactor: 0.9),
+                SizedBox(height: RgSpace.s8),
+                RgBar(lineHeight: 22, widthFactor: 0.7),
+                SizedBox(height: RgSpace.s10),
+                RgBar(lineHeight: 18, widthFactor: 0.45),
+              ],
+            ),
+          ),
+          SizedBox(height: RgSpace.s24),
+          RgCard(
+            padding: EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s18),
+            child: Column(
+              spacing: RgSpace.s4,
+              children: [
+                RgBar(lineHeight: 24, widthFactor: 0.3),
+                SizedBox(height: RgSpace.s4),
+                RgBar(lineHeight: 23),
+                RgBar(lineHeight: 23),
+                RgBar(lineHeight: 23, widthFactor: 0.6),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -164,21 +252,25 @@ class _TopBar extends StatelessWidget {
       height: RgSpace.topBar,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
-        child: Row(spacing: RgSpace.s8, children: [
-          RgCircleButton(semanticLabel: '뒤로', icon: 'chevron-left', onTap: () => context.pop()),
-          const Spacer(),
-          if (p != null) ...[
-            RgCircleButton(
-              semanticLabel: '공유',
-              icon: 'share',
-              onTap: () => SharePlus.instance.share(ShareParams(text: '${p.title}\n${p.hfUrl}')),
-            ),
-            ValueListenableBuilder(
-              valueListenable: bookmarks,
-              builder: (_, saved, _) => RgBookmarkButton(saved: saved.containsKey(p.id), onTap: () => toggleBookmark(p.id, p.title)),
-            ),
+        child: Row(
+          spacing: RgSpace.s8,
+          children: [
+            RgCircleButton(semanticLabel: '뒤로', icon: 'chevron-left', onTap: () => context.pop()),
+            const Spacer(),
+            if (p != null) ...[
+              RgCircleButton(
+                semanticLabel: '공유',
+                icon: 'share',
+                onTap: () => SharePlus.instance.share(ShareParams(text: '${p.title}\n${p.hfUrl}')),
+              ),
+              ValueListenableBuilder(
+                valueListenable: bookmarks,
+                builder: (_, saved, _) =>
+                    RgBookmarkButton(saved: saved.containsKey(p.id), onTap: () => toggleBookmark(p.id, p.title)),
+              ),
+            ],
           ],
-        ]),
+        ),
       ),
     );
   }
@@ -198,7 +290,10 @@ class _KeyPointItem extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: RgSpace.s12,
       children: [
-        Text('$index', style: RgText.meta.copyWith(height: 23 / 13, fontWeight: FontWeight.w600, color: RgColors.textTertiary)),
+        Text(
+          '$index',
+          style: RgText.meta.copyWith(height: 23 / 13, fontWeight: FontWeight.w600, color: RgColors.textTertiary),
+        ),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -209,13 +304,18 @@ class _KeyPointItem extends StatelessWidget {
                 label: '원문 근거, 초록 $n번째 문장',
                 excludeSemantics: true,
                 child: RgPressable(
-                  onTap: () => showEvidenceSheet(context, paper: paper, pointIndex: index, sentenceId: point.evidenceIds.first),
+                  onTap: () =>
+                      showEvidenceSheet(context, paper: paper, pointIndex: index, sentenceId: point.evidenceIds.first),
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(minHeight: 36),
-                    child: Row(mainAxisSize: MainAxisSize.min, spacing: RgSpace.s2, children: [
-                      Text('원문 근거 · 초록 $n번째 문장', style: linkStyle),
-                      const RgIcon('chevron-right', size: 14, color: RgColors.textSecondary),
-                    ]),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      spacing: RgSpace.s2,
+                      children: [
+                        Text('원문 근거 · 초록 $n번째 문장', style: linkStyle),
+                        const RgIcon('chevron-right', size: 14, color: RgColors.textSecondary),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -243,7 +343,9 @@ class _InfoRow extends StatelessWidget {
         spacing: RgSpace.s16,
         children: [
           Text(label, style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
-          Expanded(child: Text(value, textAlign: TextAlign.end, style: RgText.bodySmall)),
+          Expanded(
+            child: Text(value, textAlign: TextAlign.end, style: RgText.bodySmall),
+          ),
         ],
       ),
     );
@@ -251,7 +353,12 @@ class _InfoRow extends StatelessWidget {
       decoration: BoxDecoration(
         border: last ? null : const Border(bottom: BorderSide(color: RgColors.dividerCard)),
       ),
-      child: onTap == null ? row : Semantics(link: true, child: RgPressable(onTap: onTap, child: row)),
+      child: onTap == null
+          ? row
+          : Semantics(
+              link: true,
+              child: RgPressable(onTap: onTap, child: row),
+            ),
     );
   }
 }

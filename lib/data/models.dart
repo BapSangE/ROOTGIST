@@ -82,7 +82,7 @@ class PaperDetail {
         hfUrl = j['hf_url'],
         arxivUrl = j['arxiv_url'],
         topic = j['topic_primary'],
-        ready = j['ai_status'] == 'ready',
+        aiStatus = j['ai_status'],
         summary = j['summary_ko'],
         // 근거 없는 핵심 내용은 출력하지 않는다(7.2).
         keyPoints = [
@@ -101,7 +101,8 @@ class PaperDetail {
   final String hfUrl;
   final String arxivUrl;
   final String? topic;
-  final bool ready;
+  final String aiStatus; // ready | pending | failed
+  bool get ready => aiStatus == 'ready';
   final String? summary;
   final List<KeyPoint> keyPoints;
   final List<Sentence> sentences;
@@ -152,4 +153,9 @@ String koreanDate(DateTime d) => '${d.month}월 ${d.day}일 ${_weekdays[d.weekda
 String kstTime(DateTime utc) {
   final k = utc.toUtc().add(const Duration(hours: 9));
   return '${k.hour.toString().padLeft(2, '0')}:${k.minute.toString().padLeft(2, '0')}';
+}
+
+String kstDateTime(DateTime utc) {
+  final k = utc.toUtc().add(const Duration(hours: 9));
+  return '${k.month}월 ${k.day}일 ${kstTime(utc)}';
 }

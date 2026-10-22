@@ -162,21 +162,25 @@ class RgFilterChip extends StatelessWidget {
         child: SizedBox(
           height: RgSpace.minTouch,
           child: Center(
+            widthFactor: 1, // 가로로 늘어나지 않고 칩 폭만큼(Wrap 안에서도)
             child: Container(
               height: 36,
               padding: const EdgeInsets.symmetric(horizontal: RgSpace.s16),
-              alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: selected ? RgColors.actionPrimary : null,
                 borderRadius: BorderRadius.circular(RgRadius.pill),
                 border: selected ? null : Border.all(color: RgColors.borderDefault),
               ),
-              child: Text(
-                label,
-                style: RgText.bodySmall.copyWith(
-                  height: 1.2,
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                  color: selected ? RgColors.onAction : RgColors.textBody,
+              // Container(alignment:)는 가로로 꽉 차므로 Center(widthFactor: 1)로 세로만 가운데.
+              child: Center(
+                widthFactor: 1,
+                child: Text(
+                  label,
+                  style: RgText.bodySmall.copyWith(
+                    height: 1.2,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                    color: selected ? RgColors.onAction : RgColors.textBody,
+                  ),
                 ),
               ),
             ),

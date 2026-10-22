@@ -25,6 +25,7 @@ Future<void> pumpApp(WidgetTester tester) async {
   bookmarks.value = {};
   readerDefaultMode.value = ReaderMode.together;
   readerScale.value = 1.0;
+  fixtureMode.value = FixtureMode.normal;
   await tester.runAsync(() async {
     await tester.pumpWidget(const RootgistApp());
     await Future<void>.delayed(const Duration(milliseconds: 200));
@@ -309,6 +310,83 @@ void main() {
     for (final p in aiNoticeParagraphs) {
       expect(p.contains('본문'), isFalse, reason: p);
     }
+  });
+
+  testWidgets('M3: fixture 스위치로 8.1 상태 재현(로딩·오류·오프라인·지연·없음), 다시 시도', (tester) async {
+    tester.view.physicalSize = const Size(390, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+
+    // 스켈레톤은 반복 애니메이션이라 pumpAndSettle 대신 pump.
+    Future<void> switchTo(FixtureMode m) async {
+      await tester.runAsync(() async {
+        fixtureMode.value = m;
+        await tester.pump();
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pump();
+    }
+
+    await switchTo(FixtureMode.loading);
+    expect(find.bySemanticsLabel('불러오는 중'), findsOneWidget);
+
+    await switchTo(FixtureMode.error);
+    expect(find.text('불러오지 못했어요'), findsOneWidget);
+    expect(find.text('마지막 정상 수집 10월 19일 05:12'), findsOneWidget);
+    expect(find.text('인터넷 연결을 확인해 주세요'), findsNothing);
+
+    await switchTo(FixtureMode.offline);
+    expect(find.text('인터넷 연결을 확인해 주세요'), findsOneWidget);
+
+    await switchTo(FixtureMode.delayed);
+    expect(find.textContaining(keepAll('모으는'), findRichText: true), findsWidgets);
+    expect(find.textContaining(keepAll('05:09.')), findsOneWidget); // 마지막 정상 수집 10월 18일 05:09 (KST)
+
+    await switchTo(FixtureMode.empty);
+    expect(find.textContaining(keepAll('없어요'), findRichText: true), findsWidgets);
+    expect(find.text('5편'), findsNothing);
+
+    // 「다시 시도」는 다시 부른다(아직 error 모드라 또 실패). 정상으로 돌리면 복구된다.
+    await switchTo(FixtureMode.error);
+    await tester.runAsync(() async {
+      await tester.tap(find.text('다시 시도'));
+      await tester.pump();
+    });
+    expect(find.text('불러오지 못했어요'), findsOneWidget);
+    await switchTo(FixtureMode.normal);
+    await tester.pumpAndSettle();
+    expect(find.text('5편'), findsOneWidget);
+  });
+
+  testWidgets('M3: 오프라인에서 보관함 → S02는 제목 블록 + 오류 카드(7.7)', (tester) async {
+    tester.view.physicalSize = const Size(390, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+    toggleBookmark('0000.00003', '보상 모델 없이 선호를 학습하는 정책 최적화');
+    fixtureMode.value = FixtureMode.offline;
+
+    router.go('/library');
+    await tester.pumpAndSettle();
+    expect(find.text('이 기기에 저장한 연구 1편'), findsOneWidget); // 보관함은 네트워크 없이 동작
+
+    await tester.tap(find.text(keepAll('보상 모델 없이 선호를 학습하는 정책 최적화')));
+    await settle(tester);
+    expect(find.text(keepAll('보상 모델 없이 선호를 학습하는 정책 최적화')), findsOneWidget);
+    expect(find.text('인터넷 연결을 확인해 주세요'), findsOneWidget);
+    expect(find.text('번역과 함께 초록 읽기'), findsNothing);
+  });
+
+  testWidgets('M3: 해설 준비 중(pending) 논문은 준비 중 카드', (tester) async {
+    tester.view.physicalSize = const Size(390, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+    router.push('/paper/0000.00006');
+    await settle(tester);
+    expect(find.text('해설을 준비하고 있어요'), findsOneWidget);
+    expect(find.text('AI 요약'), findsNothing);
   });
 
   testWidgets('위젯 갤러리: 세그먼트·북마크·시트가 동작한다', (tester) async {

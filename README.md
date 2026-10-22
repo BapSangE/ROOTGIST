@@ -13,4 +13,5 @@ Hugging Face Daily Papers에서 매일 상위 10편을 골라, 초록만 근거�
 
 ## 상태
 
-M2(화면 9개, fixture) 완료. 다음은 M3 상태·로컬 저장. 진행 단계는 `docs/HANDOFF.md` 11장.
+M3(예외 상태·로컬 저장) 완료. 다음은 M4 백엔드(Supabase·배치 워커). 진행 단계는 `docs/HANDOFF.md` 11장.
+디버그 빌드의 설정 화면 맨 아래 「개발용 · fixture 상태」로 로딩·오류·오프라인·지연·없음 상태를 띄울 수 있다.

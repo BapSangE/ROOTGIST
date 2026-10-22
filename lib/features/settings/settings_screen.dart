@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../data/repository.dart';
 import '../../data/settings.dart';
 import '../../design/tokens.dart';
 import '../../design/typography.dart';
@@ -86,6 +87,20 @@ class SettingsScreen extends StatelessWidget {
           ),
           _Row(label: '앱 버전', value: appVersion, chevron: false),
         ]),
+        // M3 fixture 스위치: 8.1 상태를 재현한다. 디버그 빌드에만 보인다.
+        if (kDebugMode) ...[
+          group('개발용 · fixture 상태'),
+          ValueListenableBuilder(
+            valueListenable: fixtureMode,
+            builder: (_, mode, _) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
+              child: Wrap(spacing: RgSpace.s8, children: [
+                for (final m in FixtureMode.values)
+                  RgFilterChip(label: m.name, selected: m == mode, onTap: () => fixtureMode.value = m),
+              ]),
+            ),
+          ),
+        ],
       ],
     );
   }
