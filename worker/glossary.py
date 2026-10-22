@@ -7,6 +7,7 @@
 """
 import csv
 import hashlib
+import json
 import re
 import sys
 from collections import defaultdict
@@ -69,14 +70,17 @@ def _hash(s: str) -> str:
 
 
 def promote_candidates(db: Db) -> int:
-    """승인되고 한국어 대응어가 채워진 후보 → 사전(사람 승인 의미, definition_kind=paper_glossary)."""
-    ready = db.select("term_candidates", "review_status=eq.approved&sense_id=is.null&canonical_ko=not.is.null&select=*")
+    """승인된 후보 → 사전(사람 승인 의미, definition_kind=paper_glossary).
+    한국어 대응어는 검토자가 쓴 canonical_ko, 없으면 AI 초안(승인했다는 건 초안을 채택했다는 뜻)."""
+    ready = db.select("term_candidates", "review_status=eq.approved&sense_id=is.null"
+                                         "&or=(canonical_ko.not.is.null,canonical_ko_draft.not.is.null)&select=*")
     for c in ready:
         h = _hash(c["normalized_form"])
         tid, sid = f"T-cand-{h}", f"SENSE-cand-{h}"
-        db.upsert("terms", [{"term_id": tid, "canonical_en": c["surface_form"], "canonical_ko": c["canonical_ko"],
+        ko = c["canonical_ko"] or c["canonical_ko_draft"]
+        db.upsert("terms", [{"term_id": tid, "canonical_en": c["surface_form"], "canonical_ko": ko,
                              "review_status": "approved"}], "term_id")
-        db.upsert("term_senses", [{"sense_id": sid, "term_id": tid, "canonical_ko": c["canonical_ko"],
+        db.upsert("term_senses", [{"sense_id": sid, "term_id": tid, "canonical_ko": ko,
                                    "definition_ko": c["definition_ko"], "definition_kind": "paper_glossary",
                                    "ai_review_status": "first_pass_complete", "review_status": "approved",
                                    "human_reviewer": c.get("human_reviewer")}], "sense_id")
@@ -106,7 +110,54 @@ def plan_links(glossary_rows: list[dict], aliases: list[dict]):
     return links, candidates
 
 
-def sync(db: Db):
+DRAFT_RULES = """AI·머신러닝 논문 용어의 한국어 대응어를 제안한다. 아래 규칙을 지킨다.
+- 한국 AI·머신러닝 커뮤니티, 논문, 교재에서 실제로 많이 쓰는 표기를 고른다. 음차가 자리 잡은 말은 음차(예: 트랜스포머, 백본), 번역어가 자리 잡은 말은 번역어(예: 강화 학습, 지식 증류)로 쓴다.
+- 약어와 고유명(모델·데이터셋·벤치마크·방법 이름)은 원문 그대로 둔다(예: LoRA, GPT-4, MMLU).
+- 대응어만 쓴다. 설명, 따옴표, 괄호 속 원어 병기를 붙이지 않는다.
+- 한글·영문·숫자·공백·하이픈만 쓴다. 한자와 가나는 쓰지 않는다.
+- 입력의 모든 term을 입력 순서대로 정확히 한 번씩, term 값은 한 글자도 바꾸지 않고 그대로 복사한다.
+- 확실하지 않으면 가장 무난한 표기를 고르고, 새 용어를 지어내지 않는다.
+출력은 JSON 하나만: {"items": [{"term": "...", "canonical_ko": "..."}]}"""
+
+
+def check_drafts(out, terms: list[str]) -> list[str]:
+    """LLM 초안 검증: 입력 용어와 순서·표기 일치, 빈 값·긴 값·외국 문자 없음."""
+    items = out.get("items") if isinstance(out, dict) else None
+    if not isinstance(items, list) or [i.get("term") for i in items] != terms:
+        return ["terms: 입력 용어와 순서·표기가 다름"]
+    from .validate import FOREIGN
+
+    bad = [i["term"] for i in items
+           if not isinstance(i.get("canonical_ko"), str) or not 0 < len(i["canonical_ko"].strip()) <= 60
+           or "\n" in i["canonical_ko"] or FOREIGN.search(i["canonical_ko"])]
+    return [f"ko: {bad}"] if bad else []
+
+
+def draft_korean(db: Db, api_key: str, limit: int = 200, batch: int = 40) -> int:
+    """초안이 없는 대기 후보에 한국어 대응어 초안을 채운다. 검토자는 승인 또는 수정만 한다."""
+    from . import llm
+
+    todo = db.select("term_candidates", f"review_status=eq.pending&canonical_ko_draft=is.null"
+                                        f"&select=normalized_form,surface_form,definition_ko&order=seen_count.desc&limit={limit}")
+    done = 0
+    for i in range(0, len(todo), batch):
+        part = todo[i:i + batch]
+        terms = [c["surface_form"] for c in part]
+        payload = [{"term": c["surface_form"], "definition_ko": c["definition_ko"]} for c in part]
+        messages = [{"role": "system", "content": DRAFT_RULES},
+                    {"role": "user", "content": json.dumps(payload, ensure_ascii=False)}]
+        out, model = llm.generate(api_key, messages, lambda o: check_drafts(o, terms), lambda r: None)
+        if out is None:
+            print(f"  대응어 초안 실패({len(part)}개), 다음 배치에서 다시")
+            continue
+        for c, item in zip(part, out["items"]):
+            db.update("term_candidates", {"canonical_ko_draft": item["canonical_ko"].strip(), "draft_model": model},
+                      normalized_form=c["normalized_form"])
+        done += len(part)
+    return done
+
+
+def sync(db: Db, api_key: str | None = None):
     promoted = promote_candidates(db)
     aliases = db.select_all("term_aliases", "select=sense_id,surface_form&order=alias_id")
     rows = db.select_all("paper_glossary", "sense_id=is.null&select=paper_id,idx,term,definition_ko&order=paper_id,idx")
@@ -124,17 +175,19 @@ def sync(db: Db):
          "review_status": known.get(n, "pending")}
         for n, g in candidates.items()
     ], "normalized_form")
-    print(f"용어: 후보→사전 {promoted}, 새 연결 {len(links)}, 사전에 없는 표기 {len(candidates)}")
+    drafted = draft_korean(db, api_key) if api_key else 0
+    print(f"용어: 후보→사전 {promoted}, 새 연결 {len(links)}, 사전에 없는 표기 {len(candidates)}, 대응어 초안 {drafted}")
 
 
 if __name__ == "__main__":
     from .run import setting
 
     db = Db(setting("SUPABASE_URL"), setting("SUPABASE_SERVICE_ROLE_KEY"))
+    key = setting("NVIDIA_API_KEY", "nvidia_key")
     if sys.argv[1:2] == ["import"]:
         import_dictionary(db, Path(sys.argv[2]))
-        sync(db)
+        sync(db, key)
     elif sys.argv[1:2] == ["sync"]:
-        sync(db)
+        sync(db, key)
     else:
         sys.exit(__doc__)

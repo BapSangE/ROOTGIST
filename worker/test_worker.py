@@ -127,6 +127,17 @@ class GlossaryLinkTest(unittest.TestCase):
         self.assertEqual(len(candidates["trajectory drift"]), 2)
 
 
+class DraftCheckTest(unittest.TestCase):
+    def test_draft_validation(self):
+        from .glossary import check_drafts
+        terms = ["trajectory drift", "LoRA"]
+        ok = {"items": [{"term": "trajectory drift", "canonical_ko": "궤적 이탈"}, {"term": "LoRA", "canonical_ko": "LoRA"}]}
+        self.assertEqual(check_drafts(ok, terms), [])
+        self.assertTrue(check_drafts({"items": ok["items"][::-1]}, terms))  # 순서 다름
+        bad = {"items": [{"term": "trajectory drift", "canonical_ko": "軌跡 이탈"}, {"term": "LoRA", "canonical_ko": " "}]}
+        self.assertEqual(check_drafts(bad, terms), ["ko: ['trajectory drift', 'LoRA']"])
+
+
 class GenerateTest(unittest.TestCase):
     """ops config 2장 재시도·예비 모델 전환."""
 

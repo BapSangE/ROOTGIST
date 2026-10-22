@@ -122,7 +122,7 @@ def main(argv=None):
 
     if db:
         _save(db, entry, ordered, prior, exposed_ids, late, made, day["featured_paper_id"])
-        glossary.sync(db)  # 새 논문 용어를 사전에 연결하고, 없는 표기는 후보로 쌓는다
+        glossary.sync(db, key)  # 새 논문 용어를 사전에 연결하고, 없는 표기는 후보로 쌓아 한국어 대응어 초안을 단다
     ready = sum(d["ai_status"] == "ready" for d in details)
     print(f"저장: {args.out}{' + Supabase' if db else ''} (digest {digest_date}, 해설 {ready}/{len(details)}편)")
     return 0
