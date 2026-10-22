@@ -73,6 +73,9 @@ def to_paper(item: dict) -> dict | None:
         "org_name": (p.get("organization") or {}).get("fullname"),  # 게시 조직(저자 소속 아님)
         "published_at": p["publishedAt"],  # 최상위 publishedAt 말고 paper.publishedAt
         "upvotes": p.get("upvotes", 0),  # 배치 시각 값으로 고정
+        # 주소만 저장하고 화면에는 쓰지 않는다(A8 권리 검토 전)
+        "thumbnail_url": item.get("thumbnail"),
+        "media_urls": item.get("mediaUrls") or p.get("mediaUrls") or [],
     }
 
 

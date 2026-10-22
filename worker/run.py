@@ -136,7 +136,8 @@ def _save(db: Db, entry, ordered, prior, exposed_ids, late, made, featured_id):
     db.upsert("papers", [
         {"paper_id": p["paper_id"], "title_en": p["title_en"], "abstract_en": p["abstract_en"],
          "abstract_sha256": llm.sha256(p["abstract_en"]), "authors": p["authors"], "org_name": p["org_name"],
-         "published_at": p["published_at"], "withdrawn": False}
+         "published_at": p["published_at"], "withdrawn": False,
+         "thumbnail_url": p["thumbnail_url"], "media_urls": p["media_urls"]}
         for p in ordered
     ], "paper_id")
     prev_late = (db.select("digests", f"digest_date=eq.{entry['digest_date']}&select=late_added_count") or [{}])[0]

@@ -57,6 +57,12 @@ class SelectTest(unittest.TestCase):
         ], 3)
         self.assertEqual([x["paper_id"] for x in ranked], ["0000.00004", "0000.00001", "0000.00002"])
 
+    def test_media_urls_kept(self):
+        p = collect.to_paper({"thumbnail": "https://example.com/t.png",
+                              "paper": {"id": "0000.00001", "title": "T", "summary": "S", "publishedAt": "2026-10-18T00:00:00.000Z",
+                                        "mediaUrls": ["https://example.com/a.mp4"]}})
+        self.assertEqual((p["thumbnail_url"], p["media_urls"]), ("https://example.com/t.png", ["https://example.com/a.mp4"]))
+
     def test_withdrawn_excluded(self):
         self.assertIsNone(collect.to_paper({"paper": {"id": "x", "withdrawnAt": "2026-10-18"}}))
 
