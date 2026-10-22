@@ -1,0 +1,102 @@
+{
+  "paper_id": "0000.00001",
+  "title_en": "Efficient Scaling of Inference-Time Compute",
+  "title_ko": "추론 시점 연산의 효율적 확장",
+  "authors": [
+    "Author 01",
+    "Author 02",
+    "Author 03",
+    "Author 04",
+    "Author 05",
+    "Author 06"
+  ],
+  "org_name": null,
+  "published_at": "2026-10-18",
+  "hf_url": "https://huggingface.co/papers/0000.00001",
+  "arxiv_url": "https://arxiv.org/abs/0000.00001",
+  "topic_primary": "llm",
+  "topic_secondary": "optimization",
+  "ai_status": "ready",
+  "summary_ko": "입력마다 필요한 추론 연산량이 다르다는 점에 착안해, 연산을 입력 복잡도에 맞춰 배분하는 방법을 제안한 연구예요. 고정된 연산 예산을 쓰는 방식과 비교해 평가했고, 예시 벤치마크에서 같은 정확도로 연산을 30% 적게 썼다고 보고해요.",
+  "key_points": [
+    {
+      "claim_ko": "입력 복잡도에 따른 추론 연산의 동적 배분",
+      "evidence_sentence_ids": [
+        "A02"
+      ]
+    },
+    {
+      "claim_ko": "고정 연산 예산 방식과의 비교 평가",
+      "evidence_sentence_ids": [
+        "A03"
+      ]
+    },
+    {
+      "claim_ko": "같은 정확도에서 연산 30% 절감(예시 벤치마크)",
+      "evidence_sentence_ids": [
+        "A04"
+      ]
+    }
+  ],
+  "sentences": [
+    {
+      "sentence_id": "A01",
+      "kind": "text",
+      "text": "For large language models, inference-time compute has emerged as a key lever for improving performance.",
+      "translation_ko": "대규모 언어 모델에서 추론 시점 연산은 성능을 높이는 주요 수단으로 주목받고 있다."
+    },
+    {
+      "sentence_id": "A02",
+      "kind": "text",
+      "text": "We propose a method that dynamically allocates inference compute according to input complexity.",
+      "translation_ko": "본 연구는 입력 복잡도에 따라 추론 연산을 동적으로 배분하는 방법을 제안한다."
+    },
+    {
+      "sentence_id": "A03",
+      "kind": "text",
+      "text": "We evaluate the proposed method against approaches that use a fixed compute budget.",
+      "translation_ko": "제안 방법은 고정된 연산 예산을 사용하는 방식과 비교하여 평가된다."
+    },
+    {
+      "sentence_id": "A04",
+      "kind": "text",
+      "text": "On the example benchmark, the method uses 30\\% less compute at matched accuracy.",
+      "translation_ko": "예시 벤치마크에서 이 방법은 같은 정확도에서 연산을 30% 적게 사용한다."
+    },
+    {
+      "sentence_id": "A05",
+      "kind": "link",
+      "text": "Code: https://example.com/rootgist-fixture",
+      "translation_ko": null
+    }
+  ],
+  "glossary": [
+    {
+      "term": "inference-time compute",
+      "definition_ko": "학습이 끝난 모델이 새로운 입력으로부터 출력을 생성하는 단계에서 사용하는 계산량.",
+      "context_ko": "이 초록에서는 언어 모델의 성능을 높이는 수단으로 다뤄진다.",
+      "sentence_ids": [
+        "A01"
+      ],
+      "highlight": true
+    },
+    {
+      "term": "compute budget",
+      "definition_ko": "학습이나 추론에 쓸 수 있도록 미리 정해 둔 계산량의 한도.",
+      "context_ko": "비교 대상 방식이 고정해 두는 계산량 한도를 가리킨다.",
+      "sentence_ids": [
+        "A03"
+      ],
+      "highlight": true
+    },
+    {
+      "term": "Benchmark",
+      "definition_ko": "모델의 성능을 같은 조건에서 비교하기 위해 정해 둔 과제와 평가 방법의 묶음.",
+      "context_ko": "원문에는 소문자로만 나오므로 하이라이트 대상이 아니다(fixture 확인용).",
+      "sentence_ids": [
+        "A04"
+      ],
+      "highlight": false
+    }
+  ]
+}

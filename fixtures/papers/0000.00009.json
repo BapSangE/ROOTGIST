@@ -1,0 +1,54 @@
+{
+  "paper_id": "0000.00009",
+  "title_en": "Planning Web Navigation with Subgoal Memory",
+  "title_ko": "하위 목표 기억을 활용한 웹 탐색 계획",
+  "authors": [
+    "Author 01",
+    "Author 02",
+    "Author 03",
+    "Author 04",
+    "Author 05",
+    "Author 06"
+  ],
+  "org_name": null,
+  "published_at": "2026-10-17",
+  "hf_url": "https://huggingface.co/papers/0000.00009",
+  "arxiv_url": "https://arxiv.org/abs/0000.00009",
+  "topic_primary": "agent",
+  "topic_secondary": "llm",
+  "ai_status": "ready",
+  "summary_ko": "완료한 하위 목표를 기억해 두고 행동할 때마다 참고하게 해, 웹 에이전트가 같은 단계를 반복하지 않게 한 연구예요.",
+  "key_points": [
+    {
+      "claim_ko": "완료한 하위 목표 저장과 행동 전 참고",
+      "evidence_sentence_ids": [
+        "A02"
+      ]
+    }
+  ],
+  "sentences": [
+    {
+      "sentence_id": "A01",
+      "kind": "text",
+      "text": "Web agents often repeat steps when a task has many pages.",
+      "translation_ko": "웹 에이전트는 과제에 페이지가 많으면 같은 단계를 되풀이하는 경우가 많다."
+    },
+    {
+      "sentence_id": "A02",
+      "kind": "text",
+      "text": "We store completed subgoals and consult them before each action.",
+      "translation_ko": "본 연구는 완료한 하위 목표를 저장하고 행동마다 이를 참고한다."
+    }
+  ],
+  "glossary": [
+    {
+      "term": "subgoals",
+      "definition_ko": "큰 목표를 이루기 위해 나눈 중간 단계의 목표.",
+      "context_ko": "에이전트가 저장해 두고 참고하는 단위다.",
+      "sentence_ids": [
+        "A02"
+      ],
+      "highlight": true
+    }
+  ]
+}

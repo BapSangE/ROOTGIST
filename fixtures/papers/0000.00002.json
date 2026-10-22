@@ -1,0 +1,70 @@
+{
+  "paper_id": "0000.00002",
+  "title_en": "Generalization of Few-Shot Video Segmentation",
+  "title_ko": "소수 예시 기반 영상 분할의 일반화 성능 분석",
+  "authors": [
+    "Author 01",
+    "Author 02",
+    "Author 03",
+    "Author 04"
+  ],
+  "org_name": null,
+  "published_at": "2026-10-18",
+  "hf_url": "https://huggingface.co/papers/0000.00002",
+  "arxiv_url": "https://arxiv.org/abs/0000.00002",
+  "topic_primary": "multimodal",
+  "topic_secondary": null,
+  "ai_status": "ready",
+  "summary_ko": "소수 예시 기반 영상 분할 모델이 학습 때와 다른 장면에서도 잘 작동하는지 살펴본 연구예요. 장면 유형을 분리한 평가 구성을 만들었고, 장면 유형이 달라지면 시험한 모든 모델의 정확도가 떨어졌다고 해요.",
+  "key_points": [
+    {
+      "claim_ko": "학습·시험 장면 유형을 분리한 평가 구성",
+      "evidence_sentence_ids": [
+        "A02"
+      ]
+    },
+    {
+      "claim_ko": "장면 유형이 다를 때 모든 시험 모델의 정확도 하락",
+      "evidence_sentence_ids": [
+        "A03"
+      ]
+    }
+  ],
+  "sentences": [
+    {
+      "sentence_id": "A01",
+      "kind": "text",
+      "text": "Few-shot segmentation models are often tested only on scenes similar to their training data.",
+      "translation_ko": "소수 예시 분할 모델은 학습 데이터와 비슷한 장면에서만 시험되는 경우가 많다."
+    },
+    {
+      "sentence_id": "A02",
+      "kind": "text",
+      "text": "We build an evaluation split that separates scene types between training and testing.",
+      "translation_ko": "본 연구는 학습과 시험의 장면 유형을 분리한 평가 구성을 만든다."
+    },
+    {
+      "sentence_id": "A03",
+      "kind": "text",
+      "text": "Accuracy drops for all tested models when the scene types differ.",
+      "translation_ko": null
+    },
+    {
+      "sentence_id": "A04",
+      "kind": "text",
+      "text": "We release the split definitions for future comparison.",
+      "translation_ko": "향후 비교를 위해 평가 구성 정의를 공개한다."
+    }
+  ],
+  "glossary": [
+    {
+      "term": "Few-shot segmentation",
+      "definition_ko": "적은 수의 예시만 보고 새로운 대상의 영역을 이미지나 영상에서 구분해 내는 과제.",
+      "context_ko": "이 초록에서 평가 대상이 되는 모델 유형이다.",
+      "sentence_ids": [
+        "A01"
+      ],
+      "highlight": true
+    }
+  ]
+}

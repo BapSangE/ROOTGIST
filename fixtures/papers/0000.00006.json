@@ -1,0 +1,38 @@
+{
+  "paper_id": "0000.00006",
+  "title_en": "Benchmarking Long-Context Retrieval",
+  "title_ko": null,
+  "authors": [
+    "Author 01",
+    "Author 02",
+    "Author 03",
+    "Author 04",
+    "Author 05",
+    "Author 06",
+    "Author 07"
+  ],
+  "org_name": null,
+  "published_at": "2026-10-18",
+  "hf_url": "https://huggingface.co/papers/0000.00006",
+  "arxiv_url": "https://arxiv.org/abs/0000.00006",
+  "topic_primary": null,
+  "topic_secondary": null,
+  "ai_status": "pending",
+  "summary_ko": null,
+  "key_points": [],
+  "sentences": [
+    {
+      "sentence_id": "A01",
+      "kind": "text",
+      "text": "Long-context models are evaluated with retrieval tasks of varying length.",
+      "translation_ko": null
+    },
+    {
+      "sentence_id": "A02",
+      "kind": "text",
+      "text": "We report results for several example models.",
+      "translation_ko": null
+    }
+  ],
+  "glossary": []
+}

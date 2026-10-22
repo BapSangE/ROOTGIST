@@ -1,0 +1,61 @@
+{
+  "paper_id": "0000.00004",
+  "title_en": "A Tool-Using Agent for Spreadsheet Editing",
+  "title_ko": "스프레드시트 편집을 위한 도구 사용 에이전트",
+  "authors": [
+    "Author 01"
+  ],
+  "org_name": "Example Lab",
+  "published_at": "2026-10-18",
+  "hf_url": "https://huggingface.co/papers/0000.00004",
+  "arxiv_url": "https://arxiv.org/abs/0000.00004",
+  "topic_primary": "agent",
+  "topic_secondary": null,
+  "ai_status": "ready",
+  "summary_ko": "여러 단계가 이어지는 스프레드시트 편집을 위해, 계획을 세우고 함수를 도구로 호출하는 에이전트를 만든 연구예요.",
+  "key_points": [
+    {
+      "claim_ko": "편집 계획 수립과 함수 도구 호출",
+      "evidence_sentence_ids": [
+        "A02"
+      ]
+    },
+    {
+      "claim_ko": "한 단계 기준 방식보다 많은 예시 과제 완료",
+      "evidence_sentence_ids": [
+        "A03"
+      ]
+    }
+  ],
+  "sentences": [
+    {
+      "sentence_id": "A01",
+      "kind": "text",
+      "text": "Spreadsheet edits often require several dependent steps.",
+      "translation_ko": "스프레드시트 편집에는 서로 이어지는 여러 단계가 필요한 경우가 많다."
+    },
+    {
+      "sentence_id": "A02",
+      "kind": "text",
+      "text": "We present an agent that plans edits and calls spreadsheet functions as tools.",
+      "translation_ko": "본 연구는 편집 계획을 세우고 스프레드시트 함수를 도구로 호출하는 에이전트를 제시한다."
+    },
+    {
+      "sentence_id": "A03",
+      "kind": "text",
+      "text": "The agent completes more example tasks than a single-step baseline.",
+      "translation_ko": "이 에이전트는 한 단계로 처리하는 기준 방식보다 더 많은 예시 과제를 완료한다."
+    }
+  ],
+  "glossary": [
+    {
+      "term": "baseline",
+      "definition_ko": "새 방법의 성능을 비교하기 위해 기준으로 삼는 기존 방법.",
+      "context_ko": "한 단계로 처리하는 비교 대상 방식을 가리킨다.",
+      "sentence_ids": [
+        "A03"
+      ],
+      "highlight": true
+    }
+  ]
+}

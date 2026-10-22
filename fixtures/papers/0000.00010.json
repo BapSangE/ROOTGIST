@@ -1,0 +1,57 @@
+{
+  "paper_id": "0000.00010",
+  "title_en": "Multi-Agent Debate for Code Repair",
+  "title_ko": "코드 수정을 위한 다중 에이전트 토론",
+  "authors": [
+    "Author 01",
+    "Author 02",
+    "Author 03"
+  ],
+  "org_name": null,
+  "published_at": "2026-09-29",
+  "hf_url": "https://huggingface.co/papers/0000.00010",
+  "arxiv_url": "https://arxiv.org/abs/0000.00010",
+  "topic_primary": "agent",
+  "topic_secondary": null,
+  "ai_status": "ready",
+  "summary_ko": "여러 에이전트가 패치를 제안하고 서로 비판하는 토론 방식으로 코드 오류를 고친 연구예요.",
+  "key_points": [
+    {
+      "claim_ko": "여러 에이전트의 패치 제안과 상호 비판",
+      "evidence_sentence_ids": [
+        "A01"
+      ]
+    },
+    {
+      "claim_ko": "토론을 거치면 예시 테스트 통과율 향상",
+      "evidence_sentence_ids": [
+        "A02"
+      ]
+    }
+  ],
+  "sentences": [
+    {
+      "sentence_id": "A01",
+      "kind": "text",
+      "text": "We let several agents propose and critique patches for failing tests.",
+      "translation_ko": "본 연구는 여러 에이전트가 실패한 테스트에 대한 패치를 제안하고 비판하게 한다."
+    },
+    {
+      "sentence_id": "A02",
+      "kind": "text",
+      "text": "Debate rounds improve the pass rate on the example suite.",
+      "translation_ko": "토론 횟수를 거치면 예시 테스트 묶음의 통과율이 높아진다."
+    }
+  ],
+  "glossary": [
+    {
+      "term": "patches",
+      "definition_ko": "프로그램의 오류를 고치기 위해 원래 코드에 적용하는 변경분.",
+      "context_ko": "에이전트들이 제안하고 비판하는 대상이다.",
+      "sentence_ids": [
+        "A01"
+      ],
+      "highlight": true
+    }
+  ]
+}

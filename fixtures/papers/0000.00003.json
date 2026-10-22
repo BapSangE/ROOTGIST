@@ -1,0 +1,74 @@
+{
+  "paper_id": "0000.00003",
+  "title_en": "Policy Optimization from Preferences without a Reward Model",
+  "title_ko": "보상 모델 없이 선호를 학습하는 정책 최적화",
+  "authors": [
+    "Author 01",
+    "Author 02",
+    "Author 03",
+    "Author 04",
+    "Author 05"
+  ],
+  "org_name": null,
+  "published_at": "2026-10-17",
+  "hf_url": "https://huggingface.co/papers/0000.00003",
+  "arxiv_url": "https://arxiv.org/abs/0000.00003",
+  "topic_primary": "llm",
+  "topic_secondary": null,
+  "ai_status": "ready",
+  "summary_ko": "보상 모델을 따로 학습하지 않고 쌍별 선호 데이터로 정책을 바로 갱신하는 목적 함수를 제안한 연구예요. 예시 과제에서 기존 두 단계 방식과 비슷한 성능을 보였다고 해요.",
+  "key_points": [
+    {
+      "claim_ko": "쌍별 선호로 정책을 직접 갱신하는 목적 함수",
+      "evidence_sentence_ids": [
+        "A02"
+      ]
+    },
+    {
+      "claim_ko": "예시 과제에서 두 단계 방식과 비슷한 성능",
+      "evidence_sentence_ids": [
+        "A03"
+      ]
+    }
+  ],
+  "sentences": [
+    {
+      "sentence_id": "A01",
+      "kind": "text",
+      "text": "Preference learning usually trains a separate reward model before policy optimization.",
+      "translation_ko": "선호 학습은 보통 정책 최적화에 앞서 별도의 보상 모델을 학습한다."
+    },
+    {
+      "sentence_id": "A02",
+      "kind": "text",
+      "text": "We derive an objective that updates the policy directly from pairwise preferences.",
+      "translation_ko": "본 연구는 쌍별 선호로부터 정책을 직접 갱신하는 목적 함수를 유도한다."
+    },
+    {
+      "sentence_id": "A03",
+      "kind": "text",
+      "text": "In our experiments, the objective matches the two-stage pipeline on the example tasks.",
+      "translation_ko": "실험에서 이 목적 함수는 예시 과제에서 두 단계 방식과 비슷한 성능을 보인다."
+    }
+  ],
+  "glossary": [
+    {
+      "term": "reward model",
+      "definition_ko": "사람의 선호를 점수로 예측하도록 학습한 모델로, 강화학습에서 보상 신호로 쓰인다.",
+      "context_ko": "기존 방식에서 정책 최적화 전에 따로 학습하는 모델이다.",
+      "sentence_ids": [
+        "A01"
+      ],
+      "highlight": true
+    },
+    {
+      "term": "pairwise preferences",
+      "definition_ko": "두 응답 가운데 어느 쪽이 더 나은지를 고른 비교 판단 자료.",
+      "context_ko": "제안 방법이 정책을 갱신할 때 직접 쓰는 자료다.",
+      "sentence_ids": [
+        "A02"
+      ],
+      "highlight": true
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "paper_id": "0000.00007",
+  "title_en": "Measuring Calibration in Instruction-Tuned Models",
+  "title_ko": "지시 학습 모델의 보정 정도 측정",
+  "authors": [
+    "Author 01",
+    "Author 02",
+    "Author 03",
+    "Author 04"
+  ],
+  "org_name": null,
+  "published_at": "2026-10-17",
+  "hf_url": "https://huggingface.co/papers/0000.00007",
+  "arxiv_url": "https://arxiv.org/abs/0000.00007",
+  "topic_primary": "llm",
+  "topic_secondary": null,
+  "ai_status": "ready",
+  "summary_ko": "지시 학습 전후로 모델의 확신도와 실제 정확도가 얼마나 맞는지 측정한 연구예요.",
+  "key_points": [
+    {
+      "claim_ko": "예시 질문 묶음에서 학습 전후 보정 정도 측정",
+      "evidence_sentence_ids": [
+        "A02"
+      ]
+    }
+  ],
+  "sentences": [
+    {
+      "sentence_id": "A01",
+      "kind": "text",
+      "text": "Instruction tuning can change how well model confidence matches accuracy.",
+      "translation_ko": "지시 학습은 모델의 확신도가 정확도와 얼마나 맞는지를 바꿀 수 있다."
+    },
+    {
+      "sentence_id": "A02",
+      "kind": "text",
+      "text": "We measure calibration before and after tuning on example question sets.",
+      "translation_ko": "본 연구는 예시 질문 묶음에서 학습 전후의 보정 정도를 측정한다."
+    }
+  ],
+  "glossary": [
+    {
+      "term": "calibration",
+      "definition_ko": "모델이 내놓은 확신도가 실제로 맞힐 확률과 얼마나 일치하는지를 나타내는 성질.",
+      "context_ko": "학습 전후로 비교하는 측정 대상이다.",
+      "sentence_ids": [
+        "A02"
+      ],
+      "highlight": true
+    }
+  ]
+}

@@ -1,0 +1,98 @@
+{
+  "digest_date": "2026-10-19",
+  "status": "published",
+  "last_success_at": "2026-10-18T20:12:00Z",
+  "featured_paper_id": "0000.00001",
+  "papers": [
+    {
+      "paper_id": "0000.00006",
+      "rank": 1,
+      "title_en": "Benchmarking Long-Context Retrieval",
+      "title_ko": null,
+      "first_author": "Author 01",
+      "author_count": 7,
+      "published_at": "2026-10-18",
+      "topic_primary": null,
+      "topic_secondary": null,
+      "key_points_preview": [],
+      "ai_status": "pending"
+    },
+    {
+      "paper_id": "0000.00001",
+      "rank": 2,
+      "title_en": "Efficient Scaling of Inference-Time Compute",
+      "title_ko": "추론 시점 연산의 효율적 확장",
+      "first_author": "Author 01",
+      "author_count": 6,
+      "published_at": "2026-10-18",
+      "topic_primary": "llm",
+      "topic_secondary": "optimization",
+      "key_points_preview": [
+        "입력 복잡도에 따른 추론 연산의 동적 배분",
+        "고정 연산 예산 방식과의 비교 평가"
+      ],
+      "ai_status": "ready"
+    },
+    {
+      "paper_id": "0000.00002",
+      "rank": 3,
+      "title_en": "Generalization of Few-Shot Video Segmentation",
+      "title_ko": "소수 예시 기반 영상 분할의 일반화 성능 분석",
+      "first_author": "Author 01",
+      "author_count": 4,
+      "published_at": "2026-10-18",
+      "topic_primary": "multimodal",
+      "topic_secondary": null,
+      "key_points_preview": [
+        "학습·시험 장면 유형을 분리한 평가 구성",
+        "장면 유형이 다를 때 모든 시험 모델의 정확도 하락"
+      ],
+      "ai_status": "ready"
+    },
+    {
+      "paper_id": "0000.00003",
+      "rank": 4,
+      "title_en": "Policy Optimization from Preferences without a Reward Model",
+      "title_ko": "보상 모델 없이 선호를 학습하는 정책 최적화",
+      "first_author": "Author 01",
+      "author_count": 5,
+      "published_at": "2026-10-17",
+      "topic_primary": "llm",
+      "topic_secondary": null,
+      "key_points_preview": [
+        "쌍별 선호로 정책을 직접 갱신하는 목적 함수",
+        "예시 과제에서 두 단계 방식과 비슷한 성능"
+      ],
+      "ai_status": "ready"
+    },
+    {
+      "paper_id": "0000.00004",
+      "rank": 5,
+      "title_en": "A Tool-Using Agent for Spreadsheet Editing",
+      "title_ko": "스프레드시트 편집을 위한 도구 사용 에이전트",
+      "first_author": "Author 01",
+      "author_count": 1,
+      "published_at": "2026-10-18",
+      "topic_primary": "agent",
+      "topic_secondary": null,
+      "key_points_preview": [
+        "편집 계획 수립과 함수 도구 호출",
+        "한 단계 기준 방식보다 많은 예시 과제 완료"
+      ],
+      "ai_status": "ready"
+    },
+    {
+      "paper_id": "0000.00005",
+      "rank": 6,
+      "title_en": "Faster Training through Gradient Checkpoint Scheduling",
+      "title_ko": "그래디언트 체크포인트 스케줄링을 통한 학습 가속",
+      "first_author": "Author 01",
+      "author_count": 3,
+      "published_at": "2026-10-18",
+      "topic_primary": "optimization",
+      "topic_secondary": null,
+      "key_points_preview": [],
+      "ai_status": "ready"
+    }
+  ]
+}

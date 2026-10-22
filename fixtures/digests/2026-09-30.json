@@ -1,0 +1,39 @@
+{
+  "digest_date": "2026-09-30",
+  "status": "published",
+  "last_success_at": "2026-09-29T20:07:00Z",
+  "featured_paper_id": "0000.00010",
+  "papers": [
+    {
+      "paper_id": "0000.00010",
+      "rank": 1,
+      "title_en": "Multi-Agent Debate for Code Repair",
+      "title_ko": "코드 수정을 위한 다중 에이전트 토론",
+      "first_author": "Author 01",
+      "author_count": 3,
+      "published_at": "2026-09-29",
+      "topic_primary": "agent",
+      "topic_secondary": null,
+      "key_points_preview": [
+        "여러 에이전트의 패치 제안과 상호 비판",
+        "토론을 거치면 예시 테스트 통과율 향상"
+      ],
+      "ai_status": "ready"
+    },
+    {
+      "paper_id": "0000.00011",
+      "rank": 2,
+      "title_en": "Sparse Attention Kernels for Long Inputs",
+      "title_ko": "긴 입력을 위한 희소 어텐션 커널",
+      "first_author": "Author 01",
+      "author_count": 8,
+      "published_at": "2026-09-29",
+      "topic_primary": "optimization",
+      "topic_secondary": "llm",
+      "key_points_preview": [
+        "빈 블록을 건너뛰는 블록 희소 커널 구현"
+      ],
+      "ai_status": "ready"
+    }
+  ]
+}

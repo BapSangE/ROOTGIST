@@ -1,0 +1,189 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rootgist.example/schema/p2-output-v0.2.json",
+  "title": "ROOTGIST P2 model output",
+  "description": "Evaluation output v0.2. glossary mode fixed_terms or auto_select; difficulty and explanation level are independently represented.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "title_ko",
+    "summary_ko",
+    "key_points",
+    "sentence_translations",
+    "glossary",
+    "topic_tags",
+    "limitations",
+    "glossary_mode"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "p2-output-v0.2"
+    },
+    "title_ko": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "summary_ko": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1200
+    },
+    "key_points": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "$ref": "#/$defs/keyPoint"
+      }
+    },
+    "sentence_translations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/translation"
+      }
+    },
+    "glossary": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "$ref": "#/$defs/glossaryEntry"
+      },
+      "description": "fixed_terms: exactly the supplied IDs and terms once each in specified order; auto_select: 0..8 selected terms. Cross-field conditions validated separately."
+    },
+    "topic_tags": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 2,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "llm",
+          "agent",
+          "multimodal",
+          "optimization",
+          "other"
+        ]
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 500
+      }
+    },
+    "glossary_mode": {
+      "enum": [
+        "fixed_terms",
+        "auto_select"
+      ]
+    }
+  },
+  "$defs": {
+    "sentenceId": {
+      "type": "string",
+      "pattern": "^A[0-9]{2,4}$"
+    },
+    "keyPoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "claim_ko",
+        "evidence_sentence_ids"
+      ],
+      "properties": {
+        "claim_ko": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400
+        },
+        "evidence_sentence_ids": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/sentenceId"
+          }
+        }
+      }
+    },
+    "translation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sentence_id",
+        "translation_ko"
+      ],
+      "properties": {
+        "sentence_id": {
+          "$ref": "#/$defs/sentenceId"
+        },
+        "translation_ko": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        }
+      }
+    },
+    "glossaryEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "term",
+        "definition_ko",
+        "context_ko",
+        "sentence_ids",
+        "term_id",
+        "term_difficulty",
+        "explanation_level"
+      ],
+      "properties": {
+        "term": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "definition_ko": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "context_ko": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "sentence_ids": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/sentenceId"
+          }
+        },
+        "term_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 100
+        },
+        "term_difficulty": {
+          "enum": [
+            "introductory",
+            "intermediate",
+            "advanced",
+            "unknown"
+          ]
+        },
+        "explanation_level": {
+          "const": "standard"
+        }
+      }
+    }
+  }
+}

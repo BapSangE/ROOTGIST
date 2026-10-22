@@ -1,0 +1,56 @@
+{
+  "paper_id": "0000.00011",
+  "title_en": "Sparse Attention Kernels for Long Inputs",
+  "title_ko": "긴 입력을 위한 희소 어텐션 커널",
+  "authors": [
+    "Author 01",
+    "Author 02",
+    "Author 03",
+    "Author 04",
+    "Author 05",
+    "Author 06",
+    "Author 07",
+    "Author 08"
+  ],
+  "org_name": null,
+  "published_at": "2026-09-29",
+  "hf_url": "https://huggingface.co/papers/0000.00011",
+  "arxiv_url": "https://arxiv.org/abs/0000.00011",
+  "topic_primary": "optimization",
+  "topic_secondary": "llm",
+  "ai_status": "ready",
+  "summary_ko": "긴 입력에서 어텐션 비용을 줄이기 위해 빈 블록을 건너뛰는 희소 커널을 구현한 연구예요.",
+  "key_points": [
+    {
+      "claim_ko": "빈 블록을 건너뛰는 블록 희소 커널 구현",
+      "evidence_sentence_ids": [
+        "A02"
+      ]
+    }
+  ],
+  "sentences": [
+    {
+      "sentence_id": "A01",
+      "kind": "text",
+      "text": "Dense attention cost grows quadratically with input length.",
+      "translation_ko": "밀집 어텐션의 비용은 입력 길이의 제곱에 비례해 늘어난다."
+    },
+    {
+      "sentence_id": "A02",
+      "kind": "text",
+      "text": "We implement block-sparse kernels that skip empty blocks.",
+      "translation_ko": "본 연구는 비어 있는 블록을 건너뛰는 블록 희소 커널을 구현한다."
+    }
+  ],
+  "glossary": [
+    {
+      "term": "Dense attention",
+      "definition_ko": "입력의 모든 위치 쌍 사이의 관계를 계산하는 어텐션 방식.",
+      "context_ko": "비용 문제의 출발점으로 제시된다.",
+      "sentence_ids": [
+        "A01"
+      ],
+      "highlight": true
+    }
+  ]
+}

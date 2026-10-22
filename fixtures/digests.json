@@ -1,0 +1,54 @@
+{
+  "fixture_today": "2026-10-19",
+  "digests": [
+    {
+      "digest_date": "2026-10-19",
+      "source_date": "2026-10-18",
+      "status": "published",
+      "paper_count": 6,
+      "primary_topic": "llm",
+      "last_success_at": "2026-10-18T20:12:00Z"
+    },
+    {
+      "digest_date": "2026-10-18",
+      "source_date": "2026-10-17",
+      "status": "published",
+      "paper_count": 3,
+      "primary_topic": "llm",
+      "last_success_at": "2026-10-17T20:09:00Z"
+    },
+    {
+      "digest_date": "2026-10-17",
+      "source_date": "2026-10-16",
+      "status": "delayed",
+      "paper_count": 0,
+      "primary_topic": null,
+      "last_success_at": "2026-10-17T00:00:00Z"
+    },
+    {
+      "digest_date": "2026-10-16",
+      "source_date": "2026-10-15",
+      "status": "empty",
+      "paper_count": 0,
+      "primary_topic": null,
+      "last_success_at": "2026-10-15T20:04:00Z"
+    },
+    {
+      "digest_date": "2026-09-30",
+      "source_date": "2026-09-29",
+      "status": "published",
+      "paper_count": 2,
+      "primary_topic": "agent",
+      "last_success_at": "2026-09-29T20:07:00Z"
+    },
+    {
+      "digest_date": "2026-09-29",
+      "source_date": "2026-09-28",
+      "status": "published",
+      "paper_count": 1,
+      "primary_topic": "other",
+      "last_success_at": "2026-09-28T20:06:00Z"
+    }
+  ],
+  "next_cursor": null
+}

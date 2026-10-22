@@ -1,0 +1,44 @@
+{
+  "paper_id": "0000.00005",
+  "title_en": "Faster Training through Gradient Checkpoint Scheduling",
+  "title_ko": "그래디언트 체크포인트 스케줄링을 통한 학습 가속",
+  "authors": [
+    "Author 01",
+    "Author 02",
+    "Author 03"
+  ],
+  "org_name": null,
+  "published_at": "2026-10-18",
+  "hf_url": "https://huggingface.co/papers/0000.00005",
+  "arxiv_url": "https://arxiv.org/abs/0000.00005",
+  "topic_primary": "optimization",
+  "topic_secondary": null,
+  "ai_status": "ready",
+  "summary_ko": "메모리를 아끼는 그래디언트 체크포인팅에서 어떤 지점을 저장할지 고르는 경험 규칙을 설명한 글이에요.",
+  "key_points": [],
+  "sentences": [
+    {
+      "sentence_id": "A01",
+      "kind": "text",
+      "text": "Gradient checkpointing reduces memory use at the cost of extra computation.",
+      "translation_ko": "그래디언트 체크포인팅은 추가 계산을 감수하고 메모리 사용량을 줄인다."
+    },
+    {
+      "sentence_id": "A02",
+      "kind": "text",
+      "text": "This note describes a scheduling heuristic for choosing checkpoints.",
+      "translation_ko": "이 글은 체크포인트를 고르는 스케줄링 경험 규칙을 설명한다."
+    }
+  ],
+  "glossary": [
+    {
+      "term": "Gradient checkpointing",
+      "definition_ko": "역전파에 필요한 중간값 일부만 저장하고 나머지는 다시 계산해 메모리를 아끼는 학습 기법.",
+      "context_ko": "이 글이 스케줄링 대상으로 삼는 기법이다.",
+      "sentence_ids": [
+        "A01"
+      ],
+      "highlight": true
+    }
+  ]
+}

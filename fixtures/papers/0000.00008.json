@@ -1,0 +1,43 @@
+{
+  "paper_id": "0000.00008",
+  "title_en": "Text-Guided Image Editing with Layout Constraints",
+  "title_ko": "배치 제약을 둔 텍스트 기반 이미지 편집",
+  "authors": [
+    "Author 01",
+    "Author 02",
+    "Author 03",
+    "Author 04",
+    "Author 05"
+  ],
+  "org_name": "Example Studio",
+  "published_at": "2026-10-17",
+  "hf_url": "https://huggingface.co/papers/0000.00008",
+  "arxiv_url": "https://arxiv.org/abs/0000.00008",
+  "topic_primary": "multimodal",
+  "topic_secondary": null,
+  "ai_status": "ready",
+  "summary_ko": "텍스트로 이미지를 편집할 때 선택한 영역이 움직이지 않도록 배치 제약을 더한 연구예요.",
+  "key_points": [
+    {
+      "claim_ko": "편집 중 선택 영역을 고정하는 배치 제약",
+      "evidence_sentence_ids": [
+        "A02"
+      ]
+    }
+  ],
+  "sentences": [
+    {
+      "sentence_id": "A01",
+      "kind": "text",
+      "text": "Text-guided editors may move objects that the user wanted to keep in place.",
+      "translation_ko": "텍스트 기반 편집기는 사용자가 그대로 두려던 물체를 옮길 수 있다."
+    },
+    {
+      "sentence_id": "A02",
+      "kind": "text",
+      "text": "We add layout constraints that fix selected regions during editing.",
+      "translation_ko": "본 연구는 편집 중 선택한 영역을 고정하는 배치 제약을 추가한다."
+    }
+  ],
+  "glossary": []
+}

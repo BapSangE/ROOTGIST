@@ -1,0 +1,23 @@
+{
+  "digest_date": "2026-09-29",
+  "status": "published",
+  "last_success_at": "2026-09-28T20:06:00Z",
+  "featured_paper_id": "0000.00012",
+  "papers": [
+    {
+      "paper_id": "0000.00012",
+      "rank": 1,
+      "title_en": "A Survey Dataset of Lab Notebook Practices",
+      "title_ko": "연구 노트 작성 관행 조사 데이터셋",
+      "first_author": "Author 01",
+      "author_count": 2,
+      "published_at": "2026-09-28",
+      "topic_primary": "other",
+      "topic_secondary": null,
+      "key_points_preview": [
+        "연구 노트 작성 방식에 대한 설문 응답 수집"
+      ],
+      "ai_status": "ready"
+    }
+  ]
+}

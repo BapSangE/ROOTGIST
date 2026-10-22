@@ -1,0 +1,53 @@
+{
+  "digest_date": "2026-10-18",
+  "status": "published",
+  "last_success_at": "2026-10-17T20:09:00Z",
+  "featured_paper_id": "0000.00007",
+  "papers": [
+    {
+      "paper_id": "0000.00007",
+      "rank": 1,
+      "title_en": "Measuring Calibration in Instruction-Tuned Models",
+      "title_ko": "지시 학습 모델의 보정 정도 측정",
+      "first_author": "Author 01",
+      "author_count": 4,
+      "published_at": "2026-10-17",
+      "topic_primary": "llm",
+      "topic_secondary": null,
+      "key_points_preview": [
+        "예시 질문 묶음에서 학습 전후 보정 정도 측정"
+      ],
+      "ai_status": "ready"
+    },
+    {
+      "paper_id": "0000.00008",
+      "rank": 2,
+      "title_en": "Text-Guided Image Editing with Layout Constraints",
+      "title_ko": "배치 제약을 둔 텍스트 기반 이미지 편집",
+      "first_author": "Author 01",
+      "author_count": 5,
+      "published_at": "2026-10-17",
+      "topic_primary": "multimodal",
+      "topic_secondary": null,
+      "key_points_preview": [
+        "편집 중 선택 영역을 고정하는 배치 제약"
+      ],
+      "ai_status": "ready"
+    },
+    {
+      "paper_id": "0000.00009",
+      "rank": 3,
+      "title_en": "Planning Web Navigation with Subgoal Memory",
+      "title_ko": "하위 목표 기억을 활용한 웹 탐색 계획",
+      "first_author": "Author 01",
+      "author_count": 6,
+      "published_at": "2026-10-17",
+      "topic_primary": "agent",
+      "topic_secondary": "llm",
+      "key_points_preview": [
+        "완료한 하위 목표 저장과 행동 전 참고"
+      ],
+      "ai_status": "ready"
+    }
+  ]
+}
