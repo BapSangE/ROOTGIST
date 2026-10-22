@@ -21,7 +21,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
-from . import build, collect, llm, split, validate
+from . import build, collect, glossary, llm, split, validate
 from .db import Db
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -122,6 +122,7 @@ def main(argv=None):
 
     if db:
         _save(db, entry, ordered, prior, exposed_ids, late, made, day["featured_paper_id"])
+        glossary.sync(db)  # 새 논문 용어를 사전에 연결하고, 없는 표기는 후보로 쌓는다
     ready = sum(d["ai_status"] == "ready" for d in details)
     print(f"저장: {args.out}{' + Supabase' if db else ''} (digest {digest_date}, 해설 {ready}/{len(details)}편)")
     return 0

@@ -34,6 +34,20 @@ class Db:
     def select(self, table: str, query: str) -> list[dict]:
         return self._req("GET", f"{table}?{query}")
 
+    def select_all(self, table: str, query: str, page: int = 1000) -> list[dict]:
+        """PostgREST는 한 번에 최대 1000행이라 나눠 받는다. query에 order가 있어야 페이지가 안정적이다."""
+        rows, offset = [], 0
+        while True:
+            got = self.select(table, f"{query}&limit={page}&offset={offset}")
+            rows += got
+            if len(got) < page:
+                return rows
+            offset += page
+
+    def update(self, table: str, values: dict, **eq):
+        q = "&".join(f"{k}=eq.{urllib.parse.quote(str(v))}" for k, v in eq.items())
+        self._req("PATCH", f"{table}?{q}", values, "return=minimal")
+
     def rpc(self, fn: str, **args):
         return self._req("POST", f"rpc/{fn}", args)
 

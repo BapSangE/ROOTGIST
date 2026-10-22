@@ -107,6 +107,26 @@ class BuildTest(unittest.TestCase):
         self.assertEqual(build.primary_topic([pending, ready], "0000.00002"), "optimization")
 
 
+class GlossaryLinkTest(unittest.TestCase):
+    def test_single_sense_links_ambiguous_and_missing(self):
+        from . import glossary
+        aliases = [
+            {"sense_id": "S-backbone", "surface_form": "backbone"},
+            {"sense_id": "S-agent-rl", "surface_form": "agent"},
+            {"sense_id": "S-agent-ai", "surface_form": "Agent"},  # 같은 표기, 다른 의미
+        ]
+        rows = [
+            {"paper_id": "p", "idx": 0, "term": "Backbones"},  # 대소문자·복수형
+            {"paper_id": "p", "idx": 1, "term": "agent"},  # 다의어 → 연결도 후보도 아님
+            {"paper_id": "p", "idx": 2, "term": "trajectory-drift"},
+            {"paper_id": "q", "idx": 0, "term": "trajectory drift"},  # 같은 표기는 후보 하나로
+        ]
+        links, candidates = glossary.plan_links(rows, aliases)
+        self.assertEqual(links, [("p", 0, "S-backbone")])
+        self.assertEqual(list(candidates), ["trajectory drift"])
+        self.assertEqual(len(candidates["trajectory drift"]), 2)
+
+
 class GenerateTest(unittest.TestCase):
     """ops config 2장 재시도·예비 모델 전환."""
 
