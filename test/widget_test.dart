@@ -194,6 +194,12 @@ void main() {
     expect(h.keys, unorderedEquals(['A01', 'A03'])); // Benchmark(highlight=false)는 없음
     expect(h['A01']!.single.$2.term, 'inference-time compute');
     expect(h['A01']!.single.$1, 'For large language models, '.length);
+
+    // G2: 한국어 대응어가 있는 용어만 번역문에서 찾는다
+    final ko = firstHighlights(p, korean: true);
+    expect(ko.keys, ['A01']);
+    expect(ko['A01']!.single.$3, '추론 시점 연산');
+    expect(ko['A01']!.single.$1, '대규모 언어 모델에서 '.length);
   });
 
   testWidgets('S03: 모드 전환, 용어 탭 → C02', (tester) async {
@@ -212,6 +218,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('이 논문에서의 뜻'), findsOneWidget);
     expect(find.text(keepAll('학습이나 추론에 쓸 수 있도록 미리 정해 둔 계산량의 한도.')), findsOneWidget);
+    await tester.tap(find.text('닫기'));
+    await tester.pumpAndSettle();
+
+    // 함께 모드: 같은 용어가 영문·한국어 양쪽에 강조되고, 한국어 쪽을 눌러도 C02에 대응어가 나온다(G1·G2)
+    expect(find.bySemanticsLabel('용어 설명: inference-time compute'), findsNWidgets(2));
+    await tester.tap(find.bySemanticsLabel('용어 설명: inference-time compute').first);
+    await tester.pumpAndSettle();
+    expect(find.text('추론 시점 연산'), findsWidgets);
     await tester.tap(find.text('닫기'));
     await tester.pumpAndSettle();
 

@@ -154,6 +154,8 @@ class DataSourceScreen extends StatelessWidget {
     'ROOTGIST는 Hugging Face Daily Papers에 매일 올라오는 논문을 모아요.',
     '그날 upvote가 많은 상위 10편을 골라요. 이 순서는 Hugging Face 이용자들의 반응이고, ROOTGIST가 논문을 평가한 결과가 아니에요.',
     '각 논문의 원문은 상세 화면의 Hugging Face·arXiv 링크에서 확인할 수 있어요.',
+    // 용어 사전 출처 표시 의무(CC BY 4.0·Apache 2.0, 연구 레포 term_collection_plan 3장). 권리 검토(A8) 때 문구 확정.
+    '일부 용어의 한국어 표기는 Google 「Machine Learning Glossary」(CC BY 4.0)와 Hugging Face Transformers 문서 용어집(Apache 2.0)을 바탕으로 수정·번역했어요.',
   ];
 
   @override

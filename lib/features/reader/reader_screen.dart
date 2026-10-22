@@ -166,6 +166,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
                     );
                   }
                   final highlights = firstHighlights(p);
+                  final highlightsKo = firstHighlights(p, korean: true);
                   return SingleChildScrollView(
                     controller: _scroll,
                     padding: EdgeInsets.fromLTRB(
@@ -194,6 +195,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
                                   sentence: s,
                                   mode: _mode,
                                   highlights: highlights[s.id] ?? const [],
+                                  highlightsKo: highlightsKo[s.id] ?? const [],
                                 ),
                             ],
                           ),
@@ -212,10 +214,17 @@ class _ReaderScreenState extends State<ReaderScreen> {
 }
 
 class _Pair extends StatelessWidget {
-  const _Pair({super.key, required this.sentence, required this.mode, required this.highlights});
+  const _Pair({
+    super.key,
+    required this.sentence,
+    required this.mode,
+    required this.highlights,
+    required this.highlightsKo,
+  });
   final Sentence sentence;
   final ReaderMode mode;
-  final List<(int, GlossaryTerm)> highlights;
+  final List<Highlight> highlights;
+  final List<Highlight> highlightsKo;
 
   @override
   Widget build(BuildContext context) {
@@ -230,27 +239,41 @@ class _Pair extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: RgSpace.s8,
       children: [
-        if (showKo) Text(keepAll(ko), style: RgText.bodyReaderKo),
-        if (showEn) Text.rich(_highlighted(context, latexDisplay(sentence.text), enStyle)),
+        if (showKo) Text.rich(_highlighted(ko, highlightsKo, RgText.bodyReaderKo, keepAll)),
+        if (showEn) Text.rich(_highlighted(latexDisplay(sentence.text), highlights, enStyle, (s) => s)),
       ],
     );
   }
 
-  TextSpan _highlighted(BuildContext context, String text, TextStyle style) {
+  // 한국어는 하이라이트 사이 조각마다 keepAll을 적용한다(위치는 원래 문자열 기준이라 먼저 나눈 뒤 변환).
+  TextSpan _highlighted(String text, List<Highlight> hs, TextStyle style, String Function(String) wrap) {
     final spans = <InlineSpan>[];
     var at = 0;
-    for (final (start, t) in highlights) {
-      spans.add(TextSpan(text: text.substring(at, start)));
+    for (final (start, t, label) in hs) {
+      spans.add(TextSpan(text: wrap(text.substring(at, start))));
+      // 용어 뒤에 공백 없이 붙은 글자(조사 「을」, 복수 「s.」)는 같은 덩어리로 묶어 줄 끝에서 갈라지지 않게 한다.
+      final end = start + label.length;
+      final gap = text.indexOf(RegExp(r'\s'), end);
+      final suffix = text.substring(end, gap < 0 ? text.length : gap);
       spans.add(
         WidgetSpan(
           alignment: PlaceholderAlignment.baseline,
           baseline: TextBaseline.alphabetic,
-          child: _Term(term: t, style: style),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              // 한 줄보다 긴 용어(큰 글씨·좁은 화면)는 하이라이트 안에서 줄을 바꿀 수 있어야 한다
+              Flexible(child: _Term(term: t, label: label, style: style)),
+              if (suffix.isNotEmpty) Text(suffix, style: style, textScaler: TextScaler.noScaling),
+            ],
+          ),
         ),
       );
-      at = start + t.term.length;
+      at = end + suffix.length;
     }
-    spans.add(TextSpan(text: text.substring(at)));
+    spans.add(TextSpan(text: wrap(text.substring(at))));
     return TextSpan(style: style, children: spans);
   }
 }
@@ -258,8 +281,9 @@ class _Pair extends StatelessWidget {
 // 용어 하이라이트: highlight 배경, 모서리 4, 여백 3/1. 누름·시트 열림 동안 highlightActive.
 // ponytail: WidgetSpan이라 여러 단어 용어가 줄 끝에서 통째로 다음 줄로 넘어간다. 시안처럼 쪼개려면 TextSpan 배경 + 직접 그리기.
 class _Term extends StatefulWidget {
-  const _Term({required this.term, required this.style});
+  const _Term({required this.term, required this.label, required this.style});
   final GlossaryTerm term;
+  final String label; // 화면에 보이는 표기(영문 원어 또는 한국어 대응어)
   final TextStyle style;
 
   @override
@@ -291,24 +315,32 @@ class _TermState extends State<_Term> {
             borderRadius: BorderRadius.circular(RgRadius.term),
           ),
           // 문장 Text.rich가 WidgetSpan 자리를 이미 글자 배율만큼 키우므로 여기서 또 키우지 않는다.
-          child: Text(widget.term.term, style: widget.style, textScaler: TextScaler.noScaling),
+          child: Text(widget.label, style: widget.style, textScaler: TextScaler.noScaling),
         ),
       ),
     );
   }
 }
 
-// 문장 ID → [(시작 위치, 용어)]. 용어마다 리더 전체에서 처음 나온 1회만, 표시 문자열(8.3 변환 후) 기준.
-// highlight=false 이거나 정의가 빈 용어는 강조하지 않는다(8.4, 7.5).
-Map<String, List<(int, GlossaryTerm)>> firstHighlights(PaperDetail p) {
-  final out = <String, List<(int, GlossaryTerm)>>{};
-  for (final t in p.glossary.where((t) => t.highlight && t.definition.isNotEmpty)) {
+typedef Highlight = (int start, GlossaryTerm term, String label);
+
+// 문장 ID → [(시작 위치, 용어, 표기)]. 용어마다 리더 전체에서 처음 나온 1회만.
+// 영문: 표시 문자열(8.3 변환 후)에서 원어를 찾는다. highlight=false 이거나 정의가 빈 용어는 강조하지 않는다(8.4, 7.5).
+// 한국어(G2): 사전에 연결된 용어의 한국어 대응어를 번역문에서 찾는다. 「강화 학습 (RL)」처럼 뒤 괄호는 떼고 찾는다.
+Map<String, List<Highlight>> firstHighlights(PaperDetail p, {bool korean = false}) {
+  final out = <String, List<Highlight>>{};
+  final terms = korean
+      ? p.glossary.where((t) => t.termKo != null && t.definition.isNotEmpty)
+      : p.glossary.where((t) => t.highlight && t.definition.isNotEmpty);
+  for (final t in terms) {
+    final label = korean ? t.termKo!.replaceFirst(RegExp(r'\s*\(.*\)$'), '') : t.term;
+    if (label.isEmpty) continue;
     for (final s in p.sentences.where((s) => s.kind == 'text' && t.sentenceIds.contains(s.id))) {
-      final start = latexDisplay(s.text).indexOf(t.term);
+      final start = (korean ? s.translation ?? '' : latexDisplay(s.text)).indexOf(label);
       if (start < 0) continue;
       final list = out.putIfAbsent(s.id, () => []);
-      final end = start + t.term.length;
-      if (list.every((h) => end <= h.$1 || start >= h.$1 + h.$2.term.length)) list.add((start, t)); // 겹침 제외
+      final end = start + label.length;
+      if (list.every((h) => end <= h.$1 || start >= h.$1 + h.$3.length)) list.add((start, t, label)); // 겹침 제외
       break;
     }
   }

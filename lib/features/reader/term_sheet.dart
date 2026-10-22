@@ -6,7 +6,7 @@ import '../../design/typography.dart';
 import '../../design/widgets/rg_bottom_sheet.dart';
 import '../../design/widgets/rg_buttons.dart';
 
-// C02 용어 설명 시트 (HANDOFF 7.5). 한국어 대응어 행은 데이터가 없어 생략(G1).
+// C02 용어 설명 시트 (HANDOFF 7.5). 한국어 대응어는 용어 사전에 연결된 경우에만(G1).
 Future<void> showTermSheet(BuildContext context, GlossaryTerm t) {
   return showRgBottomSheet<void>(
     context,
@@ -17,6 +17,10 @@ Future<void> showTermSheet(BuildContext context, GlossaryTerm t) {
         Text('용어', style: RgText.caption.copyWith(color: RgColors.textSecondary)),
         const SizedBox(height: RgSpace.s6),
         Semantics(header: true, child: Text(t.term, style: RgText.serifTerm)),
+        if (t.termKo != null) ...[
+          const SizedBox(height: RgSpace.s6),
+          Text(t.termKo!, style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
+        ],
         const Padding(
           padding: EdgeInsets.symmetric(vertical: RgSpace.s18),
           child: Divider(height: 1, thickness: 1, color: RgColors.dividerCard),

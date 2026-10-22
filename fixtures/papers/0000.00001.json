@@ -78,7 +78,8 @@
       "sentence_ids": [
         "A01"
       ],
-      "highlight": true
+      "highlight": true,
+      "term_ko": "추론 시점 연산"
     },
     {
       "term": "compute budget",
