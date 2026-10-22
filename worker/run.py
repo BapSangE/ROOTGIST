@@ -1,6 +1,6 @@
 """하루치 배치: 수집 → 상위 10편 선별 → 문장 분할 → LLM(auto_select) → 검증 → 후처리 → 저장.
 
-    python -m worker.run                    # 어제(UTC) 목록, 상위 10편
+    python -m worker.run                    # 어제(KST 기준) UTC 날짜 D 목록, 상위 10편
     python -m worker.run --date 2026-10-21  # 특정 UTC 날짜 D
     python -m worker.run --limit 1          # 1편만(짧은 확인용)
 
@@ -44,12 +44,14 @@ def setting(*names: str) -> str | None:
 def main(argv=None):
     sys.stdout.reconfigure(line_buffering=True)  # 파이프로 받아도 진행 줄이 바로 보이게
     ap = argparse.ArgumentParser()
-    ap.add_argument("--date", help="UTC 날짜 D (YYYY-MM-DD). 기본: 어제(UTC)")
+    ap.add_argument("--date", help="UTC 날짜 D (YYYY-MM-DD). 기본: KST 기준 어제")
     ap.add_argument("--limit", type=int, default=10, help="노출·해설 편수(기본 10)")
     ap.add_argument("--out", type=Path, default=ROOT / "worker" / "out")
     args = ap.parse_args(argv)
 
-    source_date = args.date or (datetime.now(timezone.utc).date() - timedelta(days=1)).isoformat()
+    # 기본 D = KST 기준 어제. 예약 실행(KST 05:00 = UTC 20:00 전날)에서도 수동 실행에서도 같은 날을 고른다.
+    kst_today = datetime.now(timezone(timedelta(hours=9))).date()
+    source_date = args.date or (kst_today - timedelta(days=1)).isoformat()
     digest_date = (date.fromisoformat(source_date) + timedelta(days=1)).isoformat()  # KST 05:00 배치일 = D+1
     raw = args.out / "raw" / source_date
     raw.mkdir(parents=True, exist_ok=True)

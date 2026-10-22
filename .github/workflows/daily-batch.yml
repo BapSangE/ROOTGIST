@@ -1,0 +1,43 @@
+# 매일 KST 05:00 배치 (HANDOFF 3장, ops config 1.1).
+# 1) 어제(KST 기준) D 목록으로 새 다이제스트, 2) 그 전날 D-1 목록 다시 받아 보충(늦게 온 논문·해설 준비 중 재시도).
+# 비밀값: NVIDIA_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (Repository secrets).
+# 실제 초록·번역이 담긴 worker/out은 아티팩트로 올리지 않는다(공개 레포, HANDOFF 0.1).
+name: daily-batch
+
+on:
+  schedule:
+    - cron: "0 20 * * *" # UTC 20:00 = KST 05:00. GitHub 예약은 수십 분 늦게 시작할 수 있다
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "UTC 날짜 D (YYYY-MM-DD). 비우면 KST 기준 어제"
+        required: false
+
+concurrency:
+  group: daily-batch
+  cancel-in-progress: false
+
+jobs:
+  batch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150 # 예비 모델 전환 시 1시간 안팎(ops config 1.1) × 두 날짜
+    env:
+      NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r worker/requirements.txt
+      - name: 새 다이제스트 (D)
+        run: |
+          D="${{ inputs.date }}"
+          D="${D:-$(TZ=Asia/Seoul date -d yesterday +%F)}"
+          echo "D=$D" >> "$GITHUB_ENV"
+          python -m worker.run --date "$D"
+      - name: 보충 (D-1)
+        if: always()
+        run: python -m worker.run --date "$(date -d "$D -1 day" +%F)"
