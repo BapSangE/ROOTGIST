@@ -9,6 +9,7 @@ import 'design/typography.dart';
 import 'design/widgets/rg_bottom_tab_bar.dart';
 import 'debug/widget_gallery.dart';
 import 'features/home/home_screen.dart';
+import 'features/paper/paper_screen.dart';
 
 const _tabs = [
   RgTab('홈', 'house'),
@@ -35,17 +36,24 @@ final router = GoRouter(
           ]),
       ],
     ),
-    // S02는 탭바 없이 쉘 위로 푸시된다(7.0). ponytail: 다음 단계에서 실제 S02로 교체.
+    // S02·S03은 탭바 없이 쉘 위로 푸시된다(7.0).
     GoRoute(
       path: '/paper/:id',
-      builder: (_, state) => Scaffold(
-        body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(RgSpace.gutterText),
-            child: Text('S02 준비 중\n${state.pathParameters['id']}', style: RgText.titleDetail),
+      builder: (_, state) => PaperScreen(paperId: state.pathParameters['id']!),
+      routes: [
+        // ponytail: S03 단계에서 실제 리더로 교체. ?s=문장ID 로 스크롤 위치를 받는다.
+        GoRoute(
+          path: 'reader',
+          builder: (_, state) => Scaffold(
+            body: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(RgSpace.gutterText),
+                child: Text('S03 준비 중\n${state.uri.queryParameters['s'] ?? ''}', style: RgText.titleDetail),
+              ),
+            ),
           ),
         ),
-      ),
+      ],
     ),
     if (kDebugMode) GoRoute(path: '/gallery', builder: (_, _) => const WidgetGallery()),
   ],

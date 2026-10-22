@@ -17,6 +17,8 @@ class FixtureRepository {
     if (entry['status'] != 'published') return Digest.fromJson(entry);
     return Digest.fromJson(await _load('digests/$date.json'));
   }
+
+  Future<PaperDetail> getPaper(String id) async => PaperDetail.fromJson(await _load('papers/$id.json'));
 }
 
 final repository = FixtureRepository();

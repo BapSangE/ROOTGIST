@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:rootgist/app_shell.dart';
+import 'package:rootgist/data/models.dart';
 import 'package:rootgist/data/repository.dart';
 import 'package:rootgist/debug/widget_gallery.dart';
 import 'package:rootgist/design/typography.dart';
@@ -16,6 +17,15 @@ Future<void> pumpApp(WidgetTester tester) async {
   router.go('/home'); // 전역 라우터라 이전 테스트의 탭 위치가 남는다
   await tester.runAsync(() async {
     await tester.pumpWidget(const RootgistApp());
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+  });
+  await tester.pumpAndSettle();
+}
+
+// 화면 이동 뒤 새 화면의 fixture 읽기도 같은 이유로 실제 async 영역에서 프레임을 그린다.
+Future<void> settle(WidgetTester tester) async {
+  await tester.runAsync(() async {
+    await tester.pump();
     await Future<void>.delayed(const Duration(milliseconds: 200));
   });
   await tester.pumpAndSettle();
@@ -76,8 +86,52 @@ void main() {
     expect(bookmarks.value, {'0000.00001'});
 
     await tester.tap(find.text(keepAll('소수 예시 기반 영상 분할의 일반화 성능 분석')));
+    await settle(tester);
+    expect(find.text('arXiv · 0000.00002'), findsOneWidget);
+  });
+
+  test('8.3 LaTeX 표시 변환과 근거 없는 핵심 내용 제외', () {
+    expect(latexDisplay(r'uses 30\% less, a\_b \& c'), 'uses 30% less, a_b & c');
+    expect(latexDisplay(r'3 \times 4 and 10\times faster'), '3×4 and 10× faster');
+    expect(latexDisplay(r'a~b\,c'), 'a b c');
+
+    final p = PaperDetail.fromJson({
+      'paper_id': 'x', 'title_en': 'T', 'authors': ['A'], 'published_at': '2026-10-18',
+      'hf_url': '', 'arxiv_url': '', 'ai_status': 'ready',
+      'key_points': [
+        {'claim_ko': '근거 있음', 'evidence_sentence_ids': ['A03']},
+        {'claim_ko': '근거 없음', 'evidence_sentence_ids': []},
+      ],
+    });
+    expect(p.keyPoints.map((k) => k.claim), ['근거 있음']);
+    expect(p.authorLine, 'A'); // 단독 저자는 「외」 없음
+    expect(sentenceNumber('A03'), 3);
+  });
+
+  testWidgets('S02: 근거 링크 → C01 시트, 게시 조직 행(G8)', (tester) async {
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+
+    router.push('/paper/0000.00001');
+    await settle(tester);
+    expect(find.text('Efficient Scaling of Inference-Time Compute'), findsOneWidget);
+    expect(find.text('원문 근거 · 초록 4번째 문장'), findsOneWidget);
+    expect(find.text('게시 조직'), findsNothing);
+
+    await tester.tap(find.text('원문 근거 · 초록 4번째 문장'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('0000.00002'), findsOneWidget);
+    expect(find.text('핵심 내용 3의 근거'), findsOneWidget);
+    expect(find.text('On the example benchmark, the method uses 30% less compute at matched accuracy.'), findsOneWidget);
+
+    await tester.tap(find.text('닫기'));
+    await tester.pumpAndSettle();
+    expect(find.text('핵심 내용 3의 근거'), findsNothing);
+
+    router.push('/paper/0000.00004');
+    await settle(tester);
+    expect(find.text('Example Lab'), findsOneWidget);
   });
 
   testWidgets('위젯 갤러리: 세그먼트·북마크·시트가 동작한다', (tester) async {
