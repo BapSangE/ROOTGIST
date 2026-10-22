@@ -7,6 +7,9 @@ import 'package:rootgist/app_shell.dart';
 import 'package:rootgist/data/models.dart';
 import 'package:rootgist/data/repository.dart';
 import 'package:rootgist/data/settings.dart';
+import 'package:rootgist/data/supabase_repository.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:rootgist/data/storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rootgist/features/settings/ai_notice_sheet.dart';
@@ -406,6 +409,38 @@ void main() {
     final bullet = tester.widget<Text>(find.text(keepAll('입력 복잡도에 따른 추론 연산의 동적 배분')));
     expect(bullet.maxLines, 2);
     expect(bullet.overflow, TextOverflow.ellipsis);
+  });
+
+  test('M5: Supabase 읽기 함수 호출, 응답 캐시, 실패 시 캐시·오프라인 오류', () async {
+    final calls = <String>[];
+    var online = true;
+    final client = MockClient((req) async {
+      calls.add('${req.url.path} ${req.body}');
+      expect(req.headers['apikey'], 'pk');
+      if (!online) throw http.ClientException('no network');
+      final body = switch (req.url.pathSegments.last) {
+        'list_digests' => {'digests': [{'digest_date': '2026-10-22', 'source_date': '2026-10-21', 'status': 'published', 'paper_count': 1, 'primary_topic': 'agent', 'last_success_at': '2026-10-21T20:12:00Z'}], 'next_cursor': null},
+        'get_digest' => {'digest_date': '2026-10-22', 'status': 'published', 'last_success_at': '2026-10-21T20:12:00Z', 'featured_paper_id': null, 'papers': []},
+        _ => null,
+      };
+      return http.Response.bytes(utf8.encode(jsonEncode(body)), 200);
+    });
+    // .env에 /rest/v1/까지 넣어도 받아 준다
+    final repo = SupabaseRepository('https://x.supabase.co/rest/v1/', 'pk', client: client);
+
+    expect((await repo.listDigests()).single.primaryTopic, 'agent');
+    expect((await repo.getDigest('2026-10-22'))!.status, 'published');
+    expect(calls.first, startsWith('/rest/v1/rpc/list_digests '));
+    expect(calls[1], '/rest/v1/rpc/get_digest {"d":"2026-10-22"}');
+
+    online = false;
+    expect((await repo.getDigest('2026-10-22'))!.status, 'published'); // 오프라인: 저장본
+    await expectLater(
+      repo.getPaper('0000.00001'), // 저장본 없음 → 오프라인 오류, 마지막 정상 수집은 저장된 목록에서
+      throwsA(isA<LoadError>()
+          .having((e) => e.offline, 'offline', true)
+          .having((e) => e.lastSuccessAt, 'lastSuccessAt', DateTime.utc(2026, 10, 21, 20, 12))),
+    );
   });
 
   testWidgets('위젯 갤러리: 세그먼트·북마크·시트가 동작한다', (tester) async {

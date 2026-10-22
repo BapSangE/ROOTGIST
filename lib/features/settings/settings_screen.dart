@@ -87,8 +87,8 @@ class SettingsScreen extends StatelessWidget {
           ),
           _Row(label: '앱 버전', value: appVersion, chevron: false),
         ]),
-        // M3 fixture 스위치: 8.1 상태를 재현한다. 디버그 빌드에만 보인다.
-        if (kDebugMode) ...[
+        // M3 fixture 스위치: 8.1 상태를 재현한다. fixture로 띄운 디버그 빌드에만 보인다.
+        if (kDebugMode && repository is FixtureRepository) ...[
           group('개발용 · fixture 상태'),
           ValueListenableBuilder(
             valueListenable: fixtureMode,

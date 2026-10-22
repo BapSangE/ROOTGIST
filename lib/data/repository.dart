@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import 'models.dart';
+import 'supabase_repository.dart';
 
 // 불러오기 실패. offline이면 「인터넷 연결을 확인해 주세요」(8.1).
 class LoadError implements Exception {
@@ -19,8 +20,17 @@ enum FixtureMode { normal, loading, error, offline, empty, delayed }
 
 final fixtureMode = ValueNotifier(FixtureMode.normal);
 
-// ponytail: fixture 하나뿐이라 인터페이스 없이 둔다. M5에서 Supabase 구현이 생기면 추상 클래스로 뽑는다.
-class FixtureRepository {
+// 앱이 읽는 세 모양(HANDOFF 4.3). 화면은 이 인터페이스만 안다.
+abstract class Repository {
+  Future<String> todayKey(); // YYYY-MM-DD
+  Future<List<Digest>> listDigests(); // ① 최신순
+  Future<Digest?> getDigest([String? date]); // ② date가 없으면 오늘. 없는 날은 null
+  Future<PaperDetail> getPaper(String id); // ③
+  Future<Digest?> today() => getDigest();
+}
+
+// 개발용 fixture(빌드에 Supabase 설정이 없을 때).
+class FixtureRepository extends Repository {
   Future<Map<String, dynamic>> _load(String path) async {
     switch (fixtureMode.value) {
       case FixtureMode.loading:
@@ -33,14 +43,15 @@ class FixtureRepository {
   }
 
   // fixture 전용: fixture_today를 "오늘"로 쓴다.
+  @override
   Future<String> todayKey() async => (await _load('digests.json'))['fixture_today'];
 
-  // ① 날짜 목록(최신순). ponytail: fixture는 한 번에 전부. 무한 스크롤(next_cursor)은 M5.
+  @override
   Future<List<Digest>> listDigests() async => [
         for (final d in (await _load('digests.json'))['digests']) Digest.fromJson(d),
       ];
 
-  // ② 하루 다이제스트. date가 없으면 오늘.
+  @override
   Future<Digest?> getDigest([String? date]) async {
     final today = await todayKey();
     date ??= today;
@@ -57,12 +68,16 @@ class FixtureRepository {
     return Digest.fromJson(await _load('digests/$date.json'));
   }
 
-  Future<Digest?> today() => getDigest();
-
+  @override
   Future<PaperDetail> getPaper(String id) async => PaperDetail.fromJson(await _load('papers/$id.json'));
 }
 
-final repository = FixtureRepository();
+// 빌드에 --dart-define=SUPABASE_URL=… --dart-define=SUPABASE_ANON_KEY=…(공개 키)를 주면 실제 데이터,
+// 없으면 fixture. 공개 키는 레포에 넣지 않는다(권리 검토 전 실데이터, HANDOFF 0.1).
+const _supabaseUrl = String.fromEnvironment('SUPABASE_URL');
+const _supabaseKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+final Repository repository =
+    _supabaseUrl.isEmpty || _supabaseKey.isEmpty ? FixtureRepository() : SupabaseRepository(_supabaseUrl, _supabaseKey);
 
 // 9.4 저장 단위. 보관함은 이 값만으로 그린다(7.7).
 class Bookmark {
