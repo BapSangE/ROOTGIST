@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import '../tokens.dart';
 import '../typography.dart';
+import 'rg_pressable.dart';
 
 class RgTab {
   const RgTab(this.label, this.icon);
@@ -31,68 +31,36 @@ class RgBottomTabBar extends StatelessWidget {
       child: Row(
         spacing: RgSpace.s4,
         children: [
-          for (var i = 0; i < tabs.length; i++)
-            Expanded(child: _TabItem(tab: tabs[i], selected: i == currentIndex, onTap: () => onTap(i))),
+          for (var i = 0; i < tabs.length; i++) Expanded(child: _tab(tabs[i], i == currentIndex, () => onTap(i))),
         ],
       ),
     );
   }
-}
 
-class _TabItem extends StatefulWidget {
-  const _TabItem({required this.tab, required this.selected, required this.onTap});
-  final RgTab tab;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  State<_TabItem> createState() => _TabItemState();
-}
-
-class _TabItemState extends State<_TabItem> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = widget.selected ? RgColors.textPrimary : RgColors.textSecondary;
+  Widget _tab(RgTab tab, bool selected, VoidCallback onTap) {
+    final color = selected ? RgColors.textPrimary : RgColors.textSecondary;
     return Semantics(
       button: true,
-      selected: widget.selected,
-      label: widget.tab.label,
+      selected: selected,
+      label: tab.label,
       excludeSemantics: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: widget.onTap,
-        onTapDown: (_) => setState(() => _pressed = true),
-        onTapUp: (_) => setState(() => _pressed = false),
-        onTapCancel: () => setState(() => _pressed = false),
-        child: AnimatedOpacity(
-          opacity: _pressed ? 0.85 : 1,
-          duration: const Duration(milliseconds: 100),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: widget.selected ? RgColors.fillSelected : null,
-              borderRadius: BorderRadius.circular(RgRadius.pill),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              spacing: RgSpace.s2,
-              children: [
-                SvgPicture.asset(
-                  'assets/icons/${widget.tab.icon}.svg',
-                  width: 22,
-                  height: 22,
-                  colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
-                ),
-                Text(
-                  widget.tab.label,
-                  style: RgText.tabLabel.copyWith(
-                    color: color,
-                    fontWeight: widget.selected ? FontWeight.w600 : FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
+      child: RgPressable(
+        onTap: onTap,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: selected ? RgColors.fillSelected : null,
+            borderRadius: BorderRadius.circular(RgRadius.pill),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            spacing: RgSpace.s2,
+            children: [
+              RgIcon(tab.icon, size: 22, color: color),
+              Text(
+                tab.label,
+                style: RgText.tabLabel.copyWith(color: color, fontWeight: selected ? FontWeight.w600 : FontWeight.w500),
+              ),
+            ],
           ),
         ),
       ),

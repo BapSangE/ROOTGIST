@@ -1,11 +1,13 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'design/tokens.dart';
 import 'design/typography.dart';
 import 'design/widgets/rg_bottom_tab_bar.dart';
+import 'debug/widget_gallery.dart';
 
 const _tabs = [
   RgTab('홈', 'house'),
@@ -32,6 +34,7 @@ final router = GoRouter(
           ]),
       ],
     ),
+    if (kDebugMode) GoRoute(path: '/gallery', builder: (_, _) => const WidgetGallery()),
   ],
 );
 
@@ -75,7 +78,11 @@ class _PlaceholderTab extends StatelessWidget {
         height: RgSpace.topBar,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
-          child: Align(alignment: Alignment.centerLeft, child: Text(title, style: RgText.titleDetail)),
+          child: Row(children: [
+            Expanded(child: Text(title, style: RgText.titleDetail)),
+            if (kDebugMode && title == '설정')
+              TextButton(onPressed: () => context.push('/gallery'), child: const Text('위젯 갤러리')),
+          ]),
         ),
       ),
     );

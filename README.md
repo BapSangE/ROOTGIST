@@ -13,4 +13,4 @@ Hugging Face Daily Papers에서 매일 상위 10편을 골라, 초록만 근거�
 
 ## 상태
 
-M0(셋업) 완료. 다음은 M1 공통 위젯. 진행 단계는 `docs/HANDOFF.md` 11장.
+M1(공통 위젯) 완료. 다음은 M2 화면(S01부터). 진행 단계는 `docs/HANDOFF.md` 11장.
