@@ -4,9 +4,13 @@
     python -m worker.run --date 2026-10-21  # 특정 UTC 날짜 D
     python -m worker.run --limit 1          # 1편만(짧은 확인용)
 
-API 키: 환경 변수 NVIDIA_API_KEY, 없으면 레포 루트 .env의 NVIDIA_API_KEY 또는 nvidia_key.
+같은 날짜를 다시 돌리면 다음 날 보충(ops config 1.1, A7)으로 동작한다: 이미 노출한 편은 바꾸지 않고,
+늦게 올라온 논문은 보관 목록(is_exposed=false)에만 더하고, 노출 편 중 해설 준비 중인 것만 다시 만든다.
+
+키: 환경 변수 또는 레포 루트 .env
+    NVIDIA_API_KEY(또는 nvidia_key)         필수
+    SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY  있으면 Supabase에 저장, 없으면 파일로만
 출력: worker/out/ (git 제외). 실제 초록·번역이 들어 있으므로 커밋하거나 외부에 공유하지 않는다(HANDOFF 0.1, NVIDIA 시험 약관).
-ponytail: Supabase 저장과 다음 날 보충(ops config 1.1)은 Supabase 연결 때 추가한다.
 """
 import argparse
 import json
@@ -18,27 +22,30 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from . import build, collect, llm, split, validate
+from .db import Db
 
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def api_key() -> str:
-    if key := os.environ.get("NVIDIA_API_KEY"):
-        return key
+def setting(*names: str) -> str | None:
+    """환경 변수 우선, 없으면 .env. 따옴표는 벗긴다."""
+    for n in names:
+        if v := os.environ.get(n):
+            return v
     env = ROOT / ".env"
     if env.exists():
         for line in env.read_text(encoding="utf-8").splitlines():
             k, sep, v = line.partition("=")
-            if sep and k.strip() in ("NVIDIA_API_KEY", "nvidia_key"):
+            if sep and k.strip() in names:
                 return v.strip().strip("\"'")
-    raise SystemExit("NVIDIA API 키가 없습니다(NVIDIA_API_KEY 또는 .env).")
+    return None
 
 
 def main(argv=None):
     sys.stdout.reconfigure(line_buffering=True)  # 파이프로 받아도 진행 줄이 바로 보이게
     ap = argparse.ArgumentParser()
     ap.add_argument("--date", help="UTC 날짜 D (YYYY-MM-DD). 기본: 어제(UTC)")
-    ap.add_argument("--limit", type=int, default=10, help="해설 만들 편수(기본 10)")
+    ap.add_argument("--limit", type=int, default=10, help="노출·해설 편수(기본 10)")
     ap.add_argument("--out", type=Path, default=ROOT / "worker" / "out")
     args = ap.parse_args(argv)
 
@@ -52,48 +59,115 @@ def main(argv=None):
         with lock, (raw / "calls.jsonl").open("a", encoding="utf-8") as f:
             f.write(json.dumps({"at": datetime.now(timezone.utc).isoformat(), **rec}, ensure_ascii=False) + "\n")
 
-    key = api_key()
+    key = setting("NVIDIA_API_KEY", "nvidia_key") or sys.exit("NVIDIA API 키가 없습니다(NVIDIA_API_KEY 또는 .env).")
+    url, secret = setting("SUPABASE_URL"), setting("SUPABASE_SERVICE_ROLE_KEY")
+    db = Db(url, secret) if url and secret else None
+    if db is None:
+        print("Supabase 설정이 없어 파일로만 저장합니다.")
+
     try:
         items = collect.fetch_day(source_date, raw / "hf", log)
     except collect.CollectError as e:
         log({"stage": "collect", "error": str(e)})
-        prev = _last_success(args.out)
-        build.write(args.out, {"digest_date": digest_date, "source_date": source_date, "status": "delayed",
-                               "paper_count": 0, "primary_topic": None, "last_success_at": prev}, None, [])
+        _record_delayed(db, args.out, digest_date, source_date)
         print(f"수집 실패 → {digest_date} 지연으로 기록: {e}")
         return 1
 
     papers = [p for p in (collect.to_paper(i) for i in items) if p]
-    ranked = collect.select_top(papers, args.limit)
-    print(f"{source_date}: {len(items)}건 수집, 철회 제외 {len(papers)}건, 상위 {len(ranked)}편 처리")
+    ordered = collect.select_top(papers, len(papers))  # 전체 순위. 상위 limit편만 노출
+    by_id = {p["paper_id"]: p for p in ordered}
+    prior = db.digest_papers(digest_date) if db else []
+    prior_exposed = [r["paper_id"] for r in prior if r["is_exposed"]]
 
-    def one(p):
+    if prior_exposed:  # 다음 날 보충
+        exposed_ids = prior_exposed
+        known = {r["paper_id"] for r in prior}
+        late = [p for p in ordered if p["paper_id"] not in known]
+        statuses = {r["paper_id"]: r["status"] for r in db.select(
+            "paper_ai", f"paper_id=in.({','.join(exposed_ids)})&select=paper_id,status")}
+        regenerate = [i for i in exposed_ids if statuses.get(i) != "ready" and i in by_id]
+        print(f"{source_date}: 보충 — 새로 올라온 {len(late)}편은 보관 목록에만, 해설 다시 만들 편 {len(regenerate)}")
+    else:
+        exposed_ids = [p["paper_id"] for p in ordered[: args.limit]]
+        late, regenerate = [], exposed_ids
+        print(f"{source_date}: {len(items)}건 수집, 철회 제외 {len(papers)}건, 상위 {len(exposed_ids)}편 처리")
+
+    def one(pid):
+        p = by_id[pid]
         try:
             sentences = split.to_sentences(p["abstract_en"])
         except ValueError as e:
-            log({"paper_id": p["paper_id"], "stage": "split", "error": str(e)})
-            return build.paper_detail(p, [], None)
+            log({"paper_id": pid, "stage": "split", "error": str(e)})
+            return pid, build.paper_detail(p, [], None), [], None, None
         messages = llm.build_messages(p["title_en"], p["abstract_en"], sentences)
-        meta = {"paper_id": p["paper_id"], "abstract_sha256": llm.sha256(p["abstract_en"]),
-                "sentence_splitter_version": split.SPLITTER_VERSION, "glossary_mode": "auto_select",
-                "prompt_version": llm.PROMPT_VERSION, "schema_version": llm.SCHEMA_VERSION, "temperature": 0}
-        out, model = llm.generate(key, messages, lambda o: validate.check(o, sentences), lambda r: log({**meta, **r}))
-        status = f"ok ({model})" if out else "실패 → 해설 준비 중"
-        print(f"  {p['paper_id']}: {status}")
-        return build.paper_detail(p, sentences, validate.postprocess(out) if out else None)
+        out, model = llm.generate(key, messages, lambda o: validate.check(o, sentences), lambda r: log({**META, "paper_id": pid, **r}))
+        print(f"  {pid}: {f'ok ({model})' if out else '실패 → 해설 준비 중'}")
+        return pid, build.paper_detail(p, sentences, validate.postprocess(out) if out else None), sentences, out, model
 
     with ThreadPoolExecutor(max_workers=3) as pool:  # 모델당 동시 3건(ops config 1장)
-        details = list(pool.map(one, ranked))
+        made = {r[0]: r for r in pool.map(one, regenerate)}
+    # 노출 순서대로 상세를 모은다. 이번에 안 만든 편은 이미 저장된 상세를 읽는다.
+    details = [made[i][1] if i in made else db.rpc("get_paper", pid=i) for i in exposed_ids]
+    details = [d for d in details if d]
 
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    ranked = [by_id.get(d["paper_id"], {"upvotes": 0}) for d in details]
     day = build.digest(digest_date, now, ranked, details)
     entry = {"digest_date": digest_date, "source_date": source_date, "status": day["status"],
              "paper_count": len(details), "primary_topic": build.primary_topic(details, day["featured_paper_id"]),
              "last_success_at": now}
     build.write(args.out, entry, day, details)
+
+    if db:
+        _save(db, entry, ordered, prior, exposed_ids, late, made, day["featured_paper_id"])
     ready = sum(d["ai_status"] == "ready" for d in details)
-    print(f"저장: {args.out} (digest {digest_date}, 해설 {ready}/{len(details)}편)")
+    print(f"저장: {args.out}{' + Supabase' if db else ''} (digest {digest_date}, 해설 {ready}/{len(details)}편)")
     return 0
+
+
+META = {"sentence_splitter_version": split.SPLITTER_VERSION, "glossary_mode": "auto_select",
+        "prompt_version": llm.PROMPT_VERSION, "schema_version": llm.SCHEMA_VERSION, "temperature": 0}
+
+
+def _save(db: Db, entry, ordered, prior, exposed_ids, late, made, featured_id):
+    """FK 순서: papers → digests → digest_papers → 문장·해설."""
+    db.upsert("papers", [
+        {"paper_id": p["paper_id"], "title_en": p["title_en"], "abstract_en": p["abstract_en"],
+         "abstract_sha256": llm.sha256(p["abstract_en"]), "authors": p["authors"], "org_name": p["org_name"],
+         "published_at": p["published_at"], "withdrawn": False}
+        for p in ordered
+    ], "paper_id")
+    prev_late = (db.select("digests", f"digest_date=eq.{entry['digest_date']}&select=late_added_count") or [{}])[0]
+    db.upsert("digests", [{**entry, "late_added_count": prev_late.get("late_added_count", 0) + len(late)}], "digest_date")
+
+    if prior:  # 보충: 노출 편은 그대로 두고 주요 연구 표시만 다시 계산, 늦게 온 편은 뒤 순위로
+        upvotes = {r["paper_id"]: r["upvotes_at_batch"] for r in prior}
+        rows = [{"digest_date": entry["digest_date"], "paper_id": i, "rank": r + 1, "upvotes_at_batch": upvotes[i],
+                 "is_exposed": True, "is_featured": i == featured_id} for r, i in enumerate(exposed_ids)]
+        start = max(r["rank"] for r in prior)
+        rows += [{"digest_date": entry["digest_date"], "paper_id": p["paper_id"], "rank": start + n,
+                  "upvotes_at_batch": p["upvotes"], "is_exposed": False, "is_featured": False}
+                 for n, p in enumerate(late, start=1)]
+    else:
+        exposed = set(exposed_ids)
+        rows = [{"digest_date": entry["digest_date"], "paper_id": p["paper_id"], "rank": r, "upvotes_at_batch": p["upvotes"],
+                 "is_exposed": p["paper_id"] in exposed, "is_featured": p["paper_id"] == featured_id}
+                for r, p in enumerate(ordered, start=1)]
+    db.upsert("digest_papers", rows, "digest_date,paper_id")
+
+    for pid, (_, detail, sentences, out, model) in made.items():
+        src = next(p for p in ordered if p["paper_id"] == pid)
+        db.save_paper_ai(pid, llm.sha256(src["abstract_en"]), sentences, detail, out, model, META)
+
+
+def _record_delayed(db: Db | None, out_dir: Path, digest_date: str, source_date: str):
+    """수집 실패: 그날이 아직 없을 때만 지연으로 기록한다(이미 낸 날은 덮지 않는다)."""
+    entry = {"digest_date": digest_date, "source_date": source_date, "status": "delayed", "paper_count": 0,
+             "primary_topic": None, "last_success_at": _last_success(out_dir)}
+    build.write(out_dir, entry, None, [])
+    if db and not db.select("digests", f"digest_date=eq.{digest_date}&select=digest_date"):
+        last = db.select("digests", "status=neq.delayed&select=last_success_at&order=last_success_at.desc&limit=1")
+        db.upsert("digests", [{**entry, "last_success_at": last[0]["last_success_at"] if last else None}], "digest_date")
 
 
 def _last_success(out_dir: Path) -> str | None:
