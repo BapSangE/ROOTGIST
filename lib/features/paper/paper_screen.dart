@@ -132,7 +132,15 @@ class _PaperScreenState extends State<PaperScreen> {
             children: [
               Semantics(header: true, child: Text('AI 요약', style: RgText.titleCard)),
               const SizedBox(height: RgSpace.s8),
-              Text(keepAll(p.summary ?? ''), style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
+              // G4: 전문은 그대로 보이되, 실제 요약은 15줄 안팎 한 덩어리라 문장마다 문단을 나눈다.
+              Column(
+                spacing: RgSpace.s8,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final s in summaryParagraphs(p.summary ?? ''))
+                    Text(keepAll(s), style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
+                ],
+              ),
               if (p.keyPoints.isNotEmpty) ...[
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: RgSpace.s16),
@@ -362,3 +370,7 @@ class _InfoRow extends StatelessWidget {
     );
   }
 }
+
+// 요약을 문장 단위 문단으로. 한글·닫는 괄호 뒤 마침표 다음 공백에서만 나눠 「3.0배」 같은 수치는 건드리지 않는다.
+List<String> summaryParagraphs(String s) =>
+    s.trim().split(RegExp(r'(?<=[가-힣)\]][.!?])\s+')).where((p) => p.isNotEmpty).toList();

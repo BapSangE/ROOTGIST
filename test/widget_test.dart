@@ -15,6 +15,7 @@ import 'package:rootgist/debug/widget_gallery.dart';
 import 'package:rootgist/design/typography.dart';
 import 'package:rootgist/features/explore/explore_screen.dart';
 import 'package:rootgist/features/home/home_screen.dart';
+import 'package:rootgist/features/paper/paper_screen.dart';
 import 'package:rootgist/features/reader/reader_screen.dart';
 import 'package:rootgist/main.dart';
 
@@ -387,6 +388,24 @@ void main() {
     await settle(tester);
     expect(find.text('해설을 준비하고 있어요'), findsOneWidget);
     expect(find.text('AI 요약'), findsNothing);
+  });
+
+  test('S02 요약 문단 나누기: 한국어 문장 끝에서만', () {
+    expect(
+      summaryParagraphs('첫 문장이다. Exact Match를 3.0배 높인다(예: GPT). 마지막이에요! '),
+      ['첫 문장이다.', 'Exact Match를 3.0배 높인다(예: GPT).', '마지막이에요!'],
+    );
+    expect(summaryParagraphs(''), isEmpty);
+  });
+
+  testWidgets('S01: 추천 카드 불릿은 항목당 2줄까지', (tester) async {
+    tester.view.physicalSize = const Size(390, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+    final bullet = tester.widget<Text>(find.text(keepAll('입력 복잡도에 따른 추론 연산의 동적 배분')));
+    expect(bullet.maxLines, 2);
+    expect(bullet.overflow, TextOverflow.ellipsis);
   });
 
   testWidgets('위젯 갤러리: 세그먼트·북마크·시트가 동작한다', (tester) async {

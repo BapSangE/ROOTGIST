@@ -291,7 +291,13 @@ class _FeaturedCard extends StatelessWidget {
                         decoration: const BoxDecoration(color: RgColors.textBody, shape: BoxShape.circle),
                       ),
                       Expanded(
-                        child: Text(keepAll(b), style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
+                        // 실제 핵심 내용은 3~5줄짜리 문장이라 카드가 길어진다(2026-10-22 실데이터). 항목당 2줄, 전문은 S02.
+                        child: Text(
+                          keepAll(b),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: RgText.bodySummary.copyWith(color: RgColors.textBody),
+                        ),
                       ),
                     ],
                   ),
