@@ -38,12 +38,14 @@ class RgListRow extends StatelessWidget {
     this.onTap,
     this.showDivider = true,
     this.padding = const EdgeInsets.fromLTRB(20, 18, 8, 18),
+    this.crossAxisAlignment = CrossAxisAlignment.start,
   });
   final Widget child;
   final Widget? trailing;
   final VoidCallback? onTap;
   final bool showDivider;
   final EdgeInsets padding; // S04 날짜 행은 16/16/16/20
+  final CrossAxisAlignment crossAxisAlignment; // S01·S05 북마크는 위 정렬, S04 날짜 행은 center
 
   @override
   Widget build(BuildContext context) {
@@ -56,9 +58,10 @@ class RgListRow extends StatelessWidget {
           child: Padding(
             padding: padding,
             child: Row(
+              crossAxisAlignment: crossAxisAlignment,
               children: [
                 Expanded(child: child),
-                ?trailing,
+                if (trailing != null) ...[const SizedBox(width: RgSpace.s8), trailing!],
               ],
             ),
           ),

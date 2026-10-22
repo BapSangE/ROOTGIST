@@ -38,3 +38,6 @@ abstract class RgText {
   static final serifSubtitle = _s(15, 22, FontWeight.w400, 0, isSerif: true);
   static final wordmark = _s(17, 17 * 1.2, FontWeight.w700, 1.2);
 }
+
+// HANDOFF 9.3: Flutter에 keep-all이 없어 어절 안 글자 사이에 word joiner(U+2060)를 넣는다.
+String keepAll(String s) => s.split(' ').map((w) => w.runes.map(String.fromCharCode).join('⁠')).join(' ');

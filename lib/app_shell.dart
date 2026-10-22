@@ -8,6 +8,7 @@ import 'design/tokens.dart';
 import 'design/typography.dart';
 import 'design/widgets/rg_bottom_tab_bar.dart';
 import 'debug/widget_gallery.dart';
+import 'features/home/home_screen.dart';
 
 const _tabs = [
   RgTab('홈', 'house'),
@@ -16,15 +17,15 @@ const _tabs = [
   RgTab('설정', 'sliders-vertical'),
 ];
 
-// ponytail: 탭 본문은 M2에서 features/<화면>/ 위젯으로 교체한다.
+// ponytail: 나머지 탭 본문은 M2에서 features/<화면>/ 위젯으로 교체한다.
 final router = GoRouter(
   initialLocation: '/home',
   routes: [
     StatefulShellRoute.indexedStack(
       builder: (context, state, shell) => AppShell(shell: shell),
       branches: [
+        StatefulShellBranch(routes: [GoRoute(path: '/home', builder: (_, _) => const HomeScreen())]),
         for (final (path, title) in const [
-          ('/home', '오늘의 연구'),
           ('/explore', '탐색'),
           ('/library', '보관함'),
           ('/settings', '설정'),
@@ -33,6 +34,18 @@ final router = GoRouter(
             GoRoute(path: path, builder: (_, _) => _PlaceholderTab(title: title)),
           ]),
       ],
+    ),
+    // S02는 탭바 없이 쉘 위로 푸시된다(7.0). ponytail: 다음 단계에서 실제 S02로 교체.
+    GoRoute(
+      path: '/paper/:id',
+      builder: (_, state) => Scaffold(
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(RgSpace.gutterText),
+            child: Text('S02 준비 중\n${state.pathParameters['id']}', style: RgText.titleDetail),
+          ),
+        ),
+      ),
     ),
     if (kDebugMode) GoRoute(path: '/gallery', builder: (_, _) => const WidgetGallery()),
   ],
