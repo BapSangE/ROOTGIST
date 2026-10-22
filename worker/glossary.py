@@ -22,15 +22,24 @@ def normalize(s: str) -> str:
     return re.sub(r"\s+", " ", s.lower().replace("-", " ")).strip()
 
 
+def singular(n: str) -> str:
+    """정규화 표기의 단수 후보(chunks → chunk). bias처럼 틀릴 수 있으니 단독으로 쓰지 말고 실제 표기와 대조한다."""
+    if n.endswith("ies"):
+        return n[:-3] + "y"
+    if n.endswith("s") and not n.endswith("ss"):
+        return n[:-1]
+    return n
+
+
 def variants(s: str) -> set[str]:
     """복수형만 단수로 하나 더 본다(backbones → backbone). 어간 추출은 하지 않는다."""
     n = normalize(s)
-    out = {n}
-    if n.endswith("ies"):
-        out.add(n[:-3] + "y")
-    elif n.endswith("s") and not n.endswith("ss"):
-        out.add(n[:-1])
-    return out
+    return {n, singular(n)}
+
+
+def merge_plurals(forms: set[str]) -> dict[str, str]:
+    """표기 → 후보 키. 단수 표기가 실제로 있을 때만 복수 표기를 그쪽으로 합친다(bias는 bia가 없으니 그대로)."""
+    return {n: singular(n) if singular(n) != n and singular(n) in forms else n for n in forms}
 
 
 def _null(v: str):
@@ -164,17 +173,33 @@ def sync(db: Db, api_key: str | None = None):
     links, candidates = plan_links(rows, aliases)
     for pid, idx, sid in links:
         db.update("paper_glossary", {"sense_id": sid}, paper_id=pid, idx=idx)
-    # 후보는 정규화 표기 하나당 한 행. seen_count는 아직 연결 안 된 논문 용어 중 같은 표기 수(다시 돌려도 같은 값).
-    # 검토 상태는 덮어쓰지 않는다. 일괄 upsert는 모든 행의 키가 같아야 해서 기존 값을 그대로 다시 보낸다.
-    known = {c["normalized_form"]: c["review_status"]
-             for c in db.select_all("term_candidates", "select=normalized_form,review_status&order=normalized_form")}
+    # 후보는 표기 하나당 한 행, 복수형은 단수형 후보로 합친다. seen_count는 아직 연결 안 된 논문 용어 중
+    # 같은 후보로 묶이는 수(다시 돌려도 같은 값). 검토 상태는 덮어쓰지 않는다.
+    known = {c["normalized_form"]: c for c in db.select_all(
+        "term_candidates", "select=normalized_form,review_status,canonical_ko_draft,draft_model,sense_id&order=normalized_form")}
+    key = merge_plurals(set(candidates) | set(known))
+    merged = defaultdict(list)
+    for n, g in candidates.items():
+        merged[key[n]] += g
+    # 이미 저장된 복수형 후보(대기 중)는 지우고, 초안은 단수형 후보로 옮긴다.
+    carried = {}
+    for n, c in known.items():
+        if key[n] != n and c["review_status"] == "pending" and c["sense_id"] is None:
+            if c["canonical_ko_draft"] and not (known.get(key[n]) or {}).get("canonical_ko_draft"):
+                carried[key[n]] = (c["canonical_ko_draft"], c["draft_model"])
+            db.delete("term_candidates", normalized_form=n)
     now = datetime.now(timezone.utc).isoformat()
     db.upsert("term_candidates", [
-        {"normalized_form": n, "surface_form": g[0]["term"], "definition_ko": g[0]["definition_ko"],
-         "first_paper_id": g[0]["paper_id"], "seen_count": len(g), "last_seen_at": now,
-         "review_status": known.get(n, "pending")}
-        for n, g in candidates.items()
+        {"normalized_form": n,
+         # 표기는 단수형 원문이 있으면 그것(action chunks보다 action chunk)
+         "surface_form": next((r["term"] for r in g if normalize(r["term"]) == n), g[0]["term"]),
+         "definition_ko": g[0]["definition_ko"], "first_paper_id": g[0]["paper_id"], "seen_count": len(g),
+         "last_seen_at": now, "review_status": (known.get(n) or {}).get("review_status", "pending")}
+        for n, g in merged.items()
     ], "normalized_form")
+    for n, (draft, model) in carried.items():
+        db.update("term_candidates", {"canonical_ko_draft": draft, "draft_model": model}, normalized_form=n)
+    candidates = merged
     drafted = draft_korean(db, api_key) if api_key else 0
     print(f"용어: 후보→사전 {promoted}, 새 연결 {len(links)}, 사전에 없는 표기 {len(candidates)}, 대응어 초안 {drafted}")
 

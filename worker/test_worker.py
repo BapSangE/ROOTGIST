@@ -127,6 +127,16 @@ class GlossaryLinkTest(unittest.TestCase):
         self.assertEqual(len(candidates["trajectory drift"]), 2)
 
 
+class MergePluralsTest(unittest.TestCase):
+    def test_merge_only_when_singular_exists(self):
+        from .glossary import merge_plurals
+        key = merge_plurals({"action chunk", "action chunks", "bias", "policies", "policy", "lens"})
+        self.assertEqual(key["action chunks"], "action chunk")
+        self.assertEqual(key["policies"], "policy")
+        self.assertEqual(key["bias"], "bias")  # bia가 없으니 그대로
+        self.assertEqual(key["lens"], "lens")
+
+
 class DraftCheckTest(unittest.TestCase):
     def test_draft_validation(self):
         from .glossary import check_drafts
