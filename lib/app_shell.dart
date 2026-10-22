@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'design/tokens.dart';
-import 'design/typography.dart';
 import 'design/widgets/rg_bottom_tab_bar.dart';
 import 'debug/widget_gallery.dart';
 import 'features/explore/explore_screen.dart';
@@ -13,6 +12,7 @@ import 'features/home/home_screen.dart';
 import 'features/library/library_screen.dart';
 import 'features/paper/paper_screen.dart';
 import 'features/reader/reader_screen.dart';
+import 'features/settings/settings_screen.dart';
 
 const _tabs = [
   RgTab('홈', 'house'),
@@ -21,7 +21,6 @@ const _tabs = [
   RgTab('설정', 'sliders-vertical'),
 ];
 
-// ponytail: 나머지 탭 본문은 M2에서 features/<화면>/ 위젯으로 교체한다.
 final router = GoRouter(
   initialLocation: '/home',
   routes: [
@@ -40,12 +39,13 @@ final router = GoRouter(
           ),
         ]),
         StatefulShellBranch(routes: [GoRoute(path: '/library', builder: (_, _) => const LibraryScreen())]),
-        for (final (path, title) in const [
-          ('/settings', '설정'),
-        ])
-          StatefulShellBranch(routes: [
-            GoRoute(path: path, builder: (_, _) => _PlaceholderTab(title: title)),
-          ]),
+        StatefulShellBranch(routes: [
+          GoRoute(
+            path: '/settings',
+            builder: (_, _) => const SettingsScreen(),
+            routes: [GoRoute(path: 'source', builder: (_, _) => const DataSourceScreen())],
+          ),
+        ]),
       ],
     ),
     // S02·S03은 탭바 없이 쉘 위로 푸시된다(7.0).
@@ -90,29 +90,6 @@ class AppShell extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _PlaceholderTab extends StatelessWidget {
-  const _PlaceholderTab({required this.title});
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      bottom: false,
-      child: SizedBox(
-        height: RgSpace.topBar,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
-          child: Row(children: [
-            Expanded(child: Text(title, style: RgText.titleDetail)),
-            if (kDebugMode && title == '설정')
-              TextButton(onPressed: () => context.push('/gallery'), child: const Text('위젯 갤러리')),
-          ]),
-        ),
       ),
     );
   }

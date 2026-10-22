@@ -12,6 +12,7 @@ import '../../design/typography.dart';
 import '../../design/widgets/rg_buttons.dart';
 import '../../design/widgets/rg_card.dart';
 import '../../design/widgets/rg_pressable.dart';
+import '../settings/ai_notice_sheet.dart';
 import 'evidence_sheet.dart';
 
 // S02 논문 상세 (HANDOFF 7.2). ready가 아닐 때의 준비 중·오류 카드와 로딩 스켈레톤은 M3.
@@ -109,24 +110,29 @@ class _PaperScreenState extends State<PaperScreen> {
           ),
         ),
         const SizedBox(height: RgSpace.s12),
-        // ponytail: 탭 → C03은 C03을 만들 때 연결한다.
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: RgSpace.s6,
-            children: [
-              const Padding(
-                padding: EdgeInsets.only(top: 1.5),
-                child: RgIcon('info', size: 14, color: RgColors.textSecondary),
+        Semantics(
+          button: true,
+          child: RgPressable(
+            onTap: () => showAiNoticeSheet(context),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: RgSpace.s6,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.only(top: 1.5),
+                    child: RgIcon('info', size: 14, color: RgColors.textSecondary),
+                  ),
+                  Expanded(
+                    child: Text(
+                      keepAll('초록을 바탕으로 AI가 정리했어요. 논문 본문 전체를 반영하지는 않아요.'),
+                      style: RgText.caption.copyWith(height: 17 / 12, color: RgColors.textSecondary),
+                    ),
+                  ),
+                ],
               ),
-              Expanded(
-                child: Text(
-                  keepAll('초록을 바탕으로 AI가 정리했어요. 논문 본문 전체를 반영하지는 않아요.'),
-                  style: RgText.caption.copyWith(height: 17 / 12, color: RgColors.textSecondary),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ],

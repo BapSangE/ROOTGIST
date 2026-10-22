@@ -6,6 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:rootgist/app_shell.dart';
 import 'package:rootgist/data/models.dart';
 import 'package:rootgist/data/repository.dart';
+import 'package:rootgist/data/settings.dart';
+import 'package:rootgist/features/settings/ai_notice_sheet.dart';
+import 'package:rootgist/features/settings/settings_screen.dart';
 import 'package:rootgist/debug/widget_gallery.dart';
 import 'package:rootgist/design/typography.dart';
 import 'package:rootgist/features/explore/explore_screen.dart';
@@ -18,6 +21,7 @@ import 'package:rootgist/main.dart';
 Future<void> pumpApp(WidgetTester tester) async {
   router.go('/home'); // 전역 라우터·북마크라 이전 테스트 상태가 남는다
   bookmarks.value = {};
+  readerDefaultMode.value = ReaderMode.together;
   await tester.runAsync(() async {
     await tester.pumpWidget(const RootgistApp());
     await Future<void>.delayed(const Duration(milliseconds: 200));
@@ -230,6 +234,40 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('아직 저장한 연구가 없어요'), findsOneWidget);
     expect(find.text('전체 비우기'), findsNothing);
+  });
+
+  testWidgets('S06: 기본 보기가 S03에 반영, C03·데이터 출처', (tester) async {
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+
+    router.go('/settings');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('원문'));
+    await tester.pumpAndSettle();
+    expect(readerDefaultMode.value, ReaderMode.original);
+
+    await tester.tap(find.text('AI 생성 안내'));
+    await tester.pumpAndSettle();
+    expect(find.text(keepAll(aiNoticeParagraphs.first)), findsOneWidget);
+    await tester.tap(find.text('닫기'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('데이터 출처'));
+    await tester.pumpAndSettle();
+    expect(find.text(keepAll(DataSourceScreen.paragraphs.first)), findsOneWidget);
+
+    router.push('/paper/0000.00001/reader');
+    await settle(tester);
+    expect(find.text(keepAll('본 연구는 입력 복잡도에 따라 추론 연산을 동적으로 배분하는 방법을 제안한다.')), findsNothing);
+    expect(find.text('We propose a method that dynamically allocates inference compute according to input complexity.'), findsOneWidget);
+  });
+
+  test('C03 문구: 본문 전체를 읽었다는 표현 금지(7.8)', () {
+    for (final p in aiNoticeParagraphs) {
+      expect(p.contains('본문'), isFalse, reason: p);
+    }
   });
 
   testWidgets('위젯 갤러리: 세그먼트·북마크·시트가 동작한다', (tester) async {

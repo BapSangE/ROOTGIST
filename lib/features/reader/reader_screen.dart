@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../data/models.dart';
 import '../../data/repository.dart';
+import '../../data/settings.dart';
 import '../../design/tokens.dart';
 import '../../design/typography.dart';
 import '../../design/widgets/rg_buttons.dart';
@@ -10,10 +11,8 @@ import '../../design/widgets/rg_pressable.dart';
 import '../../design/widgets/rg_segmented.dart';
 import 'term_sheet.dart';
 
-enum ReaderMode { together, translation, original }
-
-// S03 초록 원문·번역 리더 (HANDOFF 7.4).
-// M3: 기본 모드 = S06 설정값, 글자 크기 시트, 모드 전환 시 스크롤 보정.
+// S03 초록 원문·번역 리더 (HANDOFF 7.4). 기본 모드는 S06 설정값.
+// M3: 글자 크기 시트, 모드 전환 시 스크롤 보정.
 class ReaderScreen extends StatefulWidget {
   const ReaderScreen({super.key, required this.paperId, this.initialSentenceId});
   final String paperId;
@@ -34,7 +33,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
     return p;
   });
   final _keys = <String, GlobalKey>{};
-  var _mode = ReaderMode.together;
+  var _mode = readerDefaultMode.value;
 
   @override
   Widget build(BuildContext context) {
