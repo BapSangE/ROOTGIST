@@ -10,6 +10,7 @@ import 'design/widgets/rg_bottom_tab_bar.dart';
 import 'debug/widget_gallery.dart';
 import 'features/explore/explore_screen.dart';
 import 'features/home/home_screen.dart';
+import 'features/library/library_screen.dart';
 import 'features/paper/paper_screen.dart';
 import 'features/reader/reader_screen.dart';
 
@@ -38,8 +39,8 @@ final router = GoRouter(
             ],
           ),
         ]),
+        StatefulShellBranch(routes: [GoRoute(path: '/library', builder: (_, _) => const LibraryScreen())]),
         for (final (path, title) in const [
-          ('/library', '보관함'),
           ('/settings', '설정'),
         ])
           StatefulShellBranch(routes: [

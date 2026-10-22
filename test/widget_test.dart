@@ -16,7 +16,8 @@ import 'package:rootgist/main.dart';
 // 에셋 읽기는 실제 I/O라 fake async 안에서 시작하면 끝나지 않고, rootBundle이 그 미완료 Future를 캐시해
 // 다음 테스트까지 막는다. 첫 프레임(initState의 fixture 읽기)을 실제 async 영역에서 띄운다.
 Future<void> pumpApp(WidgetTester tester) async {
-  router.go('/home'); // 전역 라우터라 이전 테스트의 탭 위치가 남는다
+  router.go('/home'); // 전역 라우터·북마크라 이전 테스트 상태가 남는다
+  bookmarks.value = {};
   await tester.runAsync(() async {
     await tester.pumpWidget(const RootgistApp());
     await Future<void>.delayed(const Duration(milliseconds: 200));
@@ -85,7 +86,7 @@ void main() {
 
     await tester.tap(find.bySemanticsLabel('북마크에 저장').first);
     await tester.pump();
-    expect(bookmarks.value, {'0000.00001'});
+    expect(bookmarks.value.keys, ['0000.00001']);
 
     await tester.tap(find.text(keepAll('소수 예시 기반 영상 분할의 일반화 성능 분석')));
     await settle(tester);
@@ -200,6 +201,35 @@ void main() {
     await tester.tap(find.bySemanticsLabel('뒤로'));
     await tester.pumpAndSettle();
     expect(find.text('지난 날짜의 연구를 다시 볼 수 있어요'), findsOneWidget);
+  });
+
+  testWidgets('S05: 저장 목록, 해제 → 되돌리기, 전체 비우기', (tester) async {
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+
+    restoreBookmark(Bookmark('0000.00001', '추론 시점 연산의 효율적 확장', DateTime(2026, 10, 19)));
+    restoreBookmark(Bookmark('0000.00003', '보상 모델 없이 선호를 학습하는 정책 최적화', DateTime(2026, 10, 18)));
+    router.go('/library');
+    await tester.pumpAndSettle();
+    expect(find.text('이 기기에 저장한 연구 2편'), findsOneWidget);
+    expect(find.text('arXiv · 10월 19일 저장'), findsOneWidget);
+
+    await tester.tap(find.bySemanticsLabel('저장됨, 북마크 해제').first); // 최신순 첫 행 = 10월 19일
+    await tester.pumpAndSettle();
+    expect(find.text('이 기기에 저장한 연구 1편'), findsOneWidget);
+    await tester.tap(find.text('되돌리기'));
+    await tester.pumpAndSettle();
+    expect(find.text('arXiv · 10월 19일 저장'), findsOneWidget); // 저장일 그대로 복원
+
+    await tester.tap(find.text('전체 비우기'));
+    await tester.pumpAndSettle();
+    expect(find.text('저장한 연구 2편을 모두 뺄까요?'), findsOneWidget);
+    await tester.tap(find.text('모두 빼기'));
+    await tester.pumpAndSettle();
+    expect(find.text('아직 저장한 연구가 없어요'), findsOneWidget);
+    expect(find.text('전체 비우기'), findsNothing);
   });
 
   testWidgets('위젯 갤러리: 세그먼트·북마크·시트가 동작한다', (tester) async {

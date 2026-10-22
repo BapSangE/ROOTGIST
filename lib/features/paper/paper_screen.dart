@@ -169,7 +169,7 @@ class _TopBar extends StatelessWidget {
             ),
             ValueListenableBuilder(
               valueListenable: bookmarks,
-              builder: (_, saved, _) => RgBookmarkButton(saved: saved.contains(p.id), onTap: () => toggleBookmark(p.id)),
+              builder: (_, saved, _) => RgBookmarkButton(saved: saved.containsKey(p.id), onTap: () => toggleBookmark(p.id, p.title)),
             ),
           ],
         ]),

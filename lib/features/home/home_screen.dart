@@ -36,7 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _body(Digest? digest, Set<String> saved) {
+  Widget _body(Digest? digest, Map<String, Bookmark> saved) {
     final view = HomeView(digest?.papers ?? const [], _topic);
     final status = digest?.status;
     final headline = switch (status) {
@@ -93,7 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
         if (view.featured case final p?) ...[
           SizedBox(height: view.chips.isEmpty ? RgSpace.s20 : RgSpace.s16),
-          _FeaturedCard(paper: p, saved: saved.contains(p.id)),
+          _FeaturedCard(paper: p, saved: saved.containsKey(p.id)),
         ],
         if (view.list.isNotEmpty) ...[
           Padding(
@@ -115,9 +115,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   showDivider: i < view.list.length - 1,
                   onTap: () => context.push('/paper/${p.id}'),
                   trailing: RgBookmarkButton(
-                    saved: saved.contains(p.id),
+                    saved: saved.containsKey(p.id),
                     variant: RgCircleVariant.plain,
-                    onTap: () => toggleBookmark(p.id),
+                    onTap: () => toggleBookmark(p.id, p.title),
                   ),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     if (_topic == null && p.topicLabel != null) ...[
@@ -184,7 +184,7 @@ class _FeaturedCard extends StatelessWidget {
           const SizedBox(height: RgSpace.s18),
           Row(spacing: RgSpace.s8, children: [
             Expanded(child: RgPrimaryButton(label: '자세히 읽기', onTap: () => context.push('/paper/${paper.id}'))),
-            RgBookmarkButton(saved: saved, size: 48, onTap: () => toggleBookmark(paper.id)),
+            RgBookmarkButton(saved: saved, size: 48, onTap: () => toggleBookmark(paper.id, paper.title)),
           ]),
         ],
       ),

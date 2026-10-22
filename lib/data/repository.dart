@@ -32,11 +32,22 @@ class FixtureRepository {
 
 final repository = FixtureRepository();
 
-// ponytail: 메모리 북마크. M3에서 Hive로 영속화한다.
-final bookmarks = ValueNotifier<Set<String>>({});
+// 9.4 저장 단위. 보관함은 이 값만으로 그린다(7.7).
+class Bookmark {
+  const Bookmark(this.id, this.title, this.savedAt, {this.source = 'arXiv'});
+  final String id;
+  final String title;
+  final DateTime savedAt;
+  final String source;
+}
 
-void toggleBookmark(String id) {
+// ponytail: 메모리 북마크. M3에서 Hive로 영속화한다.
+final bookmarks = ValueNotifier<Map<String, Bookmark>>({});
+
+void toggleBookmark(String id, String title) {
   final next = {...bookmarks.value};
-  if (!next.remove(id)) next.add(id);
+  if (next.remove(id) == null) next[id] = Bookmark(id, title, DateTime.now());
   bookmarks.value = next;
 }
+
+void restoreBookmark(Bookmark b) => bookmarks.value = {...bookmarks.value, b.id: b};
