@@ -9,15 +9,17 @@ import '../../design/widgets/rg_buttons.dart';
 import '../../design/widgets/rg_card.dart';
 
 // S01 오늘의 연구 (HANDOFF 7.1). 로딩·오류·지연 카드는 M3.
+// S04에서 지난 날짜로 들어오면 같은 레이아웃에 뒤로 버튼만 더한다(7.6).
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({super.key, this.date});
+  final String? date; // YYYY-MM-DD, null = 오늘
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final _digest = repository.today();
+  late final _digest = repository.getDigest(widget.date);
   String? _topic; // null = 전체
 
   @override
@@ -50,8 +52,12 @@ class _HomeScreenState extends State<HomeScreen> {
         SizedBox(
           height: RgSpace.topBar,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
-            child: Align(alignment: Alignment.centerLeft, child: Text('ROOTGIST', style: RgText.wordmark)),
+            padding: EdgeInsets.symmetric(horizontal: widget.date == null ? RgSpace.gutterText : RgSpace.gutterCard),
+            child: Row(spacing: RgSpace.s12, children: [
+              if (widget.date != null)
+                RgCircleButton(semanticLabel: '뒤로', icon: 'chevron-left', onTap: () => context.pop()),
+              Text('ROOTGIST', style: RgText.wordmark),
+            ]),
           ),
         ),
         Padding(
@@ -200,6 +206,3 @@ class HomeView {
   late final PaperItem? featured;
   late final List<PaperItem> list;
 }
-
-const _weekdays = ['월', '화', '수', '목', '금', '토', '일'];
-String koreanDate(DateTime d) => '${d.month}월 ${d.day}일 ${_weekdays[d.weekday - 1]}요일';

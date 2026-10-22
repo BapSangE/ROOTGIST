@@ -8,6 +8,7 @@ import 'package:rootgist/data/models.dart';
 import 'package:rootgist/data/repository.dart';
 import 'package:rootgist/debug/widget_gallery.dart';
 import 'package:rootgist/design/typography.dart';
+import 'package:rootgist/features/explore/explore_screen.dart';
 import 'package:rootgist/features/home/home_screen.dart';
 import 'package:rootgist/features/reader/reader_screen.dart';
 import 'package:rootgist/main.dart';
@@ -167,6 +168,38 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(ko), findsNothing);
     expect(find.bySemanticsLabel('용어 설명: inference-time compute'), findsOneWidget);
+  });
+
+  test('S04: 오늘 제외, 월 묶음, 지연 시각은 KST', () async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    final today = await repository.todayKey();
+    final days = [for (final d in await repository.listDigests()) if (d.dateKey != today) d];
+    final months = groupByMonth(days);
+    expect(months.map((m) => m.$1), ['2026년 10월', '2026년 9월']);
+    expect(months.first.$2.map((d) => d.dateKey), ['2026-10-18', '2026-10-17', '2026-10-16']);
+    expect(kstTime(DateTime.parse('2026-10-17T00:00:00Z')), '09:00');
+  });
+
+  testWidgets('S04: 정상 날짜 → 그날의 S01, 지연·없음은 탭 안 됨', (tester) async {
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+
+    await tester.tap(find.text('탐색'));
+    await settle(tester);
+    expect(find.text('수집이 늦어지고 있어요 · 마지막 정상 수집 09:00'), findsOneWidget);
+    expect(find.text('1편 · 기타'), findsOneWidget); // 단독이면 「외」 없음
+    expect(find.text('10월 19일 월요일'), findsNothing); // 오늘 제외
+
+    await tester.tap(find.text('10월 18일 일요일'));
+    await settle(tester);
+    expect(find.bySemanticsLabel('뒤로'), findsOneWidget);
+    expect(find.textContaining('10월 18일 일요일', findRichText: true), findsWidgets);
+
+    await tester.tap(find.bySemanticsLabel('뒤로'));
+    await tester.pumpAndSettle();
+    expect(find.text('지난 날짜의 연구를 다시 볼 수 있어요'), findsOneWidget);
   });
 
   testWidgets('위젯 갤러리: 세그먼트·북마크·시트가 동작한다', (tester) async {

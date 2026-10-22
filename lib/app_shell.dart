@@ -8,6 +8,7 @@ import 'design/tokens.dart';
 import 'design/typography.dart';
 import 'design/widgets/rg_bottom_tab_bar.dart';
 import 'debug/widget_gallery.dart';
+import 'features/explore/explore_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/paper/paper_screen.dart';
 import 'features/reader/reader_screen.dart';
@@ -27,8 +28,17 @@ final router = GoRouter(
       builder: (context, state, shell) => AppShell(shell: shell),
       branches: [
         StatefulShellBranch(routes: [GoRoute(path: '/home', builder: (_, _) => const HomeScreen())]),
+        StatefulShellBranch(routes: [
+          GoRoute(
+            path: '/explore',
+            builder: (_, _) => const ExploreScreen(),
+            routes: [
+              // 지난 날짜의 S01. 탐색 탭 스택 안이라 탭바가 보인다.
+              GoRoute(path: ':date', builder: (_, state) => HomeScreen(date: state.pathParameters['date'])),
+            ],
+          ),
+        ]),
         for (final (path, title) in const [
-          ('/explore', '탐색'),
           ('/library', '보관함'),
           ('/settings', '설정'),
         ])
