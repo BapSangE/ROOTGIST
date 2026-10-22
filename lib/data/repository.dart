@@ -35,13 +35,21 @@ final repository = FixtureRepository();
 // 9.4 저장 단위. 보관함은 이 값만으로 그린다(7.7).
 class Bookmark {
   const Bookmark(this.id, this.title, this.savedAt, {this.source = 'arXiv'});
+  Bookmark.fromJson(Map<String, dynamic> j)
+      : id = j['paper_id'],
+        title = j['title_ko'],
+        savedAt = DateTime.parse(j['saved_at']),
+        source = j['source'] ?? 'arXiv';
   final String id;
   final String title;
   final DateTime savedAt;
   final String source;
+
+  Map<String, dynamic> toJson() =>
+      {'paper_id': id, 'title_ko': title, 'source': source, 'saved_at': savedAt.toIso8601String()};
 }
 
-// ponytail: 메모리 북마크. M3에서 Hive로 영속화한다.
+// 저장은 storage.dart(키 bookmarks).
 final bookmarks = ValueNotifier<Map<String, Bookmark>>({});
 
 void toggleBookmark(String id, String title) {

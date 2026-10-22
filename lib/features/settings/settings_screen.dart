@@ -10,9 +10,10 @@ import '../../design/widgets/rg_buttons.dart';
 import '../../design/widgets/rg_card.dart';
 import '../../design/widgets/rg_pressable.dart';
 import '../../design/widgets/rg_segmented.dart';
+import '../reader/text_size_sheet.dart';
 import 'ai_notice_sheet.dart';
 
-// S06 설정 (HANDOFF 7.8). 글자 크기 시트는 M3.
+// S06 설정 (HANDOFF 7.8).
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
@@ -61,7 +62,10 @@ class SettingsScreen extends StatelessWidget {
               ),
             ]),
           ),
-          _Row(label: '글자 크기', value: '기본', onTap: null), // M3: 4단계 시트
+          ValueListenableBuilder(
+            valueListenable: readerScale,
+            builder: (_, s, _) => _Row(label: '글자 크기', value: readerScaleLabel(s), onTap: () => showTextSizeSheet(context)),
+          ),
         ]),
         group('안내'),
         _SettingsCard(children: [

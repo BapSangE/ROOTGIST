@@ -7,6 +7,8 @@ import 'package:rootgist/app_shell.dart';
 import 'package:rootgist/data/models.dart';
 import 'package:rootgist/data/repository.dart';
 import 'package:rootgist/data/settings.dart';
+import 'package:rootgist/data/storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rootgist/features/settings/ai_notice_sheet.dart';
 import 'package:rootgist/features/settings/settings_screen.dart';
 import 'package:rootgist/debug/widget_gallery.dart';
@@ -22,6 +24,7 @@ Future<void> pumpApp(WidgetTester tester) async {
   router.go('/home'); // 전역 라우터·북마크라 이전 테스트 상태가 남는다
   bookmarks.value = {};
   readerDefaultMode.value = ReaderMode.together;
+  readerScale.value = 1.0;
   await tester.runAsync(() async {
     await tester.pumpWidget(const RootgistApp());
     await Future<void>.delayed(const Duration(milliseconds: 200));
@@ -39,6 +42,44 @@ Future<void> settle(WidgetTester tester) async {
 }
 
 void main() {
+  // 앱 시작과 같이 저장값을 한 번 읽고, 이후 변경을 저장하는 리스너를 단다.
+  setUpAll(() async {
+    SharedPreferences.setMockInitialValues({
+      'bookmarks': jsonEncode([Bookmark('0000.00002', '저장된 논문', DateTime(2026, 10, 15)).toJson()]),
+      'settings.readerMode': 'original',
+      'settings.readerScale': 1.15,
+    });
+    await initStorage();
+  });
+
+  test('M3: 저장값을 읽어 오고, 바뀌면 바로 저장한다(Q12)', () async {
+    // setUpAll에서 읽은 값(아직 pumpApp 전)
+    expect(bookmarks.value['0000.00002']!.savedAt, DateTime(2026, 10, 15));
+    expect(readerDefaultMode.value, ReaderMode.original);
+    expect(readerScale.value, 1.15);
+
+    toggleBookmark('0000.00001', '추론 시점 연산의 효율적 확장');
+    readerScale.value = 0.9;
+    final prefs = await SharedPreferences.getInstance();
+    expect((jsonDecode(prefs.getString('bookmarks')!) as List).map((j) => j['paper_id']), containsAll(['0000.00001', '0000.00002']));
+    expect(prefs.getDouble('settings.readerScale'), 0.9);
+  });
+
+  testWidgets('M3: 모드를 바꿔도 맨 위에 걸친 문장 쌍이 제자리', (tester) async {
+    tester.view.physicalSize = const Size(390, 400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+    router.push('/paper/0000.00001/reader?s=A03');
+    await settle(tester);
+
+    final pair = find.ancestor(of: find.textContaining('We evaluate', findRichText: true), matching: find.byType(Column)).first;
+    final before = tester.getTopLeft(pair).dy;
+    expect(before, lessThan(200)); // ?s=A03 으로 스크롤되어 위쪽에 있다
+    await tester.tap(find.text('원문'));
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(pair).dy, moreOrLessEquals(before, epsilon: 1));
+  });
   testWidgets('탭 4개가 뜨고 전환된다', (tester) async {
     await pumpApp(tester);
     await tester.pumpAndSettle();

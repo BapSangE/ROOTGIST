@@ -10,9 +10,10 @@ import '../../design/widgets/rg_buttons.dart';
 import '../../design/widgets/rg_pressable.dart';
 import '../../design/widgets/rg_segmented.dart';
 import 'term_sheet.dart';
+import 'text_size_sheet.dart';
 
 // S03 초록 원문·번역 리더 (HANDOFF 7.4). 기본 모드는 S06 설정값.
-// M3: 글자 크기 시트, 모드 전환 시 스크롤 보정.
+// 모드·글자 크기를 바꿔도 화면 맨 위에 걸친 문장 쌍이 같은 자리에 남도록 스크롤을 보정한다.
 class ReaderScreen extends StatefulWidget {
   const ReaderScreen({super.key, required this.paperId, this.initialSentenceId});
   final String paperId;
@@ -32,12 +33,53 @@ class _ReaderScreenState extends State<ReaderScreen> {
     }
     return p;
   });
-  final _keys = <String, GlobalKey>{};
+  final _keys = <String, GlobalKey>{}; // 문장 순서대로 들어간다
+  final _scroll = ScrollController();
   var _mode = readerDefaultMode.value;
+
+  @override
+  void initState() {
+    super.initState();
+    readerScale.addListener(_onScale);
+  }
+
+  @override
+  void dispose() {
+    readerScale.removeListener(_onScale);
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  void _onScale() => _keepPosition(() => setState(() {}));
+
+  void _keepPosition(VoidCallback change) {
+    final viewportTop = MediaQuery.paddingOf(context).top + RgSpace.topBar;
+    RenderBox? boxOf(String id) => _keys[id]?.currentContext?.findRenderObject() as RenderBox?;
+    (String, double)? anchor;
+    for (final id in _keys.keys) {
+      final box = boxOf(id);
+      if (box == null || !box.attached) continue;
+      final top = box.localToGlobal(Offset.zero).dy;
+      if (top + box.size.height > viewportTop) {
+        anchor = (id, top);
+        break;
+      }
+    }
+    change();
+    if (anchor == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final box = boxOf(anchor!.$1);
+      if (box == null || !_scroll.hasClients) return;
+      final p = _scroll.position;
+      final target = p.pixels + box.localToGlobal(Offset.zero).dy - anchor.$2;
+      _scroll.jumpTo(target.clamp(p.minScrollExtent, p.maxScrollExtent));
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final padding = MediaQuery.paddingOf(context);
+    final mq = MediaQuery.of(context);
     return Scaffold(
       backgroundColor: RgColors.bgReading,
       body: Column(children: [
@@ -63,10 +105,15 @@ class _ReaderScreenState extends State<ReaderScreen> {
                     (ReaderMode.original, '원문'),
                   ],
                   value: _mode,
-                  onChanged: (m) => setState(() => _mode = m),
+                  onChanged: (m) => _keepPosition(() => setState(() => _mode = m)),
                 ),
               ),
-              const RgCircleButton(semanticLabel: '글자 크기', text: '가', variant: RgCircleVariant.neutral, onTap: null),
+              RgCircleButton(
+                semanticLabel: '글자 크기',
+                text: '가',
+                variant: RgCircleVariant.neutral,
+                onTap: () => showTextSizeSheet(context),
+              ),
             ]),
           ),
         ),
@@ -78,6 +125,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
               if (p == null) return const SizedBox.shrink();
               final highlights = firstHighlights(p);
               return SingleChildScrollView(
+                controller: _scroll,
                 padding: EdgeInsets.fromLTRB(RgSpace.gutterReader, RgSpace.s20, RgSpace.gutterReader, 40 + padding.bottom),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -86,18 +134,22 @@ class _ReaderScreenState extends State<ReaderScreen> {
                     const SizedBox(height: RgSpace.s6),
                     Semantics(header: true, child: Text(keepAll(p.title), style: RgText.titleReader)),
                     const SizedBox(height: RgSpace.s28),
-                    Column(
-                      spacing: RgSpace.s28,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        for (final s in p.sentences.where((s) => s.kind == 'text'))
-                          _Pair(
-                            key: _keys.putIfAbsent(s.id, GlobalKey.new),
-                            sentence: s,
-                            mode: _mode,
-                            highlights: highlights[s.id] ?? const [],
-                          ),
-                      ],
+                    // 글자 크기 단계는 본문에만, 시스템 글자 크기와 곱해서 적용한다.
+                    MediaQuery(
+                      data: mq.copyWith(textScaler: TextScaler.linear(mq.textScaler.scale(1) * readerScale.value)),
+                      child: Column(
+                        spacing: RgSpace.s28,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          for (final s in p.sentences.where((s) => s.kind == 'text'))
+                            _Pair(
+                              key: _keys.putIfAbsent(s.id, GlobalKey.new),
+                              sentence: s,
+                              mode: _mode,
+                              highlights: highlights[s.id] ?? const [],
+                            ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -187,7 +239,8 @@ class _TermState extends State<_Term> {
             color: _active ? RgColors.highlightActive : RgColors.highlight,
             borderRadius: BorderRadius.circular(RgRadius.term),
           ),
-          child: Text(widget.term.term, style: widget.style),
+          // 문장 Text.rich가 WidgetSpan 자리를 이미 글자 배율만큼 키우므로 여기서 또 키우지 않는다.
+          child: Text(widget.term.term, style: widget.style, textScaler: TextScaler.noScaling),
         ),
       ),
     );
