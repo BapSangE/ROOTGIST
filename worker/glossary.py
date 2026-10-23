@@ -274,6 +274,11 @@ def sync(db: Db, api_key: str | None = None):
     ], "normalized_form")
     for n, (draft, model) in carried.items():
         db.update("term_candidates", {"canonical_ko_draft": draft, "draft_model": model}, normalized_form=n)
+    # 해설을 다시 만들어 더 이상 어느 논문에도 없는 대기 후보는 지운다(검토 목록 정리). 승인·반려한 후보는 남긴다.
+    stale = [n for n, c in known.items()
+             if n not in merged and key[n] == n and c["review_status"] == "pending" and c["sense_id"] is None]
+    for n in stale:
+        db.delete("term_candidates", normalized_form=n)
     candidates = merged
     drafted = draft_korean(db, api_key) if api_key else 0
     draft_full_forms(db, api_key)
