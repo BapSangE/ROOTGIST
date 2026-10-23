@@ -11,10 +11,10 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-# 버전 → 문서. v0.6은 시험판(문서 머리말 참조). 확인 실행 뒤 기본값을 옮긴다.
+# 버전 → 문서. v0.6은 내부 테스트용 기본값(2026-10-23, 3편 확인 2회). 운영 제공처 전환 때 v0.5.2와 다시 비교한다.
 PROMPTS = {"v0.5.2": ROOT / "docs" / "contract" / "p2_prompt_v0.5.2.md",
            "v0.6": ROOT / "docs" / "contract" / "p2_prompt_v0.6.md"}
-DEFAULT_PROMPT = "v0.5.2"
+DEFAULT_PROMPT = "v0.6"
 SCHEMA_VERSION = "p2-output-v0.2"
 ENDPOINT = "https://integrate.api.nvidia.com/v1/chat/completions"
 

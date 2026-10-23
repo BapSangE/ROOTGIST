@@ -167,7 +167,7 @@ class PreferredTermsTest(unittest.TestCase):
     def test_v06_template_has_preferred_terms(self):
         user = llm.build_messages("T", ABSTRACT, sentences(), "v0.6", [{"term": "backbone", "ko": "백본"}])[1]["content"]
         self.assertIn('preferred_terms: [{"term": "backbone", "ko": "백본"}]', user)
-        self.assertNotIn("preferred_terms", llm.build_messages("T", ABSTRACT, sentences())[1]["content"])  # v0.5.2
+        self.assertNotIn("preferred_terms", llm.build_messages("T", ABSTRACT, sentences(), "v0.5.2")[1]["content"])
 
 
 class DraftCheckTest(unittest.TestCase):
