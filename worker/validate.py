@@ -66,6 +66,7 @@ def latex_display(s: str) -> str:
     s = re.sub(r"\\([%_&#$])", r"\1", s)
     s = re.sub(r"(?<=\d)\s*\\?times\s*(?=\d)", "×", s)  # 3 \times 4, 4 times 4 → ×
     s = re.sub(r"(?<=\d)\s*\\times\b|(?<=\d)times\b", "×", s)  # 10\times, 3times → ×
+    s = re.sub(r"(?<=\S)---?(?=\S)", "–", s)  # LaTeX 줄표 --/--- 가 그대로 옮겨진 경우(모델--하네스 → 모델–하네스)
     return re.sub(r"~|\\,", " ", s)
 
 

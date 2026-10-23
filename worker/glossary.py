@@ -14,6 +14,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
+from . import acronym
 from .db import Db
 
 
@@ -92,12 +93,35 @@ def promote_candidates(db: Db) -> int:
         db.upsert("term_senses", [{"sense_id": sid, "term_id": tid, "canonical_ko": ko,
                                    "definition_ko": c["definition_ko"], "definition_kind": "paper_glossary",
                                    "ai_review_status": "first_pass_complete", "review_status": "approved",
-                                   "human_reviewer": c.get("human_reviewer")}], "sense_id")
+                                   "human_reviewer": c.get("human_reviewer"),
+                                   # 정식 명칭도 같은 규칙: 검토자가 쓴 값, 없으면 초안(빈 문자열 = 없음)
+                                   "full_form_en": c.get("full_form_en") or c.get("full_form_en_draft") or None}],
+                  "sense_id")
         db.upsert("term_aliases", [{"alias_id": f"ALIAS-cand-{h}", "sense_id": sid, "surface_form": c["surface_form"],
                                     "normalized_form": c["normalized_form"], "relation_type": "canonical_name",
                                     "review_status": "approved", "auto_match_allowed": True}], "alias_id")
         db.update("term_candidates", {"sense_id": sid}, normalized_form=c["normalized_form"])
     return len(ready)
+
+
+def preferred_terms(db: Db) -> list[tuple[str, str, str]]:
+    """사람이 승인한 의미의 (정규화 별칭, 별칭 원문, 한국어 표기). 프롬프트 v0.6의 preferred_terms 재료."""
+    senses = {s["sense_id"]: s["canonical_ko"] for s in db.select_all(
+        "term_senses", "review_status=eq.approved&canonical_ko=not.is.null&select=sense_id,canonical_ko&order=sense_id")}
+    if not senses:
+        return []
+    aliases = db.select_all("term_aliases", "select=sense_id,surface_form&order=alias_id")
+    return [(normalize(a["surface_form"]), a["surface_form"], senses[a["sense_id"]]) for a in aliases if a["sense_id"] in senses]
+
+
+def terms_in(preferred: list[tuple[str, str, str]], abstract: str) -> list[dict]:
+    """초록에 단어 단위로 나오는 승인 표기만(복수형 포함). 같은 영문이 여러 번 걸리면 하나만."""
+    text = normalize(abstract)
+    out = {}
+    for n, surface, ko in preferred:
+        if re.search(rf"(?<![a-z0-9]){re.escape(n)}s?(?![a-z0-9])", text):
+            out.setdefault(n, {"term": surface, "ko": ko})
+    return list(out.values())
 
 
 def plan_links(glossary_rows: list[dict], aliases: list[dict]):
@@ -166,8 +190,59 @@ def draft_korean(db: Db, api_key: str, limit: int = 200, batch: int = 40) -> int
     return done
 
 
+FULL_FORM_RULES = """AI·머신러닝 약어의 영문 정식 명칭을 알려 준다.
+- 분야에서 널리 쓰이고 뜻이 하나로 정해진 약어만 정식 명칭을 쓴다(예: SLAM → Simultaneous Localization and Mapping).
+- 모델·데이터셋·벤치마크 이름처럼 정식 명칭이 따로 없거나, 여러 뜻이 가능하거나, 확실하지 않으면 null.
+- 새 명칭을 지어내지 않는다. 설명 없이 명칭만 쓴다.
+- 입력의 모든 term을 입력 순서대로 정확히 한 번씩, term 값은 그대로 복사한다.
+출력은 JSON 하나만: {"items": [{"term": "...", "full_form_en": "..." 또는 null}]}"""
+
+
+def fill_paper_full_forms(db: Db) -> int:
+    """이미 저장된 논문 용어 중 약어의 정식 명칭을 초록에서 채운다(예전 배치분). 없으면 빈 문자열로 표시해 다시 보지 않는다."""
+    rows = [r for r in db.select_all("paper_glossary", "full_form_en=is.null&select=paper_id,idx,term&order=paper_id,idx")
+            if acronym.is_acronym(r["term"])]
+    abstracts = {}
+    for r in rows:
+        if r["paper_id"] not in abstracts:
+            abstracts[r["paper_id"]] = db.select("papers", f"paper_id=eq.{r['paper_id']}&select=abstract_en")[0]["abstract_en"]
+        full = acronym.from_abstract(r["term"], abstracts[r["paper_id"]]) or ""
+        db.update("paper_glossary", {"full_form_en": full}, paper_id=r["paper_id"], idx=r["idx"])
+    return len(rows)
+
+
+def draft_full_forms(db: Db, api_key: str | None) -> int:
+    """약어 후보의 정식 명칭 초안: 처음 본 논문 초록에 풀이가 있으면 그것, 없으면 LLM(글자 대조 통과만). 없으면 빈 문자열."""
+    todo = [c for c in db.select_all("term_candidates", "review_status=eq.pending&full_form_en_draft=is.null"
+                                                        "&select=normalized_form,surface_form,definition_ko,first_paper_id&order=normalized_form")
+            if acronym.is_acronym(c["surface_form"])]
+    ask = []
+    for c in todo:
+        abstract = db.select("papers", f"paper_id=eq.{c['first_paper_id']}&select=abstract_en")[0]["abstract_en"]
+        if full := acronym.from_abstract(c["surface_form"], abstract):
+            db.update("term_candidates", {"full_form_en_draft": full}, normalized_form=c["normalized_form"])
+        else:
+            ask.append(c)
+    if ask and api_key:
+        from . import llm
+
+        terms = [c["surface_form"] for c in ask]
+        messages = [{"role": "system", "content": FULL_FORM_RULES},
+                    {"role": "user", "content": json.dumps([{"term": c["surface_form"], "definition_ko": c["definition_ko"]} for c in ask], ensure_ascii=False)}]
+        out, _ = llm.generate(api_key, messages,
+                              lambda o: [] if isinstance(o, dict) and [i.get("term") for i in o.get("items", [])] == terms else ["terms"],
+                              lambda r: None)
+        for c, item in zip(ask, (out or {}).get("items", [])):
+            full = item.get("full_form_en") if isinstance(item.get("full_form_en"), str) else ""
+            # 약어 글자와 안 맞는 명칭은 버린다(지어낸 명칭 방지)
+            db.update("term_candidates", {"full_form_en_draft": full if full and acronym.matches(c["surface_form"], full) else ""},
+                      normalized_form=c["normalized_form"])
+    return len(todo)
+
+
 def sync(db: Db, api_key: str | None = None):
     promoted = promote_candidates(db)
+    fill_paper_full_forms(db)
     aliases = db.select_all("term_aliases", "select=sense_id,surface_form&order=alias_id")
     rows = db.select_all("paper_glossary", "sense_id=is.null&select=paper_id,idx,term,definition_ko&order=paper_id,idx")
     links, candidates = plan_links(rows, aliases)
@@ -201,6 +276,7 @@ def sync(db: Db, api_key: str | None = None):
         db.update("term_candidates", {"canonical_ko_draft": draft, "draft_model": model}, normalized_form=n)
     candidates = merged
     drafted = draft_korean(db, api_key) if api_key else 0
+    draft_full_forms(db, api_key)
     print(f"용어: 후보→사전 {promoted}, 새 연결 {len(links)}, 사전에 없는 표기 {len(candidates)}, 대응어 초안 {drafted}")
 
 

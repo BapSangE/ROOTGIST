@@ -17,7 +17,13 @@ Future<void> showTermSheet(BuildContext context, GlossaryTerm t) {
         Text('용어', style: RgText.caption.copyWith(color: RgColors.textSecondary)),
         const SizedBox(height: RgSpace.s6),
         Semantics(header: true, child: Text(t.term, style: RgText.serifTerm)),
-        if (t.termKo != null) ...[
+        // 약어면 정식 명칭 한 줄(예: SLAM → Simultaneous Localization and Mapping)
+        if (t.fullForm != null) ...[
+          const SizedBox(height: RgSpace.s4),
+          Text(t.fullForm!, style: RgText.serifSubtitle.copyWith(color: RgColors.textSecondary)),
+        ],
+        // 대응어가 원어와 같으면(SLAM → SLAM) 같은 말을 두 번 보이지 않는다
+        if (t.termKo != null && t.termKo!.toLowerCase() != t.term.toLowerCase()) ...[
           const SizedBox(height: RgSpace.s6),
           Text(t.termKo!, style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
         ],

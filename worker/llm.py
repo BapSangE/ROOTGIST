@@ -11,8 +11,10 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-PROMPT_DOC = ROOT / "docs" / "contract" / "p2_prompt_v0.5.2.md"
-PROMPT_VERSION = "p2-prompt-v0.5.2"
+# 버전 → 문서. v0.6은 시험판(문서 머리말 참조). 확인 실행 뒤 기본값을 옮긴다.
+PROMPTS = {"v0.5.2": ROOT / "docs" / "contract" / "p2_prompt_v0.5.2.md",
+           "v0.6": ROOT / "docs" / "contract" / "p2_prompt_v0.6.md"}
+DEFAULT_PROMPT = "v0.5.2"
 SCHEMA_VERSION = "p2-output-v0.2"
 ENDPOINT = "https://integrate.api.nvidia.com/v1/chat/completions"
 
@@ -27,9 +29,13 @@ def _section(doc: str, start: str, end: str) -> str:
     return doc[i:j].strip()
 
 
-def load_prompt() -> tuple[str, str]:
-    """확정 프롬프트 문서에서 SYSTEM과 모드 B 규칙을 그대로 꺼낸다(문서를 고치면 호출도 바뀐다)."""
-    doc = PROMPT_DOC.read_text(encoding="utf-8")
+def prompt_version(version: str) -> str:
+    return f"p2-prompt-{version}"
+
+
+def load_prompt(version: str = DEFAULT_PROMPT) -> tuple[str, str]:
+    """프롬프트 문서에서 SYSTEM과 모드 B 규칙을 그대로 꺼낸다(문서를 고치면 호출도 바뀐다)."""
+    doc = PROMPTS[version].read_text(encoding="utf-8")
     system = _section(doc, "## SYSTEM (공통)", "## USER TEMPLATE")
     mode_b = _section(doc, "## 모드 B — AUTO SELECT (용어 선정 평가)", "## 도구측 필수 검증")
     mode_b = re.sub(r"```\n.*?```\n", "", mode_b, flags=re.S).strip()  # 코드 블록(값)은 USER에 직접 쓴다
@@ -43,8 +49,9 @@ def sha256(text: str) -> str:
 SCHEMA_DOC = ROOT / "docs" / "contract" / "p2_output_schema_v0.2.json"
 
 
-def build_messages(title_en: str, abstract: str, sentences: list[dict]) -> list[dict]:
-    system, mode_b = load_prompt()
+def build_messages(title_en: str, abstract: str, sentences: list[dict],
+                   version: str = DEFAULT_PROMPT, preferred_terms: list[dict] | None = None) -> list[dict]:
+    system, mode_b = load_prompt(version)
     # SYSTEM은 "p2-output-v0.2 스키마에 맞춘다"고만 하므로 스키마 원문을 붙인다. 빼면 모델이 필드 이름을 지어낸다
     # (2026-10-22 확인 실행: claim_ko→text, translation_ko→text_ko 등으로 3회 모두 스키마 실패).
     # ponytail: 연구 레포에서 스키마를 어디에 넣었는지는 확인하지 못했다. 운영 제공처 확인 실행 때 함께 맞춰 본다.
@@ -56,6 +63,8 @@ def build_messages(title_en: str, abstract: str, sentences: list[dict]) -> list[
         f"source_sentences: {json.dumps(src, ensure_ascii=False)}",
         'allowed_topics: ["llm","agent","multimodal","optimization","other"]',
         'explanation_level: "standard"',
+        # v0.6부터: 승인된 사전 표기(없으면 빈 목록). v0.5.2 템플릿에는 없는 줄이다.
+        *([f"preferred_terms: {json.dumps(preferred_terms or [], ensure_ascii=False)}"] if version != "v0.5.2" else []),
         'glossary_mode: "auto_select"',
         "fixed_terms: []",
         "",

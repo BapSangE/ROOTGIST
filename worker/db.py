@@ -89,6 +89,7 @@ class Db:
         self.upsert("paper_glossary", [
             {"paper_id": paper_id, "idx": i, "term": g["term"], "definition_ko": g["definition_ko"],
              "context_ko": g["context_ko"], "sentence_ids": g["sentence_ids"],
-             "term_difficulty": difficulty.get(g["term"]), "highlight": g["highlight"]}
+             "term_difficulty": difficulty.get(g["term"]), "highlight": g["highlight"],
+             "full_form_en": g.get("full_form_en")}
             for i, g in enumerate(detail["glossary"])
         ], "paper_id,idx")

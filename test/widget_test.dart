@@ -20,6 +20,7 @@ import 'package:rootgist/features/explore/explore_screen.dart';
 import 'package:rootgist/features/home/home_screen.dart';
 import 'package:rootgist/features/paper/paper_screen.dart';
 import 'package:rootgist/features/reader/reader_screen.dart';
+import 'package:rootgist/features/reader/term_sheet.dart';
 import 'package:rootgist/main.dart';
 
 // 에셋 읽기는 실제 I/O라 fake async 안에서 시작하면 끝나지 않고, rootBundle이 그 미완료 Future를 캐시해
@@ -455,6 +456,22 @@ void main() {
           .having((e) => e.offline, 'offline', true)
           .having((e) => e.lastSuccessAt, 'lastSuccessAt', DateTime.utc(2026, 10, 21, 20, 12))),
     );
+  });
+
+  testWidgets('C02: 약어는 정식 명칭 한 줄, 원어와 같은 대응어는 숨김', (tester) async {
+    final slam = GlossaryTerm.fromJson({
+      'term': 'SLAM', 'definition_ko': '가상 정의.', 'sentence_ids': ['A01'], 'highlight': true,
+      'term_ko': 'SLAM', 'full_form_en': 'Simultaneous Localization and Mapping',
+    });
+    final empty = GlossaryTerm.fromJson({'term': 'MTEB', 'definition_ko': '가상 정의.', 'full_form_en': ''});
+    expect(empty.fullForm, isNull); // 빈 문자열 = 확인했지만 없음
+    await tester.pumpWidget(MaterialApp(
+      home: Builder(builder: (context) => TextButton(onPressed: () => showTermSheet(context, slam), child: const Text('열기'))),
+    ));
+    await tester.tap(find.text('열기'));
+    await tester.pumpAndSettle();
+    expect(find.text('Simultaneous Localization and Mapping'), findsOneWidget);
+    expect(find.text('SLAM'), findsOneWidget); // 원어만, 대응어 줄은 없음
   });
 
   testWidgets('위젯 갤러리: 세그먼트·북마크·시트가 동작한다', (tester) async {

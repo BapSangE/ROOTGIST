@@ -47,7 +47,12 @@ def main(argv=None):
     ap.add_argument("--date", help="UTC 날짜 D (YYYY-MM-DD). 기본: KST 기준 어제")
     ap.add_argument("--limit", type=int, default=10, help="노출·해설 편수(기본 10)")
     ap.add_argument("--out", type=Path, default=ROOT / "worker" / "out")
+    ap.add_argument("--prompt", choices=sorted(llm.PROMPTS), default=setting("ROOTGIST_PROMPT") or llm.DEFAULT_PROMPT,
+                    help=f"프롬프트 버전(기본 {llm.DEFAULT_PROMPT}, 환경 변수 ROOTGIST_PROMPT로도 지정)")
+    ap.add_argument("--papers", help="이 논문들만 해설을 다시 만든다(쉼표 구분). 프롬프트 비교용")
+    ap.add_argument("--dry-run", action="store_true", help="Supabase에 쓰지 않는다(읽기만). 프롬프트 비교용")
     args = ap.parse_args(argv)
+    meta = {**META, "prompt_version": llm.prompt_version(args.prompt)}
 
     # 기본 D = KST 기준 어제. 예약 실행(KST 05:00 = UTC 20:00 전날)에서도 수동 실행에서도 같은 날을 고른다.
     kst_today = datetime.now(timezone(timedelta(hours=9))).date()
@@ -78,10 +83,15 @@ def main(argv=None):
     papers = [p for p in (collect.to_paper(i) for i in items) if p]
     ordered = collect.select_top(papers, len(papers))  # 전체 순위. 상위 limit편만 노출
     by_id = {p["paper_id"]: p for p in ordered}
-    prior = db.digest_papers(digest_date) if db else []
+    prior = db.digest_papers(digest_date) if db and not args.papers else []
     prior_exposed = [r["paper_id"] for r in prior if r["is_exposed"]]
+    preferred = glossary.preferred_terms(db) if db and args.prompt != "v0.5.2" else []
 
-    if prior_exposed:  # 다음 날 보충
+    if args.papers:  # 비교용: 지정한 논문만, 이미 있어도 다시 만든다
+        exposed_ids = [i for i in args.papers.split(",") if i in by_id]
+        late, regenerate = [], exposed_ids
+        print(f"{source_date}: 지정 {len(exposed_ids)}편을 {args.prompt}로 생성")
+    elif prior_exposed:  # 다음 날 보충
         exposed_ids = prior_exposed
         known = {r["paper_id"] for r in prior}
         late = [p for p in ordered if p["paper_id"] not in known]
@@ -101,8 +111,9 @@ def main(argv=None):
         except ValueError as e:
             log({"paper_id": pid, "stage": "split", "error": str(e)})
             return pid, build.paper_detail(p, [], None), [], None, None
-        messages = llm.build_messages(p["title_en"], p["abstract_en"], sentences)
-        out, model = llm.generate(key, messages, lambda o: validate.check(o, sentences), lambda r: log({**META, "paper_id": pid, **r}))
+        messages = llm.build_messages(p["title_en"], p["abstract_en"], sentences, args.prompt,
+                                      glossary.terms_in(preferred, p["abstract_en"]))
+        out, model = llm.generate(key, messages, lambda o: validate.check(o, sentences), lambda r: log({**meta, "paper_id": pid, **r}))
         print(f"  {pid}: {f'ok ({model})' if out else '실패 → 해설 준비 중'}")
         return pid, build.paper_detail(p, sentences, validate.postprocess(out) if out else None), sentences, out, model
 
@@ -111,6 +122,10 @@ def main(argv=None):
     # 노출 순서대로 상세를 모은다. 이번에 안 만든 편은 이미 저장된 상세를 읽는다.
     details = [made[i][1] if i in made else db.rpc("get_paper", pid=i) for i in exposed_ids]
     details = [d for d in details if d]
+    if args.papers:  # 비교용은 논문 상세 파일만 남기고 끝낸다(다이제스트·DB는 그대로)
+        build.write(args.out, {"digest_date": "compare", "source_date": source_date, "status": "empty"}, None, details)
+        print(f"저장: {args.out}/papers (비교용, {args.prompt})")
+        return 0
 
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     ranked = [by_id.get(d["paper_id"], {"upvotes": 0}) for d in details]
@@ -120,8 +135,8 @@ def main(argv=None):
              "last_success_at": now}
     build.write(args.out, entry, day, details)
 
-    if db:
-        _save(db, entry, ordered, prior, exposed_ids, late, made, day["featured_paper_id"])
+    if db and not args.dry_run:
+        _save(db, entry, ordered, prior, exposed_ids, late, made, day["featured_paper_id"], meta)
         glossary.sync(db, key)  # 새 논문 용어를 사전에 연결하고, 없는 표기는 후보로 쌓아 한국어 대응어 초안을 단다
     ready = sum(d["ai_status"] == "ready" for d in details)
     print(f"저장: {args.out}{' + Supabase' if db else ''} (digest {digest_date}, 해설 {ready}/{len(details)}편)")
@@ -129,10 +144,10 @@ def main(argv=None):
 
 
 META = {"sentence_splitter_version": split.SPLITTER_VERSION, "glossary_mode": "auto_select",
-        "prompt_version": llm.PROMPT_VERSION, "schema_version": llm.SCHEMA_VERSION, "temperature": 0}
+        "schema_version": llm.SCHEMA_VERSION, "temperature": 0}
 
 
-def _save(db: Db, entry, ordered, prior, exposed_ids, late, made, featured_id):
+def _save(db: Db, entry, ordered, prior, exposed_ids, late, made, featured_id, meta):
     """FK 순서: papers → digests → digest_papers → 문장·해설."""
     db.upsert("papers", [
         {"paper_id": p["paper_id"], "title_en": p["title_en"], "abstract_en": p["abstract_en"],
@@ -161,7 +176,7 @@ def _save(db: Db, entry, ordered, prior, exposed_ids, late, made, featured_id):
 
     for pid, (_, detail, sentences, out, model) in made.items():
         src = next(p for p in ordered if p["paper_id"] == pid)
-        db.save_paper_ai(pid, llm.sha256(src["abstract_en"]), sentences, detail, out, model, META)
+        db.save_paper_ai(pid, llm.sha256(src["abstract_en"]), sentences, detail, out, model, meta)
 
 
 def _record_delayed(db: Db | None, out_dir: Path, digest_date: str, source_date: str):

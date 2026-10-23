@@ -88,6 +88,7 @@ class ValidateTest(unittest.TestCase):
     def test_postprocess_and_highlight(self):
         out = validate.postprocess(output(summary_ko="30\\% 개선, 4 times 4, 3\\times 빠름, GPU~A"))
         self.assertEqual(out["summary_ko"], "30% 개선, 4×4, 3× 빠름, GPU A")
+        self.assertEqual(validate.latex_display("모델--하네스, 뇌---몸, -- 단독"), "모델–하네스, 뇌–몸, -- 단독")
         dup = output()["glossary"][0]
         self.assertEqual(validate.highlights([dup, dup, {**dup, "definition_ko": " "}], sentences()), [True, False, False])
 
@@ -135,6 +136,38 @@ class MergePluralsTest(unittest.TestCase):
         self.assertEqual(key["policies"], "policy")
         self.assertEqual(key["bias"], "bias")  # bia가 없으니 그대로
         self.assertEqual(key["lens"], "lens")
+
+
+class AcronymTest(unittest.TestCase):
+    def test_detect_and_match(self):
+        from .acronym import is_acronym, matches
+        self.assertTrue(all(map(is_acronym, ["SLAM", "LoRA", "MLLMs", "GPT-4"])))
+        self.assertFalse(any(map(is_acronym, ["backbone", "Transformer", "trajectory drift"])))
+        self.assertTrue(matches("SLAM", "Simultaneous Localization and Mapping"))
+        self.assertTrue(matches("LoRA", "Low-Rank Adaptation"))
+        self.assertTrue(matches("MLLMs", "Multimodal Large Language Models"))
+        self.assertFalse(matches("SLAM", "Sparse Linear Attention Module for Vision"))
+
+    def test_from_abstract(self):
+        from .acronym import from_abstract
+        a = "We study Multimodal large language models (MLLMs) and toy agents. SLAM (simultaneous localization and mapping) helps."
+        self.assertEqual(from_abstract("MLLMs", a), "Multimodal large language models")
+        self.assertEqual(from_abstract("SLAM", a), "simultaneous localization and mapping")
+        self.assertIsNone(from_abstract("MTEB", "We evaluate on MTEB."))  # 풀이가 없으면 지어내지 않음
+
+
+class PreferredTermsTest(unittest.TestCase):
+    def test_word_boundary_and_plural(self):
+        from .glossary import terms_in
+        pref = [("backbone", "backbone", "백본"), ("rl", "RL", "강화 학습"), ("instruction following", "instruction following", "지시 수행")]
+        got = terms_in(pref, "We freeze two Backbones for instruction-following; URLs are not RL-free.")
+        self.assertEqual([t["ko"] for t in got], ["백본", "강화 학습", "지시 수행"])
+        self.assertEqual(terms_in(pref, "control of the world"), [])  # "rl"이 world 안에 있어도 단어가 아님
+
+    def test_v06_template_has_preferred_terms(self):
+        user = llm.build_messages("T", ABSTRACT, sentences(), "v0.6", [{"term": "backbone", "ko": "백본"}])[1]["content"]
+        self.assertIn('preferred_terms: [{"term": "backbone", "ko": "백본"}]', user)
+        self.assertNotIn("preferred_terms", llm.build_messages("T", ABSTRACT, sentences())[1]["content"])  # v0.5.2
 
 
 class DraftCheckTest(unittest.TestCase):

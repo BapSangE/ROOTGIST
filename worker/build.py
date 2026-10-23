@@ -3,6 +3,7 @@ import json
 from collections import Counter
 from pathlib import Path
 
+from . import acronym
 from .validate import highlights
 
 
@@ -35,7 +36,9 @@ def paper_detail(p: dict, sentences: list[dict], out: dict | None) -> dict:
         "sentences": [{**s, "translation_ko": tr.get(s["sentence_id"])} for s in plain],
         "glossary": [
             {"term": g["term"], "definition_ko": g["definition_ko"], "context_ko": g["context_ko"],
-             "sentence_ids": g["sentence_ids"], "highlight": h}
+             "sentence_ids": g["sentence_ids"], "highlight": h,
+             # 약어면 초록이 직접 풀어 쓴 정식 명칭(없으면 빈 문자열 = 확인했지만 없음)
+             "full_form_en": (acronym.from_abstract(g["term"], p["abstract_en"]) or "") if acronym.is_acronym(g["term"]) else None}
             for g, h in zip(out["glossary"], highlights(out["glossary"], sentences))
         ],
         "limitations": out["limitations"],  # MVP 화면 미사용, 저장만
