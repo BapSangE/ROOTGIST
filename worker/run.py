@@ -51,6 +51,8 @@ def main(argv=None):
                     help=f"프롬프트 버전(기본 {llm.DEFAULT_PROMPT}, 환경 변수 ROOTGIST_PROMPT로도 지정)")
     ap.add_argument("--papers", help="이 논문들만 해설을 다시 만든다(쉼표 구분). 프롬프트 비교용")
     ap.add_argument("--dry-run", action="store_true", help="Supabase에 쓰지 않는다(읽기만). 프롬프트 비교용")
+    ap.add_argument("--regenerate", action="store_true",
+                    help="이미 낸 날의 노출 편 해설을 모두 다시 만든다(노출·순위는 그대로). 프롬프트를 바꾼 뒤 과거분 맞추기용")
     args = ap.parse_args(argv)
     meta = {**META, "prompt_version": llm.prompt_version(args.prompt)}
 
@@ -97,7 +99,7 @@ def main(argv=None):
         late = [p for p in ordered if p["paper_id"] not in known]
         statuses = {r["paper_id"]: r["status"] for r in db.select(
             "paper_ai", f"paper_id=in.({','.join(exposed_ids)})&select=paper_id,status")}
-        regenerate = [i for i in exposed_ids if statuses.get(i) != "ready" and i in by_id]
+        regenerate = [i for i in exposed_ids if (args.regenerate or statuses.get(i) != "ready") and i in by_id]
         print(f"{source_date}: 보충 — 새로 올라온 {len(late)}편은 보관 목록에만, 해설 다시 만들 편 {len(regenerate)}")
     else:
         exposed_ids = [p["paper_id"] for p in ordered[: args.limit]]
