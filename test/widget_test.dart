@@ -201,6 +201,16 @@ void main() {
     expect(ko.keys, ['A01']);
     expect(ko['A01']!.single.$3, '추론 시점 연산');
     expect(ko['A01']!.single.$1, '대규모 언어 모델에서 '.length);
+
+    // 번역문 표기가 대응어와 다르면 논문별 표기(term_ko_span)로 찾는다(동결된 디코더 ↔ 고정 디코더)
+    final p2 = PaperDetail.fromJson({
+      'paper_id': 'x', 'title_en': 'T', 'authors': ['A'], 'published_at': '2026-10-18', 'hf_url': '', 'arxiv_url': '',
+      'ai_status': 'ready',
+      'sentences': [{'sentence_id': 'A01', 'kind': 'text', 'text': 'We use a frozen decoder.', 'translation_ko': '동결된 디코더를 쓴다.'}],
+      'glossary': [{'term': 'frozen decoder', 'definition_ko': '정의.', 'sentence_ids': ['A01'], 'highlight': true,
+                    'term_ko': '고정 디코더', 'term_ko_span': '동결된 디코더'}],
+    });
+    expect(firstHighlights(p2, korean: true)['A01']!.single.$3, '동결된 디코더');
   });
 
   testWidgets('S03: 모드 전환, 용어 탭 → C02', (tester) async {

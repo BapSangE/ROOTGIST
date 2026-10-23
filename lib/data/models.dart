@@ -66,9 +66,11 @@ class GlossaryTerm {
         sentenceIds = List<String>.from(j['sentence_ids'] ?? const []),
         highlight = j['highlight'] == true,
         termKo = j['term_ko'],
+        termKoSpan = j['term_ko_span'],
         fullForm = (j['full_form_en'] as String?)?.isEmpty ?? true ? null : j['full_form_en'];
   final String term;
   final String? termKo; // 사전에 연결된 한국어 대응어(G1·G2). 없거나 앱에 보일 수 없는 의미면 null
+  final String? termKoSpan; // 이 논문 번역문에서 실제로 쓴 표기(동결된 디코더 ↔ 대응어 고정 디코더). 하이라이트는 이것 우선
   final String? fullForm; // 약어의 영문 정식 명칭(초록 풀이 또는 승인된 사전). 없으면 null
   final String definition; // G3: C02 본문은 definition_ko. context_ko는 MVP 미표시
   final List<String> sentenceIds;

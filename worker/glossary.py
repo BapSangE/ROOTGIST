@@ -150,6 +150,7 @@ DRAFT_RULES = """AI·머신러닝 논문 용어의 한국어 대응어를 제안
 - 한글·영문·숫자·공백·하이픈만 쓴다. 한자와 가나는 쓰지 않는다.
 - 입력의 모든 term을 입력 순서대로 정확히 한 번씩, term 값은 한 글자도 바꾸지 않고 그대로 복사한다.
 - 확실하지 않으면 가장 무난한 표기를 고르고, 새 용어를 지어내지 않는다.
+- translation은 이 용어가 나온 논문 문장의 한국어 번역이다. 거기서 이 용어를 옮긴 표기가 분야에서 자연스러우면 그 표기를 그대로 쓴다(번역문과 표기가 같아야 화면에서 강조된다).
 출력은 JSON 하나만: {"items": [{"term": "...", "canonical_ko": "..."}]}"""
 
 
@@ -166,17 +167,30 @@ def check_drafts(out, terms: list[str]) -> list[str]:
     return [f"ko: {bad}"] if bad else []
 
 
+def _translation_of(db: Db, c: dict) -> str:
+    """후보가 처음 나온 논문에서 그 용어가 있는 문장들의 한국어 번역(초안을 번역 표기에 맞추기 위한 문맥)."""
+    if not c.get("first_paper_id"):
+        return ""
+    rows = db.select("paper_glossary", f"paper_id=eq.{c['first_paper_id']}&select=term,sentence_ids")
+    row = next((r for r in rows if c["normalized_form"] in variants(r["term"])), None)
+    if not row:
+        return ""
+    tr = {t["sentence_id"]: t["translation_ko"] for t in db.select(
+        "paper_translations", f"paper_id=eq.{c['first_paper_id']}&select=sentence_id,translation_ko")}
+    return " ".join(tr[s] for s in row["sentence_ids"] if s in tr)
+
+
 def draft_korean(db: Db, api_key: str, limit: int = 200, batch: int = 40) -> int:
     """초안이 없는 대기 후보에 한국어 대응어 초안을 채운다. 검토자는 승인 또는 수정만 한다."""
     from . import llm
 
     todo = db.select("term_candidates", f"review_status=eq.pending&canonical_ko_draft=is.null"
-                                        f"&select=normalized_form,surface_form,definition_ko&order=seen_count.desc&limit={limit}")
+                                        f"&select=normalized_form,surface_form,definition_ko,first_paper_id&order=seen_count.desc&limit={limit}")
     done = 0
     for i in range(0, len(todo), batch):
         part = todo[i:i + batch]
         terms = [c["surface_form"] for c in part]
-        payload = [{"term": c["surface_form"], "definition_ko": c["definition_ko"]} for c in part]
+        payload = [{"term": c["surface_form"], "definition_ko": c["definition_ko"], "translation": _translation_of(db, c)} for c in part]
         messages = [{"role": "system", "content": DRAFT_RULES},
                     {"role": "user", "content": json.dumps(payload, ensure_ascii=False)}]
         out, model = llm.generate(api_key, messages, lambda o: check_drafts(o, terms), lambda r: None)
@@ -240,6 +254,63 @@ def draft_full_forms(db: Db, api_key: str | None) -> int:
     return len(todo)
 
 
+SPAN_RULES = """한국어 번역문에서 영문 용어를 옮긴 부분을 찾는다.
+- 각 항목의 translations 중에서 term(영문 용어)을 옮긴 한국어 부분을 번역문에 쓰인 글자 그대로 복사한다. 띄어쓰기도 그대로.
+- 뒤에 붙은 조사(을·를·이·가·은·는·의·에·로 등)는 뺀다. 괄호 속 원어 병기도 뺀다.
+- 번역문에 해당 부분이 없거나 확실하지 않으면 null. 번역문에 없는 표현을 만들지 않는다.
+- 입력의 모든 term을 입력 순서대로 정확히 한 번씩, term 값은 그대로 복사한다.
+출력은 JSON 하나만: {"items": [{"term": "...", "span": "..." 또는 null}]}"""
+
+
+def _strip_paren(ko: str) -> str:
+    return re.sub(r"\s*\(.*\)$", "", ko).strip()
+
+
+def align_spans(db: Db, api_key: str | None) -> int:
+    """연결된 논문 용어마다 번역문 속 실제 표기(ko_span)를 채운다(G2 하이라이트 위치).
+    사전 대응어가 번역문에 그대로 있으면 그것, 없으면 LLM이 번역문에서 고른 부분 문자열(검증 통과분만). 없으면 빈 문자열."""
+    rows = db.select_all("paper_glossary", "sense_id=not.is.null&ko_span=is.null&select=paper_id,idx,term,sentence_ids,sense_id&order=paper_id,idx")
+    if not rows:
+        return 0
+    flag = (db.select("app_config", "key=eq.show_ai_reviewed_terms&select=value") or [{}])[0].get("value") == "true"
+    ids = sorted({r["sense_id"] for r in rows})
+    senses = {}
+    for i in range(0, len(ids), 100):
+        for s in db.select("term_senses", f"sense_id=in.({','.join(ids[i:i + 100])})&select=sense_id,canonical_ko,definition_kind,review_status,ai_review_status"):
+            shown = s["definition_kind"] != "source_machine_translation_verbatim" and (
+                s["review_status"] == "approved" or (flag and s["ai_review_status"] == "first_pass_complete" and s["review_status"] == "pending"))
+            senses[s["sense_id"]] = _strip_paren(s["canonical_ko"]) if shown and s["canonical_ko"] else None
+    by_paper = defaultdict(list)
+    for r in rows:
+        by_paper[r["paper_id"]].append(r)
+    for pid, prs in by_paper.items():
+        tr = {t["sentence_id"]: t["translation_ko"] for t in db.select("paper_translations", f"paper_id=eq.{pid}&select=sentence_id,translation_ko")}
+        ask = []
+        for r in prs:
+            ko, texts = senses.get(r["sense_id"]), [tr[s] for s in r["sentence_ids"] if s in tr]
+            if ko is None:  # 앱에 대응어를 보이지 않는 의미: 위치도 필요 없다
+                db.update("paper_glossary", {"ko_span": ""}, paper_id=pid, idx=r["idx"])
+            elif any(ko in t for t in texts):
+                db.update("paper_glossary", {"ko_span": ko}, paper_id=pid, idx=r["idx"])
+            else:
+                ask.append((r, texts))
+        if not ask or not api_key:
+            continue
+        from . import llm
+
+        terms = [r["term"] for r, _ in ask]
+        payload = [{"term": r["term"], "translations": texts} for r, texts in ask]
+        messages = [{"role": "system", "content": SPAN_RULES}, {"role": "user", "content": json.dumps(payload, ensure_ascii=False)}]
+        out, _ = llm.generate(api_key, messages,
+                              lambda o: [] if isinstance(o, dict) and [i.get("term") for i in o.get("items", [])] == terms else ["terms"],
+                              lambda r: None)
+        for (r, texts), item in zip(ask, (out or {}).get("items", [None] * len(ask))):
+            span = (item or {}).get("span")
+            ok = isinstance(span, str) and span.strip() and any(span.strip() in t for t in texts)  # 번역문에 실제로 있는 글자만
+            db.update("paper_glossary", {"ko_span": span.strip() if ok else ""}, paper_id=pid, idx=r["idx"])
+    return len(rows)
+
+
 def sync(db: Db, api_key: str | None = None):
     promoted = promote_candidates(db)
     fill_paper_full_forms(db)
@@ -282,6 +353,8 @@ def sync(db: Db, api_key: str | None = None):
     candidates = merged
     drafted = draft_korean(db, api_key) if api_key else 0
     draft_full_forms(db, api_key)
+    aligned = align_spans(db, api_key)
+    print(f"용어: 번역문 표기 위치 확인 {aligned}")
     print(f"용어: 후보→사전 {promoted}, 새 연결 {len(links)}, 사전에 없는 표기 {len(candidates)}, 대응어 초안 {drafted}")
 
 

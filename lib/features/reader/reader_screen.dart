@@ -326,14 +326,15 @@ typedef Highlight = (int start, GlossaryTerm term, String label);
 
 // 문장 ID → [(시작 위치, 용어, 표기)]. 용어마다 리더 전체에서 처음 나온 1회만.
 // 영문: 표시 문자열(8.3 변환 후)에서 원어를 찾는다. highlight=false 이거나 정의가 빈 용어는 강조하지 않는다(8.4, 7.5).
-// 한국어(G2): 사전에 연결된 용어의 한국어 대응어를 번역문에서 찾는다. 「강화 학습 (RL)」처럼 뒤 괄호는 떼고 찾는다.
+// 한국어(G2): 사전에 연결된 용어를 번역문에서 찾는다. 이 논문 번역문의 실제 표기(termKoSpan)가 있으면 그것,
+// 없으면 대응어. 「강화 학습 (RL)」처럼 뒤 괄호는 떼고 찾는다.
 Map<String, List<Highlight>> firstHighlights(PaperDetail p, {bool korean = false}) {
   final out = <String, List<Highlight>>{};
   final terms = korean
       ? p.glossary.where((t) => t.termKo != null && t.definition.isNotEmpty)
       : p.glossary.where((t) => t.highlight && t.definition.isNotEmpty);
   for (final t in terms) {
-    final label = korean ? t.termKo!.replaceFirst(RegExp(r'\s*\(.*\)$'), '') : t.term;
+    final label = korean ? (t.termKoSpan ?? t.termKo!).replaceFirst(RegExp(r'\s*\(.*\)$'), '') : t.term;
     if (label.isEmpty) continue;
     for (final s in p.sentences.where((s) => s.kind == 'text' && t.sentenceIds.contains(s.id))) {
       final start = (korean ? s.translation ?? '' : latexDisplay(s.text)).indexOf(label);
