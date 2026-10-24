@@ -67,7 +67,8 @@ def latex_display(s: str) -> str:
     s = re.sub(r"(?<=\d)\s*\\?times\s*(?=\d)", "×", s)  # 3 \times 4, 4 times 4 → ×
     s = re.sub(r"(?<=\d)\s*\\times\b|(?<=\d)times\b", "×", s)  # 10\times, 3times → ×
     s = re.sub(r"(?<=\S)---?(?=\S)", "–", s)  # LaTeX 줄표 --/--- 가 그대로 옮겨진 경우(모델--하네스 → 모델–하네스)
-    return re.sub(r"~|\\,", " ", s)
+    # LaTeX 붙임 공백 ~ 는 공백으로. 숫자 사이 ~ 는 한국어 범위 표기(15~300초)라 남긴다(에뮬레이터 QA).
+    return re.sub(r"(?<!\d)~|~(?!\d)|\\,", " ", s)
 
 
 def postprocess(out: dict) -> dict:

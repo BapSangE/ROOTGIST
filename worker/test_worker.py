@@ -89,6 +89,7 @@ class ValidateTest(unittest.TestCase):
         out = validate.postprocess(output(summary_ko="30\\% 개선, 4 times 4, 3\\times 빠름, GPU~A"))
         self.assertEqual(out["summary_ko"], "30% 개선, 4×4, 3× 빠름, GPU A")
         self.assertEqual(validate.latex_display("모델--하네스, 뇌---몸, -- 단독"), "모델–하네스, 뇌–몸, -- 단독")
+        self.assertEqual(validate.latex_display("15~300초, 그림~3, et al.~"), "15~300초, 그림 3, et al. ")
         dup = output()["glossary"][0]
         self.assertEqual(validate.highlights([dup, dup, {**dup, "definition_ko": " "}], sentences()), [True, False, False])
 
