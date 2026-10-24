@@ -351,6 +351,8 @@ def sync(db: Db, api_key: str | None = None):
     for n in stale:
         db.delete("term_candidates", normalized_form=n)
     candidates = merged
+    # api_key가 없으면 LLM이 필요 없는 부분만(사전 대응어가 번역문에 그대로 있는 위치, 초록 속 약어 풀이) 한다.
+    # 매일 배치는 다이제스트를 먼저 끝내고, LLM 부분은 워크플로 마지막 단계에서 따로 돌린다(무료 등급이 느려 시간 초과로 배치 전체가 끊긴 일, 2026-10-24).
     drafted = draft_korean(db, api_key) if api_key else 0
     draft_full_forms(db, api_key)
     aligned = align_spans(db, api_key)

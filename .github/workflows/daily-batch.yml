@@ -1,12 +1,15 @@
-# 매일 KST 05:00 배치 (HANDOFF 3장, ops config 1.1).
-# 1) 어제(KST 기준) D 목록으로 새 다이제스트, 2) 그 전날 D-1 목록 다시 받아 보충(늦게 온 논문·해설 준비 중 재시도).
+# 매일 KST 새벽 배치 (HANDOFF 3장, ops config 1.1).
+# 1) 어제(KST 기준) D 목록으로 새 다이제스트, 2) 그 전날 D-1 목록 다시 받아 보충(늦게 온 논문·해설 준비 중 재시도),
+# 3) 용어집 LLM 작업(대응어·정식 명칭 초안, 번역문 표기 위치). 3은 늦거나 실패해도 1·2에 영향 없고 다음 날 이어서 한다.
 # 비밀값: NVIDIA_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (Repository secrets).
 # 실제 초록·번역이 담긴 worker/out은 아티팩트로 올리지 않는다(공개 레포, HANDOFF 0.1).
 name: daily-batch
 
 on:
   schedule:
-    - cron: "0 20 * * *" # UTC 20:00 = KST 05:00. GitHub 예약은 수십 분 늦게 시작할 수 있다
+    # UTC 19:17 = KST 04:17. 정각 예약은 GitHub 쪽이 붐벼 3시간 가까이 늦게 시작한 일이 있다(2026-10-23·24).
+    # 늦어져도 출근 전에 끝나도록 05:00보다 앞당겼다.
+    - cron: "17 19 * * *"
   workflow_dispatch:
     inputs:
       date:
@@ -20,7 +23,7 @@ concurrency:
 jobs:
   batch:
     runs-on: ubuntu-latest
-    timeout-minutes: 150 # 예비 모델 전환 시 1시간 안팎(ops config 1.1) × 두 날짜
+    timeout-minutes: 170
     env:
       NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -33,6 +36,7 @@ jobs:
           python-version: "3.12"
       - run: pip install -r worker/requirements.txt
       - name: 새 다이제스트 (D)
+        timeout-minutes: 80 # 예비 모델 전환 시 1시간 안팎(ops config 1.1)
         run: |
           D="${{ inputs.date }}"
           D="${D:-$(TZ=Asia/Seoul date -d yesterday +%F)}"
@@ -40,4 +44,10 @@ jobs:
           python -m worker.run --date "$D"
       - name: 보충 (D-1)
         if: always()
+        timeout-minutes: 45
         run: python -m worker.run --date "$(date -d "$D -1 day" +%F)"
+      - name: 용어집 LLM 작업
+        if: always()
+        timeout-minutes: 35
+        continue-on-error: true # 끊겨도 저장된 것까지는 남고, 다음 날 이어서 한다
+        run: python -m worker.glossary sync

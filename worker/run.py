@@ -139,7 +139,9 @@ def main(argv=None):
 
     if db and not args.dry_run:
         _save(db, entry, ordered, prior, exposed_ids, late, made, day["featured_paper_id"], meta)
-        glossary.sync(db, key)  # 새 논문 용어를 사전에 연결하고, 없는 표기는 후보로 쌓아 한국어 대응어 초안을 단다
+        # 새 논문 용어를 사전에 연결하고 없는 표기는 후보로 쌓는다. LLM이 필요한 초안·표기 위치는 여기서 하지 않는다
+        # (워크플로 마지막 단계 `python -m worker.glossary sync`가 한다).
+        glossary.sync(db, None)
     ready = sum(d["ai_status"] == "ready" for d in details)
     print(f"저장: {args.out}{' + Supabase' if db else ''} (digest {digest_date}, 해설 {ready}/{len(details)}편)")
     return 0
