@@ -16,6 +16,8 @@ import 'package:rootgist/features/settings/ai_notice_sheet.dart';
 import 'package:rootgist/features/settings/settings_screen.dart';
 import 'package:rootgist/debug/widget_gallery.dart';
 import 'package:rootgist/design/typography.dart';
+import 'package:rootgist/design/widgets/rg_buttons.dart';
+import 'package:flutter/semantics.dart';
 import 'package:rootgist/features/explore/explore_screen.dart';
 import 'package:rootgist/features/home/home_screen.dart';
 import 'package:rootgist/features/paper/paper_screen.dart';
@@ -453,6 +455,16 @@ void main() {
     // .env에 /rest/v1/까지 넣어도 받아 준다
     final repo = SupabaseRepository('https://x.supabase.co/rest/v1/', 'pk', client: client);
 
+    // 날짜 목록을 받기 전이라도 다이제스트 저장본에서 마지막 정상 수집 시각을 찾는다
+    final fresh = SupabaseRepository('https://x.supabase.co', 'pk', client: client);
+    (await SharedPreferences.getInstance()).remove('cache.digests');
+    expect((await fresh.getDigest('2026-10-22'))!.status, 'published');
+    online = false;
+    await expectLater(fresh.getPaper('nope'),
+        throwsA(isA<LoadError>().having((e) => e.lastSuccessAt, 'lastSuccessAt', DateTime.utc(2026, 10, 21, 20, 12))));
+    online = true;
+    calls.clear();
+
     expect((await repo.listDigests()).single.primaryTopic, 'agent');
     expect((await repo.getDigest('2026-10-22'))!.status, 'published');
     expect(calls.first, startsWith('/rest/v1/rpc/list_digests '));
@@ -482,6 +494,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Simultaneous Localization and Mapping'), findsOneWidget);
     expect(find.text('SLAM'), findsOneWidget); // 원어만, 대응어 줄은 없음
+  });
+
+  testWidgets('Q03: 라벨만 남긴 버튼도 화면 읽기 탭 동작이 있다', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(body: RgCircleButton(semanticLabel: '공유', icon: 'share', onTap: () {})),
+    ));
+    final node = tester.getSemantics(find.bySemanticsLabel('공유'));
+    expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
   });
 
   testWidgets('위젯 갤러리: 세그먼트·북마크·시트가 동작한다', (tester) async {

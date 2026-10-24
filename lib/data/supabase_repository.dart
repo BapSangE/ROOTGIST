@@ -39,12 +39,16 @@ class SupabaseRepository extends Repository {
     }
   }
 
-  // 「마지막 정상 수집」은 저장된 날짜 목록에서 가장 최근 값.
+  // 「마지막 정상 수집」은 저장본(날짜 목록·하루 다이제스트) 중 가장 최근 값.
+  // 날짜 목록만 보면 탐색 탭을 한 번도 안 연 사람에게는 비어 있었다(에뮬레이터 QA).
   DateTime? _lastSuccess(SharedPreferences prefs) {
-    final raw = prefs.getString('cache.digests');
-    if (raw == null) return null;
+    final digests = <dynamic>[
+      if (prefs.getString('cache.digests') case final raw?) ...(jsonDecode(raw)['digests'] as List),
+      for (final k in prefs.getKeys().where((k) => k.startsWith('cache.digest.')))
+        if (jsonDecode(prefs.getString(k)!) case final Map<String, dynamic> d) d,
+    ];
     final times = [
-      for (final d in (jsonDecode(raw)['digests'] as List))
+      for (final d in digests)
         if (d['status'] != 'delayed' && d['last_success_at'] != null) DateTime.parse(d['last_success_at']),
     ];
     return times.isEmpty ? null : times.reduce((a, b) => a.isAfter(b) ? a : b);

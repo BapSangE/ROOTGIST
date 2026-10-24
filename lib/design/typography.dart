@@ -41,3 +41,16 @@ abstract class RgText {
 
 // HANDOFF 9.3: Flutter에 keep-all이 없어 어절 안 글자 사이에 word joiner(U+2060)를 넣는다.
 String keepAll(String s) => s.split(' ').map((w) => w.runes.map(String.fromCharCode).join('⁠')).join(' ');
+
+// keepAll로 그리되 화면 읽기(TalkBack·VoiceOver)에는 숨은 문자 없는 원래 문장을 넘긴다.
+class KeepAllText extends StatelessWidget {
+  const KeepAllText(this.text, {super.key, this.style, this.maxLines, this.overflow});
+  final String text;
+  final TextStyle? style;
+  final int? maxLines;
+  final TextOverflow? overflow;
+
+  @override
+  Widget build(BuildContext context) =>
+      Text(keepAll(text), style: style, maxLines: maxLines, overflow: overflow, semanticsLabel: text);
+}

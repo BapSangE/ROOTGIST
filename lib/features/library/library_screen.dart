@@ -51,7 +51,7 @@ class LibraryScreen extends StatelessWidget {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text('아직 저장한 연구가 없어요', style: RgText.titleCard),
                   const SizedBox(height: RgSpace.s6),
-                  Text(keepAll('관심 있는 논문의 북마크를 누르면 여기에 모여요'), style: secondary),
+                  KeepAllText('관심 있는 논문의 북마크를 누르면 여기에 모여요', style: secondary),
                   const SizedBox(height: RgSpace.s20),
                   _OutlineButton(label: '오늘의 연구 보기', onTap: () => context.go('/home')),
                 ]),
@@ -73,7 +73,7 @@ class LibraryScreen extends StatelessWidget {
                         onTap: () => _remove(context, b),
                       ),
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(keepAll(b.title), style: RgText.titleList),
+                        KeepAllText(b.title, style: RgText.titleList),
                         const SizedBox(height: RgSpace.s4),
                         Text(
                           '${b.source} · ${b.savedAt.month}월 ${b.savedAt.day}일 저장',
@@ -92,8 +92,8 @@ class LibraryScreen extends StatelessWidget {
                     child: RgIcon('info', size: 14, color: RgColors.textSecondary),
                   ),
                   Expanded(
-                    child: Text(
-                      keepAll('인터넷 연결이 없어도 저장한 목록은 볼 수 있어요. 요약과 번역은 연결된 뒤에 불러와요.'),
+                    child: KeepAllText(
+                      '인터넷 연결이 없어도 저장한 목록은 볼 수 있어요. 요약과 번역은 연결된 뒤에 불러와요.',
                       style: RgText.caption.copyWith(height: 17 / 12, color: RgColors.textSecondary),
                     ),
                   ),

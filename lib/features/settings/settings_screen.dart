@@ -181,7 +181,7 @@ class DataSourceScreen extends StatelessWidget {
               spacing: RgSpace.s12,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                for (final p in paragraphs) Text(keepAll(p), style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
+                for (final p in paragraphs) KeepAllText(p, style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
               ],
             ),
           ]),

@@ -103,6 +103,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             style: RgText.displayHome,
+            semanticsLabel: '${koreanDate(date)} $headline', // 화면 읽기에는 숨은 문자 없이
           ),
         ),
       ),
@@ -136,10 +137,8 @@ class _HomeScreenState extends State<HomeScreen> {
         const SizedBox(height: RgSpace.s20),
         RgCard(
           padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s18),
-          child: Text(
-            keepAll(
-              [if (digest?.lastSuccessAt case final t?) '마지막 정상 수집 ${kstDateTime(t)}.', '모이는 대로 이 화면에 올라와요.'].join(' '),
-            ),
+          child: KeepAllText(
+            [if (digest?.lastSuccessAt case final t?) '마지막 정상 수집 ${kstDateTime(t)}.', '모이는 대로 이 화면에 올라와요.'].join(' '),
             style: RgText.bodySmall.copyWith(color: RgColors.textSecondary),
           ),
         ),
@@ -176,9 +175,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         Text(p.topicLabel!, style: RgText.caption.copyWith(color: RgColors.textSecondary)),
                         const SizedBox(height: RgSpace.s4),
                       ],
-                      Text(keepAll(p.title), style: RgText.titleList),
+                      KeepAllText(p.title, style: RgText.titleList),
                       const SizedBox(height: RgSpace.s4),
-                      Text('${p.date} · ${p.authors}', style: RgText.meta.copyWith(color: RgColors.textSecondary)),
+                      KeepAllText('${p.date} · ${p.authors}', style: RgText.meta.copyWith(color: RgColors.textSecondary)),
                     ],
                   ),
                 ),
@@ -270,9 +269,9 @@ class _FeaturedCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: RgSpace.s12),
-          Text(keepAll(paper.title), style: RgText.titleFeatured),
+          KeepAllText(paper.title, style: RgText.titleFeatured),
           const SizedBox(height: RgSpace.s6),
-          Text('${paper.authors} · ${paper.date}', style: RgText.meta.copyWith(color: RgColors.textSecondary)),
+          KeepAllText('${paper.authors} · ${paper.date}', style: RgText.meta.copyWith(color: RgColors.textSecondary)),
           if (bullets.isNotEmpty) ...[
             const SizedBox(height: RgSpace.s14),
             Column(
@@ -287,13 +286,14 @@ class _FeaturedCard extends StatelessWidget {
                       Container(
                         width: 4,
                         height: 4,
-                        margin: const EdgeInsets.only(top: RgSpace.s10),
+                        // 첫 줄(행간 23 × 글자 배율)의 가운데. 고정 10이면 큰 글자에서 점이 위로 뜬다(에뮬레이터 QA)
+                        margin: EdgeInsets.only(top: (MediaQuery.textScalerOf(context).scale(23) - 4) / 2),
                         decoration: const BoxDecoration(color: RgColors.textBody, shape: BoxShape.circle),
                       ),
                       Expanded(
                         // 실제 핵심 내용은 3~5줄짜리 문장이라 카드가 길어진다(2026-10-22 실데이터). 항목당 2줄, 전문은 S02.
-                        child: Text(
-                          keepAll(b),
+                        child: KeepAllText(
+                          b,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: RgText.bodySummary.copyWith(color: RgColors.textBody),

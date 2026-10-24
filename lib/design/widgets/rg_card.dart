@@ -88,7 +88,7 @@ class RgBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 24,
+      constraints: const BoxConstraints(minHeight: 24), // 고정 높이면 글자 200%에서 위아래가 잘린다(에뮬레이터 QA)
       padding: const EdgeInsets.symmetric(horizontal: RgSpace.s10, vertical: RgSpace.s4),
       decoration: BoxDecoration(
         color: onCard ? RgColors.fillBadgeOnCard : RgColors.fillBadgeOnBg,

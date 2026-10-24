@@ -180,7 +180,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
                       children: [
                         Text('초록 · 원문과 번역', style: RgText.caption.copyWith(color: RgColors.textSecondary)),
                         const SizedBox(height: RgSpace.s6),
-                        Semantics(header: true, child: Text(keepAll(p.title), style: RgText.titleReader)),
+                        Semantics(header: true, child: KeepAllText(p.title, style: RgText.titleReader)),
                         const SizedBox(height: RgSpace.s28),
                         // 글자 크기 단계는 본문에만, 시스템 글자 크기와 곱해서 적용한다.
                         MediaQuery(
@@ -306,6 +306,7 @@ class _TermState extends State<_Term> {
       button: true,
       label: '용어 설명: ${widget.term.term}',
       excludeSemantics: true,
+      onTap: _open,
       child: RgPressable(
         onTap: _open,
         child: Container(

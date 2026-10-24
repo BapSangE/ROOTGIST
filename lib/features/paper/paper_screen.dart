@@ -59,7 +59,7 @@ class _PaperScreenState extends State<PaperScreen> {
                         if (savedTitle != null)
                           Padding(
                             padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s12, RgSpace.gutterText, 0),
-                            child: Semantics(header: true, child: Text(keepAll(savedTitle), style: RgText.titleDetail)),
+                            child: Semantics(header: true, child: KeepAllText(savedTitle, style: RgText.titleDetail)),
                           ),
                         const SizedBox(height: RgSpace.s24),
                         RgErrorCard(error: snap.error, onRetry: _req.reload),
@@ -67,6 +67,14 @@ class _PaperScreenState extends State<PaperScreen> {
                         const _PaperSkeleton(),
                     ],
                   ),
+                ),
+                // 상태바 밑 배경색 띠(쉘과 같은 이유)
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: MediaQuery.paddingOf(context).top,
+                  child: const ColoredBox(color: RgColors.bgApp),
                 ),
                 if (p != null && p.ready)
                   Positioned(
@@ -99,13 +107,13 @@ class _PaperScreenState extends State<PaperScreen> {
               RgBadge(label: p.topicLabel!, onCard: false),
               const SizedBox(height: RgSpace.s14),
             ],
-            Semantics(header: true, child: Text(keepAll(p.title), style: RgText.titleDetail)),
+            Semantics(header: true, child: KeepAllText(p.title, style: RgText.titleDetail)),
             if (p.ready && p.titleKo != null) ...[
               const SizedBox(height: RgSpace.s8),
               Text(p.titleEn, style: RgText.serifSubtitle.copyWith(color: RgColors.textBody)),
             ],
             const SizedBox(height: RgSpace.s10),
-            Text('${p.authorLine} · ${p.date} 발행', style: secondary),
+            KeepAllText('${p.authorLine} · ${p.date} 발행', style: secondary),
           ],
         ),
       ),
@@ -138,7 +146,7 @@ class _PaperScreenState extends State<PaperScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   for (final s in summaryParagraphs(p.summary ?? ''))
-                    Text(keepAll(s), style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
+                    KeepAllText(s, style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
                 ],
               ),
               if (p.keyPoints.isNotEmpty) ...[
@@ -175,8 +183,8 @@ class _PaperScreenState extends State<PaperScreen> {
                     child: RgIcon('info', size: 14, color: RgColors.textSecondary),
                   ),
                   Expanded(
-                    child: Text(
-                      keepAll('초록을 바탕으로 AI가 정리했어요. 논문 본문 전체를 반영하지는 않아요.'),
+                    child: KeepAllText(
+                      '초록을 바탕으로 AI가 정리했어요. 논문 본문 전체를 반영하지는 않아요.',
                       style: RgText.caption.copyWith(height: 17 / 12, color: RgColors.textSecondary),
                     ),
                   ),
@@ -294,6 +302,7 @@ class _KeyPointItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final n = sentenceNumber(point.evidenceIds.first);
     final linkStyle = RgText.meta.copyWith(color: RgColors.textSecondary);
+    void open() => showEvidenceSheet(context, paper: paper, pointIndex: index, sentenceId: point.evidenceIds.first);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: RgSpace.s12,
@@ -306,14 +315,14 @@ class _KeyPointItem extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(keepAll(point.claim), style: RgText.bodySummary),
+              KeepAllText(point.claim, style: RgText.bodySummary),
               Semantics(
                 button: true,
                 label: '원문 근거, 초록 $n번째 문장',
                 excludeSemantics: true,
+                onTap: open, // excludeSemantics가 하위의 탭 동작까지 지우므로 직접 넘긴다
                 child: RgPressable(
-                  onTap: () =>
-                      showEvidenceSheet(context, paper: paper, pointIndex: index, sentenceId: point.evidenceIds.first),
+                  onTap: open,
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(minHeight: 36),
                     child: Row(

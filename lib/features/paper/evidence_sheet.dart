@@ -39,7 +39,7 @@ Future<void> showEvidenceSheet(
                 Text(latexDisplay(s.text), style: RgText.serifTogether.copyWith(fontSize: 16, height: 26 / 16)),
                 if (s.translation != null) ...[
                   const SizedBox(height: RgSpace.s10),
-                  Text(keepAll(s.translation!), style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
+                  KeepAllText(s.translation!, style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
                 ],
               ],
             ),

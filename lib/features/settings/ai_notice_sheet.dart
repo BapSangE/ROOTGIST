@@ -25,7 +25,7 @@ Future<void> showAiNoticeSheet(BuildContext context) {
           spacing: RgSpace.s12,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            for (final p in aiNoticeParagraphs) Text(keepAll(p), style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
+            for (final p in aiNoticeParagraphs) KeepAllText(p, style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
           ],
         ),
         const SizedBox(height: RgSpace.s24),

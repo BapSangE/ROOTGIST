@@ -79,6 +79,14 @@ class AppShell extends StatelessWidget {
       body: Stack(
         children: [
           Positioned.fill(child: shell),
+          // 상태바 밑에 배경색 띠: 스크롤한 내용이 시계·배터리 아이콘과 겹치지 않게(에뮬레이터 QA)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: MediaQuery.paddingOf(context).top,
+            child: const ColoredBox(color: RgColors.bgApp),
+          ),
           Positioned(
             left: RgSpace.gutterCard,
             right: RgSpace.gutterCard,

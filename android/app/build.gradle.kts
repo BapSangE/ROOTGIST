@@ -7,7 +7,8 @@ plugins {
 android {
     namespace = "com.example.app_repo"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    // Flutter 기본값(flutter.ndkVersion = 28.2)이 아니라 설치된 NDK 30을 쓴다. 네이티브 코드가 없어 엔진 라이브러리 처리에만 쓰인다.
+    ndkVersion = "30.0.16248370"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

@@ -44,6 +44,7 @@ class RgBottomTabBar extends StatelessWidget {
       selected: selected,
       label: tab.label,
       excludeSemantics: true,
+      onTap: onTap, // excludeSemantics가 하위의 탭 동작까지 지우므로 직접 넘긴다(TalkBack 두 번 탭)
       child: RgPressable(
         onTap: onTap,
         child: DecoratedBox(

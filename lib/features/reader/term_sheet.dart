@@ -33,7 +33,7 @@ Future<void> showTermSheet(BuildContext context, GlossaryTerm t) {
         ),
         Text('이 논문에서의 뜻', style: RgText.caption.copyWith(color: RgColors.textSecondary)),
         const SizedBox(height: RgSpace.s6),
-        Text(keepAll(t.definition), style: RgText.bodyDefinition),
+        KeepAllText(t.definition, style: RgText.bodyDefinition),
         const SizedBox(height: RgSpace.s24),
         RgNeutralButton(label: '닫기', onTap: () => Navigator.of(sheet).pop()),
       ],
