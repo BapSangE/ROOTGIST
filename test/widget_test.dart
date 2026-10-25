@@ -16,7 +16,10 @@ import 'package:rootgist/features/settings/ai_notice_sheet.dart';
 import 'package:rootgist/features/settings/settings_screen.dart';
 import 'package:rootgist/debug/widget_gallery.dart';
 import 'package:rootgist/design/typography.dart';
+import 'package:rootgist/design/theme.dart';
+import 'package:rootgist/design/tokens.dart';
 import 'package:rootgist/design/widgets/rg_buttons.dart';
+import 'package:rootgist/design/widgets/rg_segmented.dart';
 import 'package:flutter/semantics.dart';
 import 'package:rootgist/features/explore/explore_screen.dart';
 import 'package:rootgist/features/home/home_screen.dart';
@@ -214,6 +217,32 @@ void main() {
     });
     expect(firstHighlights(p2, korean: true)['A01']!.single.$3, '동결된 디코더');
   });
+
+  testWidgets('iOS: 왼쪽 가장자리에서 밀면 S03 → S02 → 홈으로 뒤로 간다', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+    // 전역 rgTheme은 처음 만든 테스트의 플랫폼(Android)을 들고 있어, iOS 전환을 쓰도록 테마만 바꿔 다시 띄운다.
+    await tester.pumpWidget(MaterialApp.router(theme: rgTheme.copyWith(platform: TargetPlatform.iOS), routerConfig: router));
+    await tester.pumpAndSettle();
+
+    router.push('/paper/0000.00001');
+    await settle(tester);
+    router.push('/paper/0000.00001/reader');
+    await settle(tester);
+    expect(find.byType(ReaderScreen), findsOneWidget);
+
+    await tester.dragFrom(const Offset(5, 400), const Offset(300, 0));
+    await tester.pumpAndSettle();
+    expect(find.byType(ReaderScreen), findsNothing);
+    expect(find.byType(PaperScreen), findsOneWidget);
+
+    await tester.dragFrom(const Offset(5, 400), const Offset(300, 0));
+    await tester.pumpAndSettle();
+    expect(find.byType(PaperScreen), findsNothing);
+    expect(find.byType(HomeScreen), findsOneWidget);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
   testWidgets('S03: 모드 전환, 용어 탭 → C02', (tester) async {
     tester.view.physicalSize = const Size(390, 2400);
@@ -525,5 +554,38 @@ void main() {
     await tester.tap(find.text('닫기').last);
     await tester.pumpAndSettle();
     expect(find.text('inference-time compute'), findsNothing);
+  });
+
+  testWidgets('Q02: 더 큰 텍스트에서 세그먼트·칩이 글자 높이만큼 늘고, S03 상단 바 안에 들어간다', (tester) async {
+    const line = 14 * 1.2; // bodySmall, 줄 높이 1.2
+    for (final scale in [1.0, 1.5, 3.0]) {
+      // S03 상단 바처럼 52 고정 높이 안에 세그먼트, 그 아래 칩
+      await tester.pumpWidget(MaterialApp(
+        home: MediaQuery(
+          data: MediaQueryData(size: const Size(390, 844), textScaler: TextScaler.linear(scale)),
+          child: Column(children: [
+            SizedBox(
+              height: RgSpace.topBar,
+              child: Row(children: [
+                Expanded(child: RgSegmented(options: readerScales, value: 1.0, onChanged: (_) {})),
+              ]),
+            ),
+            RgFilterChip(label: '언어 모델', selected: false, onTap: () {}),
+          ]),
+        ),
+      ));
+      expect(tester.takeException(), isNull, reason: '$scale배');
+
+      final shown = line * (scale > 2 ? 2 : scale); // 2배에서 멈춘다
+      final seg = tester.getSize(find.byType(RgSegmented<double>)).height;
+      final chip = tester.getSize(find.byType(RgFilterChip)).height;
+      if (scale == 1.0) {
+        expect((seg, chip), (40.0, RgSpace.minTouch)); // 기본 크기는 시안 그대로
+      } else {
+        expect(seg, greaterThanOrEqualTo(shown + 2 * RgSpace.s4));
+        expect(seg, lessThanOrEqualTo(RgSpace.topBar));
+        expect(chip, greaterThanOrEqualTo(shown + RgSpace.s16));
+      }
+    }
   });
 }

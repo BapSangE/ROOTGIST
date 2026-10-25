@@ -108,10 +108,10 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
       if (view.chips.isNotEmpty) ...[
-        // 칩 시각 높이 36, 터치 44. 시안의 위아래 20은 시각 기준이라 4씩 덜어낸다.
+        // 칩 시각 높이 36, 터치 44(더 큰 텍스트에서는 늘어난다). 시안의 위아래 20은 시각 기준이라 4씩 덜어낸다.
         const SizedBox(height: RgSpace.s16),
         SizedBox(
-          height: RgSpace.minTouch,
+          height: RgFilterChip.touchHeight(context),
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),

@@ -21,6 +21,11 @@ const _tabs = [
   RgTab('설정', 'sliders-vertical'),
 ];
 
+// 뒤로 가는 하위 화면은 MaterialPage를 직접 만든다. go_router 기본 페이지가 전환 없는 NoTransitionPage로
+// 만들어져 iOS 가장자리 밀어서 뒤로가기가 붙지 않았다(iOS QA). MaterialPage는 테마의 플랫폼 기본 전환을 쓴다.
+Page<void> _page(GoRouterState state, Widget child) =>
+    MaterialPage<void>(key: state.pageKey, name: state.name ?? state.path, child: child);
+
 final router = GoRouter(
   initialLocation: '/home',
   routes: [
@@ -34,7 +39,7 @@ final router = GoRouter(
             builder: (_, _) => const ExploreScreen(),
             routes: [
               // 지난 날짜의 S01. 탐색 탭 스택 안이라 탭바가 보인다.
-              GoRoute(path: ':date', builder: (_, state) => HomeScreen(date: state.pathParameters['date'])),
+              GoRoute(path: ':date', pageBuilder: (_, state) => _page(state, HomeScreen(date: state.pathParameters['date']))),
             ],
           ),
         ]),
@@ -43,7 +48,7 @@ final router = GoRouter(
           GoRoute(
             path: '/settings',
             builder: (_, _) => const SettingsScreen(),
-            routes: [GoRoute(path: 'source', builder: (_, _) => const DataSourceScreen())],
+            routes: [GoRoute(path: 'source', pageBuilder: (_, state) => _page(state, const DataSourceScreen()))],
           ),
         ]),
       ],
@@ -51,14 +56,17 @@ final router = GoRouter(
     // S02·S03은 탭바 없이 쉘 위로 푸시된다(7.0).
     GoRoute(
       path: '/paper/:id',
-      builder: (_, state) => PaperScreen(paperId: state.pathParameters['id']!),
+      pageBuilder: (_, state) => _page(state, PaperScreen(paperId: state.pathParameters['id']!)),
       routes: [
         // ?s=문장ID: C01에서 들어오면 그 문장 쌍으로 스크롤
         GoRoute(
           path: 'reader',
-          builder: (_, state) => ReaderScreen(
-            paperId: state.pathParameters['id']!,
-            initialSentenceId: state.uri.queryParameters['s'],
+          pageBuilder: (_, state) => _page(
+            state,
+            ReaderScreen(
+              paperId: state.pathParameters['id']!,
+              initialSentenceId: state.uri.queryParameters['s'],
+            ),
           ),
         ),
       ],

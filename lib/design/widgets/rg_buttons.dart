@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../tokens.dart';
@@ -147,11 +149,20 @@ class RgBookmarkButton extends StatelessWidget {
 }
 
 // RgFilterChip: 시각 36 / 터치 44, 좌우 16, 14pt.
+// 알약 칩·세그먼트 글자(bodySmall 14, 줄 높이 1.2)가 더 큰 텍스트에서 잘리지 않도록 높이를 글자에 맞춰 늘린다.
+// 배율은 2배에서 멈춘다: S03 상단 바가 52 고정이라 세그먼트가 그 안에 들어가야 한다(iOS QA Q02).
+TextScaler rgPillTextScaler(BuildContext context) => MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 2);
+double rgPillHeight(BuildContext context, double base) =>
+    math.max(base, rgPillTextScaler(context).scale(14) * 1.2 + RgSpace.s16);
+
 class RgFilterChip extends StatelessWidget {
   const RgFilterChip({super.key, required this.label, required this.selected, required this.onTap});
   final String label;
   final bool selected;
   final VoidCallback? onTap;
+
+  // 칩 목록(S01)도 이 높이로 잡는다.
+  static double touchHeight(BuildContext context) => math.max(RgSpace.minTouch, rgPillHeight(context, 36));
 
   @override
   Widget build(BuildContext context) {
@@ -161,11 +172,11 @@ class RgFilterChip extends StatelessWidget {
       child: RgPressable(
         onTap: onTap,
         child: SizedBox(
-          height: RgSpace.minTouch,
+          height: touchHeight(context),
           child: Center(
             widthFactor: 1, // 가로로 늘어나지 않고 칩 폭만큼(Wrap 안에서도)
             child: Container(
-              height: 36,
+              height: rgPillHeight(context, 36),
               padding: const EdgeInsets.symmetric(horizontal: RgSpace.s16),
               decoration: BoxDecoration(
                 color: selected ? RgColors.actionPrimary : null,
@@ -177,6 +188,8 @@ class RgFilterChip extends StatelessWidget {
                 widthFactor: 1,
                 child: Text(
                   label,
+                  textScaler: rgPillTextScaler(context),
+                  maxLines: 1,
                   style: RgText.bodySmall.copyWith(
                     height: 1.2,
                     fontWeight: selected ? FontWeight.w600 : FontWeight.w500,

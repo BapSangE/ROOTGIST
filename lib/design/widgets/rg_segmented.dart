@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../tokens.dart';
 import '../typography.dart';
+import 'rg_buttons.dart';
 import 'rg_pressable.dart';
 
-// RgSegmented: 높이 40, 내부 여백 4, 간격 2, n등분. 흰 알약은 AnimatedAlign 200ms easeOut.
+// RgSegmented: 높이 40(더 큰 텍스트에서는 rgPillHeight만큼), 내부 여백 4, 간격 2, n등분. 흰 알약은 AnimatedAlign 200ms easeOut.
 class RgSegmented<T> extends StatelessWidget {
   const RgSegmented({super.key, required this.options, required this.value, required this.onChanged});
   final List<(T, String)> options;
@@ -17,8 +18,9 @@ class RgSegmented<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final n = options.length;
     final index = options.indexWhere((o) => o.$1 == value);
+    final scaler = rgPillTextScaler(context);
     return Container(
-      height: 40,
+      height: rgPillHeight(context, 40),
       padding: const EdgeInsets.all(RgSpace.s4),
       decoration: BoxDecoration(color: RgColors.fillNeutral, borderRadius: BorderRadius.circular(RgRadius.pill)),
       child: LayoutBuilder(builder: (context, c) {
@@ -49,13 +51,19 @@ class RgSegmented<T> extends StatelessWidget {
                       selected: v == value,
                       child: RgPressable(
                         onTap: () => onChanged(v),
+                        // 칸이 좁으면(4등분 「아주 크게」) 줄바꿈 대신 칸 안으로 줄인다.
                         child: Center(
-                          child: Text(
-                            label,
-                            style: RgText.bodySmall.copyWith(
-                              height: 1.2,
-                              fontWeight: v == value ? FontWeight.w600 : FontWeight.w500,
-                              color: v == value ? RgColors.textPrimary : RgColors.textSecondary,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              label,
+                              textScaler: scaler,
+                              maxLines: 1,
+                              style: RgText.bodySmall.copyWith(
+                                height: 1.2,
+                                fontWeight: v == value ? FontWeight.w600 : FontWeight.w500,
+                                color: v == value ? RgColors.textPrimary : RgColors.textSecondary,
+                              ),
                             ),
                           ),
                         ),
