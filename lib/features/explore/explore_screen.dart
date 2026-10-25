@@ -43,13 +43,15 @@ class _ExploreScreenState extends State<ExploreScreen> {
           return ListView(
             padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top, bottom: RgSpace.bottomScrollInset),
             children: [
-              SizedBox(
-                height: RgSpace.topBar,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Semantics(header: true, child: Text('탐색', style: RgText.titleDetail)),
+              ChromeTextScale(
+                child: SizedBox(
+                  height: RgSpace.topBar,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Semantics(header: true, child: Text('탐색', style: RgText.titleDetail)),
+                    ),
                   ),
                 ),
               ),
@@ -129,8 +131,8 @@ class _DayRow extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            koreanDate(day.date),
+          KeepAllText(
+            koreanDate(day.date), // 큰 글자에서 「토 / 요일」로 갈라지지 않게
             style: day.status == 'empty' ? RgText.titleList.copyWith(color: RgColors.textSecondary) : RgText.titleList,
           ),
           const SizedBox(height: RgSpace.s2),

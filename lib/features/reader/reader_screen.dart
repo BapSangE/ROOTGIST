@@ -93,35 +93,37 @@ class _ReaderScreenState extends State<ReaderScreen> {
             color: RgColors.bgReading,
             padding: EdgeInsets.only(top: padding.top),
             height: padding.top + RgSpace.topBar,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
-              child: Row(
-                spacing: RgSpace.s8,
-                children: [
-                  RgCircleButton(
-                    semanticLabel: '뒤로',
-                    icon: 'chevron-left',
-                    variant: RgCircleVariant.neutral,
-                    onTap: () => context.pop(),
-                  ),
-                  Expanded(
-                    child: RgSegmented(
-                      options: const [
-                        (ReaderMode.together, '함께'),
-                        (ReaderMode.translation, '번역'),
-                        (ReaderMode.original, '원문'),
-                      ],
-                      value: _mode,
-                      onChanged: (m) => _keepPosition(() => setState(() => _mode = m)),
+            child: ChromeTextScale(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
+                child: Row(
+                  spacing: RgSpace.s8,
+                  children: [
+                    RgCircleButton(
+                      semanticLabel: '뒤로',
+                      icon: 'chevron-left',
+                      variant: RgCircleVariant.neutral,
+                      onTap: () => context.pop(),
                     ),
-                  ),
-                  RgCircleButton(
-                    semanticLabel: '글자 크기',
-                    text: '가',
-                    variant: RgCircleVariant.neutral,
-                    onTap: () => showTextSizeSheet(context),
-                  ),
-                ],
+                    Expanded(
+                      child: RgSegmented(
+                        options: const [
+                          (ReaderMode.together, '함께'),
+                          (ReaderMode.translation, '번역'),
+                          (ReaderMode.original, '원문'),
+                        ],
+                        value: _mode,
+                        onChanged: (m) => _keepPosition(() => setState(() => _mode = m)),
+                      ),
+                    ),
+                    RgCircleButton(
+                      semanticLabel: '글자 크기',
+                      text: '가',
+                      variant: RgCircleVariant.neutral,
+                      onTap: () => showTextSizeSheet(context),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

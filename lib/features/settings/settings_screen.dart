@@ -31,15 +31,17 @@ class SettingsScreen extends StatelessWidget {
     return ListView(
       padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top, bottom: RgSpace.bottomScrollInset),
       children: [
-        SizedBox(
-          height: RgSpace.topBar,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
-            child: Row(children: [
-              Expanded(child: Semantics(header: true, child: Text('설정', style: RgText.titleDetail))),
-              if (kDebugMode)
-                TextButton(onPressed: () => context.push('/gallery'), child: const Text('위젯 갤러리')),
-            ]),
+        ChromeTextScale(
+          child: SizedBox(
+            height: RgSpace.topBar,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
+              child: Row(children: [
+                Expanded(child: Semantics(header: true, child: Text('설정', style: RgText.titleDetail))),
+                if (kDebugMode)
+                  TextButton(onPressed: () => context.push('/gallery'), child: const Text('위젯 갤러리')),
+              ]),
+            ),
           ),
         ),
         group('읽기', first: true),

@@ -22,26 +22,28 @@ class LibraryScreen extends StatelessWidget {
         return ListView(
           padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top, bottom: RgSpace.bottomScrollInset),
           children: [
-            SizedBox(
-              height: RgSpace.topBar,
-              child: Padding(
-                padding: const EdgeInsets.only(left: RgSpace.gutterText, right: RgSpace.s12),
-                child: Row(children: [
-                  Expanded(child: Semantics(header: true, child: Text('보관함', style: RgText.titleDetail))),
-                  if (list.isNotEmpty)
-                    Semantics(
-                      button: true,
-                      child: RgPressable(
-                        onTap: () => _confirmClear(context, list.length),
-                        child: Container(
-                          height: RgSpace.minTouch,
-                          padding: const EdgeInsets.symmetric(horizontal: RgSpace.s8),
-                          alignment: Alignment.center,
-                          child: Text('전체 비우기', style: secondary.copyWith(fontWeight: FontWeight.w500)),
+            ChromeTextScale(
+              child: SizedBox(
+                height: RgSpace.topBar,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: RgSpace.gutterText, right: RgSpace.s12),
+                  child: Row(children: [
+                    Expanded(child: Semantics(header: true, child: Text('보관함', style: RgText.titleDetail))),
+                    if (list.isNotEmpty)
+                      Semantics(
+                        button: true,
+                        child: RgPressable(
+                          onTap: () => _confirmClear(context, list.length),
+                          child: Container(
+                            height: RgSpace.minTouch,
+                            padding: const EdgeInsets.symmetric(horizontal: RgSpace.s8),
+                            alignment: Alignment.center,
+                            child: Text('전체 비우기', style: secondary.copyWith(fontWeight: FontWeight.w500)),
+                          ),
                         ),
                       ),
-                    ),
-                ]),
+                  ]),
+                ),
               ),
             ),
             if (list.isEmpty)
@@ -154,15 +156,15 @@ class _OutlineButton extends StatelessWidget {
       child: RgPressable(
         onTap: onTap,
         child: Container(
-          height: RgSpace.minTouch,
-          padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20),
+          constraints: const BoxConstraints(minHeight: RgSpace.minTouch),
+          padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s10),
           decoration: BoxDecoration(
             color: RgColors.surfaceCard,
             borderRadius: BorderRadius.circular(RgRadius.pill),
             border: Border.all(color: RgColors.borderDefault),
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Text(label, style: RgText.bodySmall.copyWith(height: 1.2, fontWeight: FontWeight.w600)),
+            Flexible(child: Text(label, style: RgText.bodySmall.copyWith(height: 1.2, fontWeight: FontWeight.w600))),
           ]),
         ),
       ),

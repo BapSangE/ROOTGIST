@@ -62,17 +62,19 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _topBar(BuildContext context) => SizedBox(
-    height: RgSpace.topBar,
-    child: Padding(
-      padding: EdgeInsets.symmetric(horizontal: widget.date == null ? RgSpace.gutterText : RgSpace.gutterCard),
-      child: Row(
-        spacing: RgSpace.s12,
-        children: [
-          if (widget.date != null)
-            RgCircleButton(semanticLabel: '뒤로', icon: 'chevron-left', onTap: () => context.pop()),
-          Text('ROOTGIST', style: RgText.wordmark),
-        ],
+  Widget _topBar(BuildContext context) => ChromeTextScale(
+    child: SizedBox(
+      height: RgSpace.topBar,
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: widget.date == null ? RgSpace.gutterText : RgSpace.gutterCard),
+        child: Row(
+          spacing: RgSpace.s12,
+          children: [
+            if (widget.date != null)
+              RgCircleButton(semanticLabel: '뒤로', icon: 'chevron-left', onTap: () => context.pop()),
+            Text('ROOTGIST', style: RgText.wordmark),
+          ],
+        ),
       ),
     ),
   );
@@ -96,7 +98,7 @@ class _HomeScreenState extends State<HomeScreen> {
             TextSpan(
               children: [
                 TextSpan(
-                  text: '${koreanDate(date)}\n',
+                  text: '${keepAll(koreanDate(date))}\n', // 큰 글자에서 「25 / 일」로 갈라지지 않게
                   style: const TextStyle(color: RgColors.textTertiary),
                 ),
                 TextSpan(text: keepAll(headline)),
@@ -151,7 +153,7 @@ class _HomeScreenState extends State<HomeScreen> {
             textBaseline: TextBaseline.alphabetic,
             spacing: RgSpace.s8,
             children: [
-              Semantics(header: true, child: Text('새로 올라온 연구', style: RgText.titleSection)),
+              Flexible(child: Semantics(header: true, child: Text('새로 올라온 연구', style: RgText.titleSection))),
               Text('${view.list.length}편', style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
             ],
           ),
@@ -261,8 +263,11 @@ class _FeaturedCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          // 큰 글자에서 한 줄에 안 들어가면 다음 줄로
+          Wrap(
             spacing: RgSpace.s8,
+            runSpacing: RgSpace.s4,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               if (paper.topicLabel != null) RgBadge(label: paper.topicLabel!),
               Text('오늘의 주요 연구', style: RgText.caption.copyWith(color: RgColors.textSecondary)),

@@ -13,6 +13,7 @@ import '../../design/widgets/rg_buttons.dart';
 import '../../design/widgets/rg_card.dart';
 import '../../design/widgets/rg_pressable.dart';
 import '../../design/widgets/rg_states.dart';
+import '../reader/text_size_sheet.dart';
 import '../settings/ai_notice_sheet.dart';
 import 'evidence_sheet.dart';
 
@@ -133,38 +134,41 @@ class _PaperScreenState extends State<PaperScreen> {
       ],
       if (p.ready) ...[
         const SizedBox(height: RgSpace.s24),
-        RgCard(
-          padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Semantics(header: true, child: Text('AI 요약', style: RgText.titleCard)),
-              const SizedBox(height: RgSpace.s8),
-              // G4: 전문은 그대로 보이되, 실제 요약은 15줄 안팎 한 덩어리라 문장마다 문단을 나눈다.
-              Column(
-                spacing: RgSpace.s8,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  for (final s in summaryParagraphs(p.summary ?? ''))
-                    KeepAllText(s, style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
-                ],
-              ),
-              if (p.keyPoints.isNotEmpty) ...[
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: RgSpace.s16),
-                  child: Divider(height: 1, thickness: 1, color: RgColors.dividerCard),
-                ),
-                Semantics(header: true, child: Text('핵심 내용', style: RgText.titleCard)),
-                const SizedBox(height: RgSpace.s10),
+        // 설정의 글자 크기 4단계가 S03 본문과 함께 이 카드에도 적용된다(iOS QA).
+        ReaderTextScale(
+          child: RgCard(
+            padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Semantics(header: true, child: Text('AI 요약', style: RgText.titleCard)),
+                const SizedBox(height: RgSpace.s8),
+                // G4: 전문은 그대로 보이되, 실제 요약은 15줄 안팎 한 덩어리라 문장마다 문단을 나눈다.
                 Column(
-                  spacing: RgSpace.s14,
+                  spacing: RgSpace.s8,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    for (final (i, k) in p.keyPoints.take(3).indexed) _KeyPointItem(paper: p, index: i + 1, point: k),
+                    for (final s in summaryParagraphs(p.summary ?? ''))
+                      KeepAllText(s, style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
                   ],
                 ),
+                if (p.keyPoints.isNotEmpty) ...[
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: RgSpace.s16),
+                    child: Divider(height: 1, thickness: 1, color: RgColors.dividerCard),
+                  ),
+                  Semantics(header: true, child: Text('핵심 내용', style: RgText.titleCard)),
+                  const SizedBox(height: RgSpace.s10),
+                  Column(
+                    spacing: RgSpace.s14,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final (i, k) in p.keyPoints.take(3).indexed) _KeyPointItem(paper: p, index: i + 1, point: k),
+                    ],
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
         const SizedBox(height: RgSpace.s12),
@@ -264,28 +268,30 @@ class _TopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = paper;
-    return SizedBox(
-      height: RgSpace.topBar,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
-        child: Row(
-          spacing: RgSpace.s8,
-          children: [
-            RgCircleButton(semanticLabel: '뒤로', icon: 'chevron-left', onTap: () => context.pop()),
-            const Spacer(),
-            if (p != null) ...[
-              RgCircleButton(
-                semanticLabel: '공유',
-                icon: 'share',
-                onTap: () => SharePlus.instance.share(ShareParams(text: '${p.title}\n${p.hfUrl}')),
-              ),
-              ValueListenableBuilder(
-                valueListenable: bookmarks,
-                builder: (_, saved, _) =>
-                    RgBookmarkButton(saved: saved.containsKey(p.id), onTap: () => toggleBookmark(p.id, p.title)),
-              ),
+    return ChromeTextScale(
+      child: SizedBox(
+        height: RgSpace.topBar,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
+          child: Row(
+            spacing: RgSpace.s8,
+            children: [
+              RgCircleButton(semanticLabel: '뒤로', icon: 'chevron-left', onTap: () => context.pop()),
+              const Spacer(),
+              if (p != null) ...[
+                RgCircleButton(
+                  semanticLabel: '공유',
+                  icon: 'share',
+                  onTap: () => SharePlus.instance.share(ShareParams(text: '${p.title}\n${p.hfUrl}')),
+                ),
+                ValueListenableBuilder(
+                  valueListenable: bookmarks,
+                  builder: (_, saved, _) =>
+                      RgBookmarkButton(saved: saved.containsKey(p.id), onTap: () => toggleBookmark(p.id, p.title)),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -329,7 +335,7 @@ class _KeyPointItem extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       spacing: RgSpace.s2,
                       children: [
-                        Text('원문 근거 · 초록 $n번째 문장', style: linkStyle),
+                        Flexible(child: Text('원문 근거 · 초록 $n번째 문장', style: linkStyle)),
                         const RgIcon('chevron-right', size: 14, color: RgColors.textSecondary),
                       ],
                     ),

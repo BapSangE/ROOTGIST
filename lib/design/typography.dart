@@ -54,3 +54,13 @@ class KeepAllText extends StatelessWidget {
   Widget build(BuildContext context) =>
       Text(keepAll(text), style: style, maxLines: maxLines, overflow: overflow, semanticsLabel: text);
 }
+
+// 높이가 고정된 화면 틀(상단 바 52, 하단 탭바 64)은 일반 최대 글자 크기(XXXL, 1.35배)에서 배율을 멈춘다.
+// 본문은 끝까지 커진다. iOS 기본 내비게이션 바·탭바도 접근성 크기에서 더 커지지 않는다(iOS QA).
+class ChromeTextScale extends StatelessWidget {
+  const ChromeTextScale({super.key, required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => MediaQuery.withClampedTextScaling(maxScaleFactor: 1.35, child: child);
+}

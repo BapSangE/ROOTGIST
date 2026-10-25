@@ -20,6 +20,10 @@ class RgBottomTabBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return ChromeTextScale(child: _bar());
+  }
+
+  Widget _bar() {
     return Container(
       height: 64,
       padding: const EdgeInsets.all(RgSpace.s6),

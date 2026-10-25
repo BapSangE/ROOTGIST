@@ -297,12 +297,12 @@ void main() {
     await settle(tester);
     expect(find.text('수집이 늦어지고 있어요 · 마지막 정상 수집 09:00'), findsOneWidget);
     expect(find.text('1편 · 기타'), findsOneWidget); // 단독이면 「외」 없음
-    expect(find.text('10월 19일 월요일'), findsNothing); // 오늘 제외
+    expect(find.text(keepAll('10월 19일 월요일')), findsNothing); // 오늘 제외
 
-    await tester.tap(find.text('10월 18일 일요일'));
+    await tester.tap(find.text(keepAll('10월 18일 일요일')));
     await settle(tester);
     expect(find.bySemanticsLabel('뒤로'), findsOneWidget);
-    expect(find.textContaining('10월 18일 일요일', findRichText: true), findsWidgets);
+    expect(find.textContaining(keepAll('10월 18일 일요일'), findRichText: true), findsWidgets);
 
     await tester.tap(find.bySemanticsLabel('뒤로'));
     await tester.pumpAndSettle();
@@ -554,6 +554,47 @@ void main() {
     await tester.tap(find.text('닫기').last);
     await tester.pumpAndSettle();
     expect(find.text('inference-time compute'), findsNothing);
+  });
+
+  testWidgets('Q02: 접근성 최대 글자(AX5, 3.12배)에서도 화면마다 넘침이 없다', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    tester.platformDispatcher.textScaleFactorTestValue = 3.12;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await pumpApp(tester);
+
+    for (final path in ['/home', '/explore', '/explore/2026-10-18', '/library', '/settings', '/settings/source', '/paper/0000.00001', '/paper/0000.00001/reader']) {
+      router.go('/home');
+      await settle(tester);
+      path.startsWith('/paper') ? router.push(path) : router.go(path);
+      await settle(tester);
+      for (var i = 0; i < 6; i++) {
+        await tester.drag(find.byType(Scrollable).first, const Offset(0, -700), warnIfMissed: false);
+        await tester.pumpAndSettle();
+      }
+      expect(tester.takeException(), isNull, reason: path);
+    }
+    // 화면 틀(탭바)은 1.35배에서 멈춘다
+    router.go('/home');
+    await settle(tester);
+    expect(MediaQuery.textScalerOf(tester.element(find.text('홈'))).scale(1), 1.35);
+  });
+
+  testWidgets('S1: 글자 크기 4단계가 S02 AI 요약·핵심 내용에도 적용된다', (tester) async {
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+    router.push('/paper/0000.00001');
+    await settle(tester);
+
+    double scaleOf(String text) => MediaQuery.textScalerOf(tester.element(find.text(text))).scale(1);
+    expect(scaleOf('핵심 내용'), 1.0);
+    readerScale.value = 1.3;
+    await tester.pump();
+    expect(scaleOf('핵심 내용'), 1.3);
+    expect(scaleOf('Efficient Scaling of Inference-Time Compute'), 1.0); // 카드 밖 제목 블록은 그대로
   });
 
   testWidgets('Q02: 더 큰 텍스트에서 세그먼트·칩이 글자 높이만큼 늘고, S03 상단 바 안에 들어간다', (tester) async {

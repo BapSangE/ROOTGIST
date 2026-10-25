@@ -20,7 +20,9 @@ class RgPrimaryButton extends StatelessWidget {
       child: RgPressable(
         onTap: onTap,
         child: Container(
-          height: floating ? 56 : 48,
+          // 고정 높이면 더 큰 텍스트에서 글자가 잘린다. 기본 크기에서는 48/56 그대로.
+          constraints: BoxConstraints(minHeight: floating ? 56 : 48),
+          padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s12),
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: RgColors.actionPrimary,
@@ -29,6 +31,7 @@ class RgPrimaryButton extends StatelessWidget {
           ),
           child: Text(
             label,
+            textAlign: TextAlign.center,
             style: RgText.bodySmall.copyWith(
               fontSize: floating ? 16 : 15,
               height: 1.2,
@@ -55,10 +58,11 @@ class RgNeutralButton extends StatelessWidget {
       child: RgPressable(
         onTap: onTap,
         child: Container(
-          height: 48,
+          constraints: const BoxConstraints(minHeight: 48),
+          padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s12),
           alignment: Alignment.center,
           decoration: BoxDecoration(color: RgColors.fillNeutral, borderRadius: BorderRadius.circular(RgRadius.pill)),
-          child: Text(label, style: RgText.bodySmall.copyWith(fontSize: 15, height: 1.2, fontWeight: FontWeight.w600)),
+          child: Text(label, textAlign: TextAlign.center, style: RgText.bodySmall.copyWith(fontSize: 15, height: 1.2, fontWeight: FontWeight.w600)),
         ),
       ),
     );
@@ -150,7 +154,7 @@ class RgBookmarkButton extends StatelessWidget {
 
 // RgFilterChip: 시각 36 / 터치 44, 좌우 16, 14pt.
 // 알약 칩·세그먼트 글자(bodySmall 14, 줄 높이 1.2)가 더 큰 텍스트에서 잘리지 않도록 높이를 글자에 맞춰 늘린다.
-// 배율은 2배에서 멈춘다: S03 상단 바가 52 고정이라 세그먼트가 그 안에 들어가야 한다(iOS QA Q02).
+// 배율은 2배에서 멈춘다: 세그먼트 칸 폭이 좁아(4등분) 그 이상은 칸 안에 들어가지 않는다(iOS QA Q02).
 TextScaler rgPillTextScaler(BuildContext context) => MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 2);
 double rgPillHeight(BuildContext context, double base) =>
     math.max(base, rgPillTextScaler(context).scale(14) * 1.2 + RgSpace.s16);
