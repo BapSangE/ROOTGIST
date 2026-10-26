@@ -279,6 +279,9 @@ class _TopBar extends StatelessWidget {
               RgCircleButton(semanticLabel: '뒤로', icon: 'chevron-left', onTap: () => context.pop()),
               const Spacer(),
               if (p != null) ...[
+                // AI 카드 글자 크기(S03과 같은 4단계). 카드가 있을 때만(iOS QA)
+                if (p.ready)
+                  RgCircleButton(semanticLabel: '글자 크기', text: '가', onTap: () => showTextSizeSheet(context)),
                 RgCircleButton(
                   semanticLabel: '공유',
                   icon: 'share',

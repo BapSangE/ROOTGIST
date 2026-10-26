@@ -462,7 +462,7 @@ S02·S03은 탭 위에 푸시되어 **탭바를 숨긴다**. S02의 AI 안내 �
 
 | # | 요소 | 명세 | 위 간격 |
 |---|---|---|---|
-| 1 | 상단 바 | 높이 52, 좌우 16. 왼쪽 뒤로 RgCircleButton outline. 오른쪽 공유(outline) + 북마크(저장 시 filled), 간격 8. 우측 버튼 최대 2개 | SafeArea |
+| 1 | 상단 바 | 높이 52, 좌우 16. 왼쪽 뒤로 RgCircleButton outline. 오른쪽 글자 크기(outline 「가」 15/600, AI 카드가 있을 때만 → S03과 같은 4단계 시트) + 공유(outline) + 북마크(저장 시 filled), 간격 8. 우측 버튼 최대 3개(iOS QA에서 글자 크기 추가) | SafeArea |
 | 2 | 제목 블록 | 좌우 20. ① RgBadge(onBg) 분야 ② 한국어 제목 titleDetail(위 14) ③ 영문 원제 serifSubtitle textBody(위 8) ④ 「저자 외 · YYYY.MM.DD 발행」 meta(위 10) | 12 |
 | 3 | AI 카드 | RgCard. ① 「AI 요약」 titleCard ② 요약 bodySummary textBody(위 8) ③ dividerCard(위아래 16) ④ 「핵심 내용」 titleCard ⑤ 항목 0~3개, 항목 간격 14(위 10) | 24 |
 | 3-1 | 핵심 내용 항목 | 번호 13/600 textTertiary + 간격 12 + [내용 bodySummary, 근거 링크]. 링크 「원문 근거 · 초록 N번째 문장」 meta textSecondary + chevron-right 14, 최소 높이 36 | — |

@@ -643,6 +643,14 @@ void main() {
     await tester.pump();
     expect(scaleOf('핵심 내용'), 1.3);
     expect(scaleOf('Efficient Scaling of Inference-Time Compute'), 1.0); // 카드 밖 제목 블록은 그대로
+
+    // 상세 상단 바 「가」 → 같은 4단계 시트, 고르면 카드에 바로 반영
+    await tester.tap(find.bySemanticsLabel('글자 크기'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('작게'));
+    await tester.pumpAndSettle();
+    expect(readerScale.value, 0.9);
+    expect(scaleOf('핵심 내용'), 0.9);
   });
 
   testWidgets('Q02: 더 큰 텍스트에서 세그먼트·칩이 글자 높이만큼 늘고, S03 상단 바 안에 들어간다', (tester) async {
