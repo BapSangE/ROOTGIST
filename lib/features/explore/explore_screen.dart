@@ -8,11 +8,12 @@ import '../../design/typography.dart';
 import '../../design/widgets/rg_card.dart';
 import '../../design/widgets/rg_pressable.dart';
 import '../../design/widgets/rg_states.dart';
+import '../home/home_screen.dart';
 import 'official_news.dart';
 import 'trending_models.dart';
 
-// S04 탐색 (HANDOFF 7.6). 오늘은 홈에서 보이므로 뺀다.
-// 위쪽 「논문 | 공식 소식 | 모델」 칸(PROPOSALS P9 A안, 브랜치 feature/official-news). 옆으로 밀어 넘긴다.
+// S04 탐색 (HANDOFF 7.6). 위쪽 「논문 | 공식 소식 | 모델」 칸(PROPOSALS P9 A안). 옆으로 밀어 넘긴다.
+// 논문 칸: 오늘의 논문 전체(홈은 3편만 미리 보여 준다) → 아래로 지난 논문을 달마다. 이번 달은 펼치고 지난달부터는 접는다.
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
 
@@ -22,18 +23,39 @@ class ExploreScreen extends StatefulWidget {
 
 class _ExploreScreenState extends State<ExploreScreen> {
   final _req = Reloadable(() async {
+    final (digest, fallback) = await loadDigest();
+    final shown = (fallback ?? digest)?.dateKey;
     final today = await repository.todayKey();
-    return [
-      for (final d in await repository.listDigests())
-        if (d.dateKey != today) d,
-    ];
+    return (
+      digest,
+      fallback,
+      [
+        for (final d in await repository.listDigests())
+          if (d.dateKey != today && d.dateKey != shown) d,
+      ],
+    );
   });
 
-  var _tab = 0; // 0 논문, 1 공식 소식, 2 모델
-  final _pages = PageController();
+  late var _tab = exploreJump.value?.tab ?? 0; // 0 논문, 1 공식 소식, 2 모델
+  late final _pages = PageController(initialPage: _tab);
+  final _open = <String>{}; // 펼친 지난달
+
+  // 홈 「더 보기」 → 그 칸으로
+  void _jump() {
+    final j = exploreJump.value;
+    if (j == null || !_pages.hasClients) return;
+    _pages.jumpToPage(j.tab);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    exploreJump.addListener(_jump);
+  }
 
   @override
   void dispose() {
+    exploreJump.removeListener(_jump);
     _req.dispose();
     _pages.dispose();
     super.dispose();
@@ -82,51 +104,86 @@ class _ExploreScreenState extends State<ExploreScreen> {
       builder: (context, _) => FutureBuilder(
         future: _req.future,
         builder: (context, snap) {
-          final months = groupByMonth(snap.data ?? const []);
+          if (snap.hasError) {
+            return ListView(children: [const SizedBox(height: RgSpace.s28), RgErrorCard(error: snap.error, onRetry: _req.reload)]);
+          }
+          if (snap.connectionState != ConnectionState.done) {
+            return const RgSkeleton(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s28, RgSpace.gutterText, RgSpace.s12),
+                    child: RgBar(lineHeight: 25, widthFactor: 0.3),
+                  ),
+                  RgSkeletonRows(count: 4),
+                ],
+              ),
+            );
+          }
+          final (digest, fallback, past) = snap.data!;
+          final shown = fallback ?? digest;
+          final months = groupByMonth(past);
           return ListView(
             padding: const EdgeInsets.only(bottom: RgSpace.bottomScrollInset),
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s16, RgSpace.gutterText, 0),
-                child: Text('지난 날짜의 연구를 다시 볼 수 있어요', style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
-              ),
-              if (snap.hasError) ...[
-                const SizedBox(height: RgSpace.s28),
-                RgErrorCard(error: snap.error, onRetry: _req.reload),
-              ] else if (snap.connectionState != ConnectionState.done)
-                const RgSkeleton(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Padding(
-                        padding: EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s28, RgSpace.gutterText, RgSpace.s12),
-                        child: RgBar(lineHeight: 25, widthFactor: 0.3),
-                      ),
-                      RgSkeletonRows(count: 4),
-                    ],
-                  ),
+              if (shown != null && shown.papers.isNotEmpty) ...[
+                SectionTitle(fallback == null ? '오늘의 논문' : '${shown.date.month}월 ${shown.date.day}일 논문', count: '${shown.papers.length}편'),
+                DigestPapers(digest: digest, fallback: fallback, title: '그 밖의 논문'),
+              ],
+              if (months.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s40, RgSpace.gutterText, 0),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s4, children: [
+                    Semantics(header: true, child: Text('지난 논문', style: RgText.titleSection)),
+                    Text('날짜를 누르면 그날의 논문을 볼 수 있어요', style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
+                  ]),
                 ),
               for (final (i, (month, days)) in months.indexed) ...[
-                Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    RgSpace.gutterText,
-                    i == 0 ? RgSpace.s28 : RgSpace.s32,
-                    RgSpace.gutterText,
-                    RgSpace.s12,
+                // 이번 달(맨 위)은 늘 펼친다. 지난달부터는 눌러서 펼친다.
+                if (i == 0 || _open.contains(month)) ...[
+                  _MonthHeader(month: month, count: days.length, open: true, onTap: i == 0 ? null : () => setState(() => _open.remove(month))),
+                  RgCard(
+                    child: Column(
+                      children: [for (final (j, d) in days.indexed) _DayRow(day: d, last: j == days.length - 1)],
+                    ),
                   ),
-                  child: Semantics(header: true, child: Text(month, style: RgText.titleSection)),
-                ),
-                RgCard(
-                  child: Column(
-                    children: [for (final (j, d) in days.indexed) _DayRow(day: d, last: j == days.length - 1)],
-                  ),
-                ),
+                ] else
+                  _MonthHeader(month: month, count: days.length, open: false, onTap: () => setState(() => _open.add(month))),
               ],
             ],
           );
         },
       ),
     );
+  }
+}
+
+// 달 묶음 머리: 「2026년 9월 · 22일치」. 접힌 달은 누르면 펼친다.
+class _MonthHeader extends StatelessWidget {
+  const _MonthHeader({required this.month, required this.count, required this.open, this.onTap});
+  final String month;
+  final int count;
+  final bool open;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final row = Container(
+      constraints: const BoxConstraints(minHeight: RgSpace.minTouch),
+      padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s20, RgSpace.gutterText, RgSpace.s8),
+      child: Row(spacing: RgSpace.s8, children: [
+        Expanded(child: Semantics(header: true, child: Text(month, style: RgText.titleList.copyWith(fontWeight: FontWeight.w700)))),
+        Text('$count일치', style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
+        if (onTap != null)
+          Transform.rotate(
+            angle: open ? -1.5708 : 1.5708, // 펼침 ▲ / 접힘 ▼
+            child: const RgIcon('chevron-right', size: 16, color: RgColors.textSecondary),
+          ),
+      ]),
+    );
+    if (onTap == null) return row;
+    return Semantics(button: true, expanded: open, child: RgPressable(onTap: onTap, child: row));
   }
 }
 

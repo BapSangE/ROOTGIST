@@ -11,6 +11,7 @@ import '../../design/widgets/rg_card.dart';
 import '../../design/widgets/rg_pressable.dart';
 import '../../design/widgets/rg_segmented.dart';
 import '../../design/widgets/rg_states.dart';
+import '../common/item_actions.dart';
 
 // S04 「공식 소식」 칸(PROPOSALS P8d·P9 A안). 발표(연구소 블로그) | 업데이트(커뮤니티 공지·릴리스).
 // 글마다 AI 요약과 핵심 내용만 한국어로 보이고, 핵심 내용은 원문의 근거 문단으로, 상세는 원문 링크로 보낸다.
@@ -23,11 +24,29 @@ class OfficialNewsSection extends StatefulWidget {
 
 class _OfficialNewsSectionState extends State<OfficialNewsSection> {
   final _req = Reloadable(repository.listOfficialNews);
-  var _updates = false; // false = 발표, true = 업데이트
+  var _updates = exploreJump.value?.updates ?? false; // false = 발표, true = 업데이트
   String? _source; // null = 전체
+
+  // 홈 「업데이트 더 보기」로 들어오면 업데이트를, 「공식 발표 더 보기」면 발표를 고른다
+  void _jump() {
+    final j = exploreJump.value;
+    if (j != null && j.tab == 1 && mounted) {
+      setState(() {
+        _updates = j.updates;
+        _source = null;
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    exploreJump.addListener(_jump);
+  }
 
   @override
   void dispose() {
+    exploreJump.removeListener(_jump);
     _req.dispose();
     super.dispose();
   }
@@ -102,24 +121,7 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
         for (final n in shown) ...[const SizedBox(height: RgSpace.s12), _NewsCard(news: n)]
       else ...[
         const SizedBox(height: RgSpace.s12),
-        RgCard(
-          child: Column(children: [
-            for (final (i, n) in shown.indexed)
-              RgListRow(
-                showDivider: i < shown.length - 1,
-                onTap: () => context.go('/explore/news/${Uri.encodeComponent(n.id)}'),
-                trailing: const Padding(
-                  padding: EdgeInsets.only(top: 2, right: RgSpace.s12),
-                  child: RgIcon('chevron-right', size: 18, color: RgColors.textTertiary),
-                ),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(newsMeta(n), style: RgText.caption.copyWith(color: RgColors.textSecondary)),
-                  const SizedBox(height: RgSpace.s4),
-                  KeepAllText(n.titleKo ?? n.titleEn, style: RgText.titleList),
-                ]),
-              ),
-          ]),
-        ),
+        RgCard(child: Column(children: [for (final (i, n) in shown.indexed) NewsRow(news: n, last: i == shown.length - 1)])),
       ],
       Padding(
         padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s12, RgSpace.gutterText, 0),
@@ -139,6 +141,31 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
   }
 }
 
+// 발표 한 줄(탐색 목록, 홈 하이라이트): 출처·날짜 + 제목, 누르면 상세. 오른쪽에 공유·북마크.
+class NewsRow extends StatelessWidget {
+  const NewsRow({super.key, required this.news, required this.last});
+  final OfficialNews news;
+  final bool last;
+
+  @override
+  Widget build(BuildContext context) {
+    final n = news;
+    return RgListRow(
+      showDivider: !last,
+      onTap: () => context.go('/explore/news/${Uri.encodeComponent(n.id)}'),
+      trailing: newsActions(n),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(newsMeta(n), style: RgText.caption.copyWith(color: RgColors.textSecondary)),
+        const SizedBox(height: RgSpace.s4),
+        KeepAllText(n.titleKo ?? n.titleEn, style: RgText.titleList),
+      ]),
+    );
+  }
+}
+
+ItemActions newsActions(OfficialNews n, {RgCircleVariant variant = RgCircleVariant.plain}) =>
+    ItemActions(id: n.id, title: n.titleKo ?? n.titleEn, url: n.url, source: n.sourceLabel, kind: 'news', variant: variant);
+
 class _NewsCard extends StatelessWidget {
   const _NewsCard({required this.news});
   final OfficialNews news;
@@ -151,7 +178,7 @@ class _NewsCard extends StatelessWidget {
     return RgCard(
       padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s18),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // 머리(출처·제목)는 누르면 원문으로
+        // 머리(출처·제목)는 누르면 원문으로. 오른쪽 위에 공유·북마크
         Semantics(
           link: true,
           label: '$meta, ${news.titleKo ?? news.titleEn}, 원문 열기',
@@ -171,10 +198,8 @@ class _NewsCard extends StatelessWidget {
                   ],
                 ]),
               ),
-              Padding(
-                padding: EdgeInsets.only(top: (MediaQuery.textScalerOf(context).scale(16) - 14) / 2),
-                child: const RgIcon('arrow-up-right', size: 14, color: RgColors.textTertiary),
-              ),
+              // 누르는 영역 44는 그대로 두고 모양만 카드 모서리 쪽으로(추천 카드와 같게)
+              Transform.translate(offset: const Offset(RgSpace.s12, -RgSpace.s10), child: newsActions(news)),
             ]),
           ),
         ),

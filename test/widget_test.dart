@@ -25,6 +25,7 @@ import 'package:rootgist/design/widgets/rg_pressable.dart';
 import 'package:rootgist/design/widgets/rg_segmented.dart';
 import 'package:flutter/semantics.dart';
 import 'package:rootgist/features/explore/explore_screen.dart';
+import 'package:rootgist/features/explore/official_news.dart';
 import 'package:rootgist/features/home/home_screen.dart';
 import 'package:rootgist/features/paper/paper_screen.dart';
 import 'package:rootgist/features/reader/reader_screen.dart';
@@ -39,6 +40,7 @@ Future<void> pumpApp(WidgetTester tester) async {
   readerDefaultMode.value = ReaderMode.together;
   readerScale.value = 1.0;
   fixtureMode.value = FixtureMode.normal;
+  exploreJump.value = null;
   await tester.runAsync(() async {
     await tester.pumpWidget(const RootgistApp());
     await Future<void>.delayed(const Duration(milliseconds: 200));
@@ -141,7 +143,7 @@ void main() {
     addTearDown(tester.view.reset);
     await pumpApp(tester);
 
-    expect(find.text('5편'), findsOneWidget);
+    expect(find.text('논문 더 보기'), findsOneWidget); // 홈은 3편만 미리 보여 준다
 
     await tester.tap(find.bySemanticsLabel('북마크에 저장').first);
     await tester.pump();
@@ -315,7 +317,7 @@ void main() {
     await pumpApp(tester);
     router.go('/explore');
     await settle(tester);
-    expect(find.text('지난 날짜의 연구를 다시 볼 수 있어요'), findsOneWidget);
+    expect(find.text('지난 논문'), findsOneWidget);
 
     // 왼쪽으로 밀면 공식 소식
     await tester.fling(find.byType(PageView), const Offset(-300, 0), 1000);
@@ -347,7 +349,7 @@ void main() {
     // 오른쪽으로 밀면 다시 논문
     await tester.fling(find.byType(PageView), const Offset(300, 0), 1000);
     await settle(tester);
-    expect(find.text('지난 날짜의 연구를 다시 볼 수 있어요'), findsOneWidget);
+    expect(find.text('지난 논문'), findsOneWidget);
   });
 
   testWidgets('P9: 탐색 「모델」 칸은 HF 트렌딩 순위, 누르면 제작사 강점·점수, 카드가 없으면 안내', (tester) async {
@@ -358,6 +360,9 @@ void main() {
     router.go('/explore');
     await settle(tester);
     await tester.tap(find.text('모델'));
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    } // 칸 넘김이 끝나야 모델 칸이 그려지고 불러오기를 시작한다
     await settle(tester);
     expect(find.text('example-coder'), findsOneWidget);
     expect(find.text(keepAll('example-lab 공개 · 400억 파라미터 텍스트 생성 모델')), findsOneWidget);
@@ -376,6 +381,40 @@ void main() {
     await settle(tester);
     expect(find.text(keepAll('제작사가 모델 카드에 강점이나 평가 결과를 밝히지 않았어요. 연결된 논문에서 확인해 보세요.')), findsOneWidget);
     expect(find.text('arXiv · 0000.00001'), findsOneWidget);
+  });
+
+  testWidgets('홈 하이라이트: 논문 3편·공식 발표·업데이트·모델, 「더 보기」는 탐색의 그 칸으로', (tester) async {
+    tester.view.physicalSize = const Size(390, 3200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+    await settle(tester);
+    expect(find.text('오늘의 주요 논문'), findsOneWidget);
+    expect(find.text('공식 발표'), findsOneWidget);
+    expect(find.text('업데이트'), findsOneWidget);
+    expect(find.text('주목받는 모델'), findsOneWidget);
+    expect(find.text('example-coder'), findsOneWidget);
+    // 홈 논문은 추천 1 + 행 2 = 3편
+    expect(find.bySemanticsLabel('공유'), findsNWidgets(3 + 2 + 2 + 2));
+
+    // 공식 발표를 저장하면 보관함에 「공식 소식」으로
+    await tester.tap(find.descendant(of: find.byType(NewsRow).first, matching: find.bySemanticsLabel('북마크에 저장')));
+    await tester.pump();
+    expect(bookmarks.value.values.last.kind, 'news');
+
+    await tester.tap(find.text('업데이트 더 보기'));
+    await settle(tester);
+    expect(find.text('릴리스 노트 전체 보기'), findsOneWidget); // 공식 소식 칸의 「업데이트」
+
+    router.go('/home');
+    await settle(tester);
+    await tester.tap(find.text('모델 더 보기'));
+    await settle(tester);
+    expect(find.text(keepAll('요즘 Hugging Face에서 주목받는 모델이에요. 순서는 Hugging Face의 트렌딩 순위예요.')), findsOneWidget);
+
+    router.go('/library');
+    await settle(tester);
+    expect(find.textContaining('공식 소식 · '), findsOneWidget);
   });
 
   test('P8d: 근거 링크는 원문 구절 위치로(#:~:text=), 구절이 없으면 글 주소', () {
@@ -439,6 +478,8 @@ void main() {
     await tester.tap(find.text('탐색'));
     await settle(tester);
     expect(find.text('수집이 늦어지고 있어요 · 마지막 정상 수집 09:00'), findsOneWidget);
+    await tester.tap(find.text('2026년 9월')); // 지난달은 접혀 있다
+    await tester.pumpAndSettle();
     expect(find.text('1편 · 기타'), findsOneWidget); // 단독이면 「외」 없음
     expect(find.text(keepAll('10월 19일 월요일')), findsNothing); // 오늘 제외
 
@@ -449,7 +490,7 @@ void main() {
 
     await tester.tap(find.bySemanticsLabel('뒤로'));
     await tester.pumpAndSettle();
-    expect(find.text('지난 날짜의 연구를 다시 볼 수 있어요'), findsOneWidget);
+    expect(find.text('지난 논문'), findsOneWidget);
   });
 
   testWidgets('S05: 저장 목록, 해제 → 되돌리기, 전체 비우기', (tester) async {
@@ -462,22 +503,22 @@ void main() {
     restoreBookmark(Bookmark('0000.00003', '보상 모델 없이 선호를 학습하는 정책 최적화', DateTime(2026, 10, 18)));
     router.go('/library');
     await tester.pumpAndSettle();
-    expect(find.text('이 기기에 저장한 연구 2편'), findsOneWidget);
-    expect(find.text('arXiv · 10월 19일 저장'), findsOneWidget);
+    expect(find.text('이 기기에 저장한 항목 2개'), findsOneWidget);
+    expect(find.text('논문 · arXiv · 10월 19일 저장'), findsOneWidget);
 
     await tester.tap(find.bySemanticsLabel('저장됨, 북마크 해제').first); // 최신순 첫 행 = 10월 19일
     await tester.pumpAndSettle();
-    expect(find.text('이 기기에 저장한 연구 1편'), findsOneWidget);
+    expect(find.text('이 기기에 저장한 항목 1개'), findsOneWidget);
     await tester.tap(find.text('되돌리기'));
     await tester.pumpAndSettle();
-    expect(find.text('arXiv · 10월 19일 저장'), findsOneWidget); // 저장일 그대로 복원
+    expect(find.text('논문 · arXiv · 10월 19일 저장'), findsOneWidget); // 저장일 그대로 복원
 
     await tester.tap(find.text('전체 비우기'));
     await tester.pumpAndSettle();
-    expect(find.text('저장한 연구 2편을 모두 뺄까요?'), findsOneWidget);
+    expect(find.text('저장한 항목 2개를 모두 뺄까요?'), findsOneWidget);
     await tester.tap(find.text('모두 빼기'));
     await tester.pumpAndSettle();
-    expect(find.text('아직 저장한 연구가 없어요'), findsOneWidget);
+    expect(find.text('아직 저장한 게 없어요'), findsOneWidget);
     expect(find.text('전체 비우기'), findsNothing);
   });
 
@@ -609,10 +650,9 @@ void main() {
 
     expect(find.textContaining(keepAll('오늘은 새 논문이 없어요'), findRichText: true), findsOneWidget);
     expect(find.textContaining(keepAll('10월 19일 월요일'), findRichText: true), findsOneWidget); // 헤드라인 날짜는 오늘
-    expect(find.text(keepAll('주말에는 새 논문이 발표되지 않아요. 가장 최근인 10월 18일 일요일 연구를 보여 드려요.')), findsOneWidget);
-    expect(find.text('10월 18일 주요 연구'), findsOneWidget);
-    expect(find.text('그날 올라온 연구'), findsOneWidget);
-    expect(find.text('2편'), findsOneWidget); // 10월 18일 3편 − 추천 1
+    expect(find.text(keepAll('주말에는 새 논문이 발표되지 않아요. 가장 최근인 10월 18일 일요일 논문을 보여 드려요.')), findsOneWidget);
+    expect(find.text('10월 18일 주요 논문'), findsOneWidget);
+    expect(find.text('논문 더 보기'), findsOneWidget);
 
     // 지연은 대체하지 않고 지금처럼 수집 안내만
     await tester.runAsync(() async {
@@ -621,7 +661,7 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 200));
     });
     await tester.pumpAndSettle();
-    expect(find.text('그날 올라온 연구'), findsNothing);
+    expect(find.text('논문 더 보기'), findsNothing);
     expect(find.textContaining(keepAll('모으는'), findRichText: true), findsWidgets);
   });
 
@@ -658,7 +698,7 @@ void main() {
 
     await switchTo(FixtureMode.empty);
     expect(find.textContaining(keepAll('없어요'), findRichText: true), findsWidgets);
-    expect(find.text('5편'), findsNothing);
+    expect(find.text('10월 18일 주요 논문'), findsOneWidget); // P4: 가장 최근 다이제스트로 대신
 
     // 「다시 시도」는 다시 부른다(아직 error 모드라 또 실패). 정상으로 돌리면 복구된다.
     await switchTo(FixtureMode.error);
@@ -669,7 +709,7 @@ void main() {
     expect(find.text('불러오지 못했어요'), findsOneWidget);
     await switchTo(FixtureMode.normal);
     await tester.pumpAndSettle();
-    expect(find.text('5편'), findsOneWidget);
+    expect(find.text('논문 더 보기'), findsOneWidget);
   });
 
   testWidgets('M3: 오프라인에서 보관함 → S02는 제목 블록 + 오류 카드(7.7)', (tester) async {
@@ -682,7 +722,7 @@ void main() {
 
     router.go('/library');
     await tester.pumpAndSettle();
-    expect(find.text('이 기기에 저장한 연구 1편'), findsOneWidget); // 보관함은 네트워크 없이 동작
+    expect(find.text('이 기기에 저장한 항목 1개'), findsOneWidget); // 보관함은 네트워크 없이 동작
 
     await tester.tap(find.text(keepAll('보상 모델 없이 선호를 학습하는 정책 최적화')));
     await settle(tester);
@@ -831,9 +871,12 @@ void main() {
     // 화면 틀(탭바)은 1.35배, 큰 제목은 2배에서 멈추고 본문은 그대로 커진다
     router.go('/home');
     await settle(tester);
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, 20000)); // 앞에서 내려 둔 홈을 맨 위로
+    await tester.pumpAndSettle();
     expect(MediaQuery.textScalerOf(tester.element(find.text('홈'))).scale(1), 1.35);
     expect(MediaQuery.textScalerOf(tester.element(find.textContaining(keepAll('올라왔어요'), findRichText: true))).scale(1), 2);
-    expect(MediaQuery.textScalerOf(tester.element(find.text('새로 올라온 연구'))).scale(1), 3.12);
+    await tester.scrollUntilVisible(find.text('논문 더 보기'), 300, scrollable: find.byType(Scrollable).first);
+    expect(MediaQuery.textScalerOf(tester.element(find.text('논문 더 보기'))).scale(1), 3.12);
   });
 
   testWidgets('S1: 글자 크기 4단계가 S02 AI 요약·핵심 내용에도 적용된다', (tester) async {

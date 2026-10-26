@@ -5,9 +5,10 @@ import '../../data/models.dart';
 import '../../data/repository.dart';
 import '../../design/tokens.dart';
 import '../../design/typography.dart';
+import '../../design/widgets/rg_buttons.dart';
 import '../../design/widgets/rg_card.dart';
-import '../../design/widgets/rg_pressable.dart';
 import '../../design/widgets/rg_states.dart';
+import '../common/item_actions.dart';
 import 'news_detail.dart';
 
 // S04 「모델」 칸(PROPOSALS P9 A안): Hugging Face 트렌딩 모델 순위. 누르면 모델 상세.
@@ -57,35 +58,7 @@ class _TrendingModelsSectionState extends State<TrendingModelsSection> {
                 )
               else ...[
                 const SizedBox(height: RgSpace.s16),
-                RgCard(
-                  child: Column(children: [
-                    for (final (i, m) in models.indexed)
-                      RgListRow(
-                        showDivider: i < models.length - 1,
-                        onTap: () => context.go('/explore/model/${Uri.encodeComponent(m.id)}'),
-                        trailing: const Padding(
-                          padding: EdgeInsets.only(top: 2, right: RgSpace.s12),
-                          child: RgIcon('chevron-right', size: 18, color: RgColors.textTertiary),
-                        ),
-                        child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s12, children: [
-                          SizedBox(
-                            width: RgSpace.s20,
-                            child: Text('${m.rank}', style: RgText.meta.copyWith(height: 23 / 13, fontWeight: FontWeight.w600, color: RgColors.textSecondary)),
-                          ),
-                          Expanded(
-                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s4, children: [
-                              Text(m.name, style: RgText.titleList),
-                              KeepAllText(modelLine(m), style: RgText.bodySmall.copyWith(color: RgColors.textBody)),
-                              Text(
-                                [?m.licenseKo, '좋아요 ${countKo(m.likes ?? 0)}', '다운로드 ${countKo(m.downloads ?? 0)}'].join(' · '),
-                                style: RgText.meta.copyWith(color: RgColors.textSecondary),
-                              ),
-                            ]),
-                          ),
-                        ]),
-                      ),
-                  ]),
-                ),
+                RgCard(child: Column(children: [for (final (i, m) in models.indexed) ModelRow(model: m, last: i == models.length - 1)])),
               ],
             ],
           );
@@ -94,3 +67,39 @@ class _TrendingModelsSectionState extends State<TrendingModelsSection> {
     );
   }
 }
+
+// 모델 한 줄(탐색 목록, 홈 하이라이트): 순위 + 이름 + 한 줄 설명 + 라이선스·반응. 오른쪽에 공유·북마크.
+class ModelRow extends StatelessWidget {
+  const ModelRow({super.key, required this.model, required this.last});
+  final TrendingModel model;
+  final bool last;
+
+  @override
+  Widget build(BuildContext context) {
+    final m = model;
+    return RgListRow(
+      showDivider: !last,
+      onTap: () => context.go('/explore/model/${Uri.encodeComponent(m.id)}'),
+      trailing: modelActions(m),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s12, children: [
+        SizedBox(
+          width: RgSpace.s20,
+          child: Text('${m.rank}', style: RgText.meta.copyWith(height: 23 / 13, fontWeight: FontWeight.w600, color: RgColors.textSecondary)),
+        ),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s4, children: [
+            Text(m.name, style: RgText.titleList),
+            KeepAllText(modelLine(m), style: RgText.bodySmall.copyWith(color: RgColors.textBody)),
+            Text(
+              [?m.licenseKo, '좋아요 ${countKo(m.likes ?? 0)}', '다운로드 ${countKo(m.downloads ?? 0)}'].join(' · '),
+              style: RgText.meta.copyWith(color: RgColors.textSecondary),
+            ),
+          ]),
+        ),
+      ]),
+    );
+  }
+}
+
+ItemActions modelActions(TrendingModel m, {RgCircleVariant variant = RgCircleVariant.plain}) =>
+    ItemActions(id: m.id, title: m.name, url: m.url, source: 'Hugging Face', kind: 'model', variant: variant);

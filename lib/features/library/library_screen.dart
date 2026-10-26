@@ -8,7 +8,7 @@ import '../../design/widgets/rg_buttons.dart';
 import '../../design/widgets/rg_card.dart';
 import '../../design/widgets/rg_pressable.dart';
 
-// S05 보관함 (HANDOFF 7.7). 저장 단위만으로 그리므로 네트워크 없이 동작한다.
+// S05 보관함 (HANDOFF 7.7). 저장 단위만으로 그리므로 네트워크 없이 동작한다. 논문·공식 소식·모델을 함께 담는다.
 class LibraryScreen extends StatelessWidget {
   const LibraryScreen({super.key});
 
@@ -51,24 +51,25 @@ class LibraryScreen extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s24, RgSpace.gutterText, 0),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('아직 저장한 연구가 없어요', style: RgText.titleCard),
+                  Text('아직 저장한 게 없어요', style: RgText.titleCard),
                   const SizedBox(height: RgSpace.s6),
-                  KeepAllText('관심 있는 논문의 북마크를 누르면 여기에 모여요', style: secondary),
+                  KeepAllText('논문·소식·모델의 북마크를 누르면 여기에 모여요', style: secondary),
                   const SizedBox(height: RgSpace.s20),
-                  _OutlineButton(label: '오늘의 연구 보기', onTap: () => context.go('/home')),
+                  _OutlineButton(label: '오늘의 논문 보기', onTap: () => context.go('/home')),
                 ]),
               )
             else ...[
               Padding(
                 padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s4, RgSpace.gutterText, RgSpace.s24),
-                child: Text('이 기기에 저장한 연구 ${list.length}편', style: secondary),
+                child: Text('이 기기에 저장한 항목 ${list.length}개', style: secondary),
               ),
               RgCard(
                 child: Column(children: [
                   for (final (i, b) in list.indexed)
                     RgListRow(
                       showDivider: i < list.length - 1,
-                      onTap: () => context.push('/paper/${b.id}'),
+                      // 논문은 쉘 위로, 소식·모델은 탐색 탭 안의 상세로
+                      onTap: () => b.kind == 'paper' ? context.push(b.path) : context.go(b.path),
                       trailing: RgBookmarkButton(
                         saved: true,
                         variant: RgCircleVariant.plain,
@@ -78,7 +79,7 @@ class LibraryScreen extends StatelessWidget {
                         KeepAllText(b.title, style: RgText.titleList),
                         const SizedBox(height: RgSpace.s4),
                         Text(
-                          '${b.source} · ${b.savedAt.month}월 ${b.savedAt.day}일 저장',
+                          '${_kindKo(b.kind)} · ${b.source} · ${b.savedAt.month}월 ${b.savedAt.day}일 저장',
                           style: RgText.meta.copyWith(color: RgColors.textSecondary),
                         ),
                       ]),
@@ -110,7 +111,7 @@ class LibraryScreen extends StatelessWidget {
 
   // 해제는 즉시 지우고 4초 동안 되돌릴 수 있다.
   void _remove(BuildContext context, Bookmark b) {
-    toggleBookmark(b.id, b.title);
+    toggleBookmark(b.id, b.title, source: b.source, kind: b.kind);
     final bottom = MediaQuery.paddingOf(context).bottom;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -130,7 +131,7 @@ class LibraryScreen extends StatelessWidget {
       barrierColor: RgColors.overlayDim,
       builder: (d) => AlertDialog(
         backgroundColor: RgColors.surfaceCard,
-        content: Text('저장한 연구 $n편을 모두 뺄까요?', style: RgText.bodySummary),
+        content: Text('저장한 항목 $n개를 모두 뺄까요?', style: RgText.bodySummary),
         actions: [
           TextButton(onPressed: () => Navigator.of(d).pop(false), child: const Text('취소')),
           TextButton(onPressed: () => Navigator.of(d).pop(true), child: const Text('모두 빼기')),
@@ -142,6 +143,12 @@ class LibraryScreen extends StatelessWidget {
     bookmarks.value = {};
   }
 }
+
+String _kindKo(String kind) => switch (kind) {
+  'news' => '공식 소식',
+  'model' => '모델',
+  _ => '논문',
+};
 
 // 빈 상태 행동: 아웃라인 알약 44 (8.1).
 class _OutlineButton extends StatelessWidget {

@@ -1,0 +1,48 @@
+import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
+
+import '../../data/repository.dart';
+import '../../design/tokens.dart';
+import '../../design/widgets/rg_buttons.dart';
+
+// 카드·목록 행마다 붙는 공유 + 북마크(실기기 QA 요청: 모든 카드에). 목록 행은 plain, 상세 상단 바는 outline.
+class ItemActions extends StatelessWidget {
+  const ItemActions({
+    super.key,
+    required this.id,
+    required this.title,
+    required this.url,
+    this.source = 'arXiv',
+    this.kind = 'paper',
+    this.variant = RgCircleVariant.plain,
+  });
+  final String id, title, url, source, kind;
+  final RgCircleVariant variant;
+
+  @override
+  Widget build(BuildContext context) {
+    final plain = variant == RgCircleVariant.plain;
+    return Row(mainAxisSize: MainAxisSize.min, spacing: plain ? 0 : 8, children: [
+      RgCircleButton(
+        semanticLabel: '공유',
+        icon: 'share',
+        variant: variant,
+        iconColor: plain ? RgColors.textTertiary : null,
+        onTap: () => shareItem(title, url),
+      ),
+      ValueListenableBuilder(
+        valueListenable: bookmarks,
+        builder: (_, saved, _) => RgBookmarkButton(
+          saved: saved.containsKey(id),
+          variant: variant,
+          onTap: () => toggleBookmark(id, title, source: source, kind: kind),
+        ),
+      ),
+    ]);
+  }
+}
+
+void shareItem(String title, String url) => SharePlus.instance.share(ShareParams(text: '$title\n$url'));
+
+// 논문 목록에는 HF 주소가 없어(PaperItem) 논문 id로 만든다.
+String paperUrl(String id) => 'https://huggingface.co/papers/$id';

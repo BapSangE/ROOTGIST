@@ -11,6 +11,7 @@ import '../../design/widgets/rg_card.dart';
 import '../../design/widgets/rg_pressable.dart';
 import '../../design/widgets/rg_states.dart';
 import 'official_news.dart';
+import 'trending_models.dart';
 
 // 공식 소식 상세(실기기 QA 요청): S02처럼 배지·제목 → AI 요약·핵심 내용(근거) → 원문 링크. 글 전체는 옮기지 않는다.
 class NewsDetailScreen extends StatefulWidget {
@@ -43,7 +44,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
           return ListView(
             padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top, bottom: RgSpace.bottomScrollInset),
             children: [
-              _TopBar(url: n?.url),
+              _TopBar(url: n?.url, actions: n == null ? null : newsActions(n, variant: RgCircleVariant.outline)),
               if (snap.hasError) RgErrorCard(error: snap.error, onRetry: _req.reload),
               if (snap.connectionState == ConnectionState.done && n == null)
                 Padding(
@@ -138,7 +139,7 @@ class _ModelDetailScreenState extends State<ModelDetailScreen> {
           return ListView(
             padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top, bottom: RgSpace.bottomScrollInset),
             children: [
-              _TopBar(url: m?.url),
+              _TopBar(url: m?.url, actions: m == null ? null : modelActions(m, variant: RgCircleVariant.outline)),
               if (snap.hasError) RgErrorCard(error: snap.error, onRetry: _req.reload),
               if (snap.connectionState == ConnectionState.done && m == null)
                 Padding(
@@ -245,8 +246,9 @@ String modelLine(TrendingModel m) => [
 ].join(' · ');
 
 class _TopBar extends StatelessWidget {
-  const _TopBar({required this.url});
+  const _TopBar({required this.url, this.actions});
   final String? url;
+  final Widget? actions; // 공유·북마크
 
   @override
   Widget build(BuildContext context) => ChromeTextScale(
@@ -254,7 +256,7 @@ class _TopBar extends StatelessWidget {
       height: RgSpace.topBar,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
-        child: Row(children: [
+        child: Row(spacing: RgSpace.s8, children: [
           RgCircleButton(semanticLabel: '뒤로', icon: 'chevron-left', onTap: () => context.pop()),
           const Spacer(),
           if (url case final u?)
@@ -263,6 +265,7 @@ class _TopBar extends StatelessWidget {
               icon: 'arrow-up-right',
               onTap: () => launchUrl(Uri.parse(u), mode: LaunchMode.externalApplication),
             ),
+          ?actions,
         ]),
       ),
     ),

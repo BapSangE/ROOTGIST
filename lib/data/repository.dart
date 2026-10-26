@@ -92,29 +92,48 @@ final Repository repository =
     _supabaseUrl.isEmpty || _supabaseKey.isEmpty ? FixtureRepository() : SupabaseRepository(_supabaseUrl, _supabaseKey);
 
 // 9.4 저장 단위. 보관함은 이 값만으로 그린다(7.7).
+// kind: paper(논문) | news(공식 소식: 발표·업데이트) | model(트렌딩 모델). 예전 저장값은 kind가 없어 paper로 읽는다.
 class Bookmark {
-  const Bookmark(this.id, this.title, this.savedAt, {this.source = 'arXiv'});
+  const Bookmark(this.id, this.title, this.savedAt, {this.source = 'arXiv', this.kind = 'paper'});
   Bookmark.fromJson(Map<String, dynamic> j)
       : id = j['paper_id'],
         title = j['title_ko'],
         savedAt = DateTime.parse(j['saved_at']),
-        source = j['source'] ?? 'arXiv';
+        source = j['source'] ?? 'arXiv',
+        kind = j['kind'] ?? 'paper';
   final String id;
   final String title;
   final DateTime savedAt;
-  final String source;
+  final String source; // 보관함 행의 출처 표시(arXiv, OpenAI, Hugging Face …)
+  final String kind;
+
+  // 보관함에서 눌렀을 때 갈 화면
+  String get path => switch (kind) {
+    'news' => '/explore/news/${Uri.encodeComponent(id)}',
+    'model' => '/explore/model/${Uri.encodeComponent(id)}',
+    _ => '/paper/$id',
+  };
 
   Map<String, dynamic> toJson() =>
-      {'paper_id': id, 'title_ko': title, 'source': source, 'saved_at': savedAt.toIso8601String()};
+      {'paper_id': id, 'title_ko': title, 'source': source, 'kind': kind, 'saved_at': savedAt.toIso8601String()};
 }
 
 // 저장은 storage.dart(키 bookmarks).
 final bookmarks = ValueNotifier<Map<String, Bookmark>>({});
 
-void toggleBookmark(String id, String title) {
+void toggleBookmark(String id, String title, {String source = 'arXiv', String kind = 'paper'}) {
   final next = {...bookmarks.value};
-  if (next.remove(id) == null) next[id] = Bookmark(id, title, DateTime.now());
+  if (next.remove(id) == null) next[id] = Bookmark(id, title, DateTime.now(), source: source, kind: kind);
   bookmarks.value = next;
 }
 
 void restoreBookmark(Bookmark b) => bookmarks.value = {...bookmarks.value, b.id: b};
+
+// 홈 「더 보기」 → 탐색의 그 칸으로. (칸, 업데이트 선택 여부). 같은 칸을 다시 눌러도 알리도록 매번 새 값.
+class ExploreJump {
+  const ExploreJump(this.tab, {this.updates = false});
+  final int tab; // 0 논문, 1 공식 소식, 2 모델
+  final bool updates;
+}
+
+final exploreJump = ValueNotifier<ExploreJump?>(null);
