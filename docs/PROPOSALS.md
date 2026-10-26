@@ -10,7 +10,7 @@
 | 순서 | ID | 제목 | 왜 이 순서 | 크기 |
 |---|---|---|---|---|
 | 1 | P7 | 개인정보 처리방침·문의하기 | 스토어 심사 필수 항목. 내용만 정하면 앱 쪽은 상수 두 개 | S |
-| 2 | P2 | 앱 이름·ID·아이콘·스플래시 | 외부 공개(지인 베타 포함) 전 필수. 앱 ID는 나중에 바꾸기 어렵다 | M |
+| 2 | P2 | 앱 이름·아이콘·스플래시(앱 ID는 확정) | 외부 공개(지인 베타 포함) 전 필수 | M |
 | 3 | P1 | 외부 링크 표시 | 작고, 사용자가 기능을 못 찾는 문제 | S |
 | 4 | P5 | 추천 카드 「자세히 읽기」 버튼 정리 | 작지만 시안 변경 | S |
 | 5 | P6 | 사용 가이드·공지사항 | 새 화면·저장값·(공지는) 서버 데이터 | M |
@@ -35,17 +35,16 @@
 - **배경**: iOS-앱이름 메모 「아이콘과 앱 실행시 애니메이션은 미리 준비 필요」. 알려진 항목(IOS_QA 3.2 「앱 이름」).
 - **지금 상태**
   - 홈 화면 이름: iOS `App Repo`, Android `app_repo`.
-  - 앱 ID: iOS `com.example.appRepo`(QA 때만 로컬에서 `com.bapsange.rootgist`로 바꿔 씀, 커밋 안 함), Android `com.example.app_repo`.
+  - 앱 ID: **`com.bapsange.rootgist`로 확정**(2026-10-26). iOS 번들 ID·Android `applicationId` 모두 반영. Android `namespace`(코드 패키지 `com.example.app_repo`)는 앱 밖에 보이지 않아 그대로 둔다.
   - 아이콘: Flutter 기본. 스플래시: 흰 화면.
   - 무료 Apple ID 서명은 7일마다 다시 설치해야 한다. 지인 베타(TestFlight)는 유료 Apple Developer 계정이 필요하다.
 - **제안**
-  - **앱 ID를 먼저 정한다**(예: `com.<조직>.rootgist`, iOS·Android 같게). 스토어에 올린 뒤에는 바꿀 수 없다.
   - 이름: 홈 화면 표시명 `ROOTGIST`(또는 한글 이름). 길이는 아이콘 아래 잘리지 않게 10자 안팎.
   - 아이콘: 불변 원칙(무채색)에 맞춰 오프화이트 바탕 + 검정 워드마크/모노그램. 시안 1장에서 `flutter_launcher_icons`로 두 플랫폼 크기를 만든다.
   - 스플래시: **정적**(배경 `bgApp` + 가운데 워드마크)을 권한다. 네이티브 스플래시는 애니메이션이 안 되고, Flutter 쪽에 애니메이션을 넣으면 그만큼 첫 화면이 늦어진다. 원하면 첫 프레임에서 워드마크가 짧게(200~300ms) 사라지는 정도만.
-- **바뀌는 곳**: `ios/Runner/Info.plist`, `ios/Runner.xcodeproj`(번들 ID), `android/app/build.gradle*`·`AndroidManifest.xml`, 아이콘 에셋, `flutter_native_splash` 설정.
+- **바뀌는 곳**: `ios/Runner/Info.plist`(표시 이름), `android/app/src/main/AndroidManifest.xml`(`android:label`), 아이콘 에셋, `flutter_native_splash` 설정.
 - **크기**: M(아이콘 시안 제외)
-- **정할 것**: 앱 ID, 표시 이름, 아이콘 시안, 유료 개발자 계정 여부(지인 베타 시점).
+- **정할 것**: 표시 이름, 아이콘 시안, 유료 개발자 계정 여부(지인 베타 시점).
 
 ## P1. 외부 링크 표시
 

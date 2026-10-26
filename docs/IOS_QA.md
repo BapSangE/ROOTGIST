@@ -24,7 +24,8 @@ M6의 「iPhone 실기기」 몫. Android는 에뮬레이터(Pixel 8, Android 17
 4. Xcode 서명
    - `open ios/Runner.xcworkspace` → 왼쪽 Runner → Signing & Capabilities
    - Team: 「Add an Account…」로 본인 Apple ID 추가 후 「(Personal Team)」 선택
-   - **Bundle Identifier**: 지금 값 `com.example.appRepo`는 Apple에 등록할 수 없다. 테스트용으로 `com.<본인영문>.rootgist` 처럼 바꾼다. 이 변경(`ios/Runner.xcodeproj/project.pbxproj`)은 **커밋하지 않는다** — 정식 앱 ID는 외부 공개 준비 때 Android와 같이 정한다.
+   - **Bundle Identifier**: 정식 앱 ID `com.bapsange.rootgist`가 이미 들어 있다(iOS·Android 같음). 바꾸지 않는다.
+   - Team을 고르면 Xcode가 `DEVELOPMENT_TEAM`(개인 Team ID)을 `project.pbxproj`에 써 넣는다. 사람마다 다른 값이라 **이 줄은 커밋하지 않는다**. Xcode가 함께 바꾸는 `objectVersion`·`Main.storyboard` 형식 변경도 커밋하지 않는다.
 5. 아이폰
    - USB로 연결 → 「이 컴퓨터를 신뢰」
    - 설정 → 개인정보 보호 및 보안 → **개발자 모드** 켜기(재시작됨)
@@ -76,7 +77,7 @@ Q04(색 토큰·대비)와 Q13(번역 없는 문장)은 코드·데이터 기준
 | 외부 링크 | 원문 출처(arXiv) 링크 → Safari로 열림, 돌아오면 앱 상태 유지 | |
 | 키보드·입력 | (입력창 없음 — 해당 없음) | |
 | 다크 모드 | 설정에서 다크 모드로 바꿔도 앱은 밝은 화면 그대로(MVP는 라이트만) | |
-| 앱 이름 | 홈 화면 아이콘 아래 이름이 「App Repo」로 나옴 — 알려진 항목(외부 공개 때 앱 ID와 같이 바꿈) | |
+| 앱 이름 | 홈 화면 아이콘 아래 이름이 「App Repo」로 나옴 — 알려진 항목(표시 이름은 PROPOSALS P2에서 정함) | |
 | 글꼴 | 한글 제목·본문, 영문 세리프(원문)가 Android와 같은 글꼴로 나옴 | |
 
 ### 3.3 VoiceOver (Q03)

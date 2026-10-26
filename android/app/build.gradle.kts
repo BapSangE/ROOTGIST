@@ -16,8 +16,8 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.app_repo"
+        // 스토어에 올린 뒤에는 바꿀 수 없다. iOS 번들 ID와 같다. namespace(코드 패키지)는 앱 밖에 안 보여 그대로 둔다.
+        applicationId = "com.bapsange.rootgist"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
