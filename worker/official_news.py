@@ -255,12 +255,22 @@ def translate(titles: list[str], api_key: str, log) -> list[str] | None:
     return [x.strip() for x in out["titles"]] if out else None
 
 
+# 앱 문장은 해요체(공지·안내와 같은 말투). 릴리스 요약이 「추가되었습니다」로 나왔다(실기기 QA).
+HAEYO = (" Write every Korean sentence in the polite 해요체 used by Korean consumer apps, with endings like "
+         "~해요, ~했어요, ~돼요, ~됐어요, ~있어요. Never use 합니다체 (~합니다, ~했습니다, ~됩니다) or plain ~다 endings.")
+
+
+def not_haeyo(texts) -> bool:
+    """한 문장이라도 「~다」(합니다체·평서형)로 끝나면 True. 명사로 끝나는 짧은 문장은 그대로 둔다."""
+    return any(isinstance(t, str) and t.strip().rstrip(".!?\"')]").endswith("다") for t in texts)
+
+
 RELEASE_SYSTEM = (
     "You summarize software release notes for Korean developers. Use only the release notes given; do not guess or add anything. "
     "Pick the up to 3 changes a developer would care about most (new features first, then important fixes). "
     "Write each as one short Korean sentence; keep API, feature, flag and product names in their original spelling. "
     "Return only a JSON object: {\"points\": [\"...\"]} with 1 to 3 items."
-)
+) + HAEYO
 
 
 def summarize_release(notes: str, api_key: str, log) -> list[dict] | None:
@@ -269,7 +279,7 @@ def summarize_release(notes: str, api_key: str, log) -> list[dict] | None:
     def check(out):
         p = out.get("points") if isinstance(out, dict) else None
         ok = isinstance(p, list) and 1 <= len(p) <= 3 and all(isinstance(x, str) and x.strip() for x in p)
-        return [] if ok else ["points_invalid"]
+        return ([] if not not_haeyo(p) else ["not_haeyo"]) if ok else ["points_invalid"]
 
     out, _ = llm.generate(api_key, msgs, check, log)
     return [{"text": x.strip()} for x in out["points"]] if out else None
@@ -282,7 +292,7 @@ POST_SYSTEM = (
     "summary: 1 or 2 Korean sentences on what the post is about. points: up to 3 key points, each one Korean sentence, "
     "para: the number of the paragraph that supports it, quote: 3 to 10 consecutive words copied exactly from that paragraph. "
     "If the paragraphs are too short for key points, return an empty points list."
-)
+) + HAEYO
 
 
 def summarize_post(title: str, paras: list[str], api_key: str, log) -> tuple[str, list[dict]] | None:
@@ -303,7 +313,7 @@ def summarize_post(title: str, paras: list[str], api_key: str, log) -> tuple[str
         for pt in pts:
             if not (isinstance(pt, dict) and isinstance(pt.get("text"), str) and isinstance(pt.get("para"), int) and 1 <= pt["para"] <= len(body)):
                 return ["point_evidence_invalid"]  # 근거 문단이 없는 핵심 내용은 받지 않는다
-        return []
+        return ["not_haeyo"] if not_haeyo([out["summary"]] + [pt["text"] for pt in pts]) else []
 
     out, _ = llm.generate(api_key, msgs, check, log)
     if not out:
@@ -341,7 +351,7 @@ CARD_SYSTEM = (
     "strengths: up to 3 short Korean sentences on what the makers say the model is for or good at. "
     "benchmarks: up to 4 benchmark results the makers report for this model, name exactly as written and score as written (e.g. \"74.2%\"). "
     "limitation: one Korean sentence on a limitation the makers state, or null. Use empty lists when the card says nothing."
-)
+) + HAEYO
 
 
 def summarize_card(card: str, api_key: str, log) -> dict | None:
@@ -355,7 +365,9 @@ def summarize_card(card: str, api_key: str, log) -> dict | None:
               and isinstance(bm, list) and len(bm) <= 4
               and all(isinstance(b, dict) and isinstance(b.get("name"), str) and isinstance(b.get("score"), str) for b in bm)
               and (lim is None or isinstance(lim, str)))
-        return [] if ok else ["card_shape"]
+        if not ok:
+            return ["card_shape"]
+        return ["not_haeyo"] if not_haeyo(st + [lim]) else []
 
     out, _ = llm.generate(api_key, msgs, check, log)
     if not out:
@@ -411,7 +423,10 @@ def main(argv=None):
     key = None if args.no_llm else setting("NVIDIA_API_KEY")
     cache = json.loads(DIGEST_CACHE.read_text(encoding="utf-8")) if DIGEST_CACHE.exists() else {}
     for item in items:
-        item.update({k: v for k, v in cache.get(item["url"], {}).items() if k in ("title_ko", "summary_ko", "key_points")})
+        hit = cache.get(item["url"], {})
+        if not_haeyo([hit.get("summary_ko")] + [p.get("text") for p in hit.get("key_points") or []]):
+            hit = {"title_ko": hit.get("title_ko")}  # 예전 합니다체 요약은 다시 만든다(제목 번역은 그대로)
+        item.update({k: v for k, v in hit.items() if k in ("title_ko", "summary_ko", "key_points")})
     todo = [i for i in items if not i.get("title_ko")]
     ko = translate([i["title_en"] for i in todo], key, lambda e: None) if key and todo else None
     report.append(f"제목 번역: 새 {len(todo)}개 " + ("완료" if ko or not todo else "건너뜀(키 없음)" if not key else "실패, 원문만"))
@@ -429,10 +444,14 @@ def main(argv=None):
 
     def digest_release(r):
         hit = cache.get(r["title_en"])
+        if hit and not_haeyo([p.get("text") for p in hit["key_points"]]):
+            hit = None
         r["key_points"] = hit["key_points"] if hit else (summarize_release(r["notes"], key, lambda e: None) if key else None) or []
 
     def digest_model(m):
         hit = cache.get(m["url"])
+        if hit and hit["card"] and not_haeyo(hit["card"]["strengths"] + [hit["card"].get("limitation")]):
+            hit = None
         if hit:
             m["card"] = hit["card"]
             return

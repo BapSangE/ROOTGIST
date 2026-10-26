@@ -288,8 +288,8 @@ class OfficialNewsTest(unittest.TestCase):
 
     def test_post_points_need_evidence_and_real_quote(self):
         paras = ["Alpha model is faster than before on long inputs.", "Pricing drops by half for everyone."]
-        reply = {"summary": "요약", "points": [{"text": "빨라졌다", "para": 1, "quote": "faster than before"},
-                                             {"text": "싸졌다", "para": 2, "quote": "not in the paragraph"}]}
+        reply = {"summary": "요약", "points": [{"text": "빨라졌어요", "para": 1, "quote": "faster than before"},
+                                             {"text": "싸졌어요", "para": 2, "quote": "not in the paragraph"}]}
         with mock.patch.object(llm, "stream_chat", return_value={"content": json.dumps(reply, ensure_ascii=False), "finish_reason": "stop"}):
             summary, points = official_news.summarize_post("T", paras, "k", lambda e: None)
         self.assertEqual(summary, "요약")
@@ -309,6 +309,13 @@ class OfficialNewsTest(unittest.TestCase):
             got = official_news.from_hf_trending()
         self.assertEqual([m["id"] for m in got], ["a/good"])
         self.assertEqual((got[0]["params"], got[0]["license"], got[0]["arxiv"]), (27_000_000_000, "mit", ["2601.00001"]))
+
+    def test_haeyo_rejects_hamnida_and_plain_endings(self):
+        from worker.official_news import not_haeyo
+        self.assertTrue(not_haeyo(["API 버전 지원이 추가되었습니다."]))
+        self.assertTrue(not_haeyo(["새 모델을 공개했다"]))
+        self.assertFalse(not_haeyo(["API 버전 지원이 추가됐어요.", "message threads 지원", None]))
+        self.assertFalse(not_haeyo(["코딩에 강해요(제작사 측정)."]))
 
     def test_card_scores_must_appear_in_card(self):
         card = "Our model scores 74.2% on SWE-bench Verified."
