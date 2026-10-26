@@ -19,6 +19,7 @@ import 'package:rootgist/design/typography.dart';
 import 'package:rootgist/design/theme.dart';
 import 'package:rootgist/design/tokens.dart';
 import 'package:rootgist/design/widgets/rg_buttons.dart';
+import 'package:rootgist/design/widgets/rg_pressable.dart';
 import 'package:rootgist/design/widgets/rg_segmented.dart';
 import 'package:flutter/semantics.dart';
 import 'package:rootgist/features/explore/explore_screen.dart';
@@ -147,6 +148,12 @@ void main() {
     await tester.tap(find.text(keepAll('소수 예시 기반 영상 분할의 일반화 성능 분석')));
     await settle(tester);
     expect(find.text('arXiv · 0000.00002'), findsOneWidget);
+
+    // P1: 외부 링크 행은 ↗ 아이콘과 동작을 말하는 화면 읽기 문구(arXiv·HF), 발행일 행은 아이콘 없음
+    expect(find.text('Hugging Face'), findsOneWidget);
+    expect(find.bySemanticsLabel('arXiv에서 원문 열기'), findsOneWidget);
+    expect(find.bySemanticsLabel('Hugging Face에서 논문 페이지 열기'), findsOneWidget);
+    expect(find.byWidgetPredicate((w) => w is RgIcon && w.name == 'arrow-up-right'), findsNWidgets(2));
   });
 
   test('8.3 LaTeX 표시 변환과 근거 없는 핵심 내용 제외', () {

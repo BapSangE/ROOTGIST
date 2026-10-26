@@ -206,8 +206,17 @@ class _PaperScreenState extends State<PaperScreen> {
             _InfoRow(
               label: '원문 출처',
               value: 'arXiv · ${p.id}',
+              semanticsLabel: 'arXiv에서 원문 열기',
               onTap: () => launchUrl(Uri.parse(p.arxivUrl), mode: LaunchMode.externalApplication),
             ),
+            // 토론·코드 링크가 있는 HF 논문 페이지(iOS QA P1). 데이터 출처 화면 문구와도 맞춘다.
+            if (p.hfUrl.isNotEmpty)
+              _InfoRow(
+                label: '논문 페이지',
+                value: 'Hugging Face',
+                semanticsLabel: 'Hugging Face에서 논문 페이지 열기',
+                onTap: () => launchUrl(Uri.parse(p.hfUrl), mode: LaunchMode.externalApplication),
+              ),
             if (p.orgName != null) _InfoRow(label: '게시 조직', value: p.orgName!), // G8
             _InfoRow(label: '발행일', value: p.date, last: true),
           ],
@@ -354,10 +363,11 @@ class _KeyPointItem extends StatelessWidget {
 }
 
 class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.label, required this.value, this.onTap, this.last = false});
+  const _InfoRow({required this.label, required this.value, this.onTap, this.semanticsLabel, this.last = false});
   final String label;
   final String value;
-  final VoidCallback? onTap;
+  final VoidCallback? onTap; // 있으면 외부 링크: 값 옆에 ↗(iOS QA P1)
+  final String? semanticsLabel;
   final bool last;
 
   @override
@@ -372,6 +382,12 @@ class _InfoRow extends StatelessWidget {
           Expanded(
             child: Text(value, textAlign: TextAlign.end, style: RgText.bodySmall),
           ),
+          if (onTap != null)
+            Padding(
+              // bodySmall 첫 줄(행간 21) 가운데
+              padding: EdgeInsets.only(top: (MediaQuery.textScalerOf(context).scale(21) - 14) / 2),
+              child: const RgIcon('arrow-up-right', size: 14, color: RgColors.textTertiary),
+            ),
         ],
       ),
     );
@@ -383,6 +399,9 @@ class _InfoRow extends StatelessWidget {
           ? row
           : Semantics(
               link: true,
+              label: semanticsLabel,
+              excludeSemantics: semanticsLabel != null,
+              onTap: onTap, // excludeSemantics가 하위의 탭 동작까지 지우므로 직접 넘긴다
               child: RgPressable(onTap: onTap, child: row),
             ),
     );

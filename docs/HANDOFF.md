@@ -282,7 +282,7 @@ HF Daily Papers에서 **매일 상위 10편**을 골라, 초록만 근거로 한
 | 북마크 | `bookmark` (저장됨은 채움) |
 | 뒤로 / 공유 / 행 이동·근거 링크 / AI 안내 | `chevron-left` / `share` / `chevron-right` / `info` |
 
-**아이콘은 `docs/design/ui_v2.1/icons/*.svg`를 그대로 쓴다.** 캔버스 시안에서 뽑은 경로로, Lucide 계열이지만 Lucide 원본과 경로가 다르다(예: house, compass, sliders-vertical은 단순화됨). 모두 viewBox 24, `stroke="currentColor"`, 선 굵기 1.75, 둥근 끝이다. `flutter_svg`로 넣고 `colorFilter`로 색을 입힌다. 저장된 북마크는 `bookmark-filled.svg`.
+**아이콘은 `docs/design/ui_v2.1/icons/*.svg`를 그대로 쓴다.** 캔버스 시안에서 뽑은 경로로, Lucide 계열이지만 Lucide 원본과 경로가 다르다(예: house, compass, sliders-vertical은 단순화됨). 모두 viewBox 24, `stroke="currentColor"`, 선 굵기 1.75, 둥근 끝이다. `flutter_svg`로 넣고 `colorFilter`로 색을 입힌다. 저장된 북마크는 `bookmark-filled.svg`. 시안에 없는 `arrow-up-right.svg`(외부 링크, iOS QA P1)는 Lucide 원본 경로를 같은 선 굵기로 앱 에셋에만 추가했다.
 
 ### 5.4 토큰 코드 (`lib/design/tokens.dart`, `typography.dart`)
 
@@ -467,7 +467,7 @@ S02·S03은 탭 위에 푸시되어 **탭바를 숨긴다**. S02의 AI 안내 �
 | 3 | AI 카드 | RgCard. ① 「AI 요약」 titleCard ② 요약 bodySummary textBody(위 8) ③ dividerCard(위아래 16) ④ 「핵심 내용」 titleCard ⑤ 항목 0~3개, 항목 간격 14(위 10) | 24 |
 | 3-1 | 핵심 내용 항목 | 번호 13/600 textTertiary + 간격 12 + [내용 bodySummary, 근거 링크]. 링크 「원문 근거 · 초록 N번째 문장」 meta textSecondary + chevron-right 14, 최소 높이 36 | — |
 | 4 | AI 안내 캡션 | 카드 바깥, 좌우 20. info 14 + caption 12/17 textSecondary, 간격 6. 「초록을 바탕으로 AI가 정리했어요. 논문 본문 전체를 반영하지는 않아요.」 탭 → C03 | 12 |
-| 5 | 원문 정보 카드 | RgCard, 좌우 여백 20, 위아래 4. 행 높이 14+21+14, 라벨 textSecondary · 값 textPrimary bodySmall 양끝 정렬. 행: 원문 출처(arXiv · ID, 탭 → 외부 브라우저 `arxiv_url`), 발행일 | 28 |
+| 5 | 원문 정보 카드 | RgCard, 좌우 여백 20, 위아래 4. 행 높이 14+21+14, 라벨 textSecondary · 값 textPrimary bodySmall 양끝 정렬. 행: 원문 출처(arXiv · ID, 탭 → 외부 브라우저 `arxiv_url`), 논문 페이지(Hugging Face, 탭 → `hf_url`, 비어 있으면 숨김), 발행일. 외부 링크 행은 값 오른쪽에 `arrow-up-right` 14 textTertiary, 화면 읽기 「arXiv에서 원문 열기」·「Hugging Face에서 논문 페이지 열기」(iOS QA P1) | 28 |
 | 6 | 하단 여백 | 136 | — |
 | 7 | 하단 주 버튼 | 「번역과 함께 초록 읽기」 RgPrimaryButton 56, 좌우 16, 하단 30 위 고정 → S03 | — |
 
