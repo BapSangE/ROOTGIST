@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -77,15 +78,10 @@ class SettingsScreen extends StatelessWidget {
         ]),
         group('정보'),
         _SettingsCard(children: [
-          _Row(
-            label: '개인정보 처리방침',
-            onTap: privacyPolicyUrl == null
-                ? null
-                : () => launchUrl(Uri.parse(privacyPolicyUrl!), mode: LaunchMode.inAppBrowserView),
-          ),
+          _Row(label: '개인정보 처리방침', onTap: () => context.go('/settings/privacy')),
           _Row(
             label: '문의하기',
-            onTap: contactEmail == null ? null : () => launchUrl(Uri(scheme: 'mailto', path: contactEmail)),
+            onTap: () => launchUrl(Uri(scheme: 'mailto', path: contactEmail)),
           ),
           _Row(label: '앱 버전', value: appVersion, chevron: false),
         ]),
@@ -191,4 +187,110 @@ class DataSourceScreen extends StatelessWidget {
       ],
     );
   }
+}
+
+// 개인정보 처리방침(G13): docs/privacy.md를 그대로 읽어 보여 준다. 같은 파일이 GitHub Pages 페이지다.
+class PrivacyScreen extends StatefulWidget {
+  const PrivacyScreen({super.key});
+
+  @override
+  State<PrivacyScreen> createState() => _PrivacyScreenState();
+}
+
+class _PrivacyScreenState extends State<PrivacyScreen> {
+  late final _doc = rootBundle.loadString('docs/privacy.md').then(privacyBlocks);
+
+  @override
+  Widget build(BuildContext context) {
+    final body = RgText.bodySummary.copyWith(color: RgColors.textBody);
+    return FutureBuilder(
+      future: _doc,
+      builder: (context, snap) => ListView(
+        padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top, bottom: RgSpace.bottomScrollInset),
+        children: [
+          SizedBox(
+            height: RgSpace.topBar,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
+              child: Row(children: [
+                RgCircleButton(semanticLabel: '뒤로', icon: 'chevron-left', onTap: () => context.pop()),
+              ]),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s12, RgSpace.gutterText, 0),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              for (final (kind, text) in snap.data ?? const <(MdBlock, String)>[])
+                switch (kind) {
+                  MdBlock.title => Padding(
+                    padding: const EdgeInsets.only(bottom: RgSpace.s16),
+                    child: HeadingTextScale(child: Semantics(header: true, child: KeepAllText(text, style: RgText.titleDetail))),
+                  ),
+                  MdBlock.heading => Padding(
+                    padding: const EdgeInsets.only(top: RgSpace.s20, bottom: RgSpace.s8),
+                    child: Semantics(header: true, child: KeepAllText(text, style: RgText.titleSection)),
+                  ),
+                  MdBlock.bullet => Padding(
+                    padding: const EdgeInsets.only(bottom: RgSpace.s6),
+                    child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s8, children: [
+                      Text('·', style: body),
+                      Expanded(child: KeepAllText(text, style: body)),
+                    ]),
+                  ),
+                  MdBlock.paragraph => Padding(
+                    padding: const EdgeInsets.only(bottom: RgSpace.s12),
+                    child: KeepAllText(text, style: body),
+                  ),
+                },
+              const SizedBox(height: RgSpace.s20),
+              Semantics(
+                link: true,
+                child: RgPressable(
+                  onTap: () => launchUrl(Uri.parse(privacyPolicyUrl), mode: LaunchMode.externalApplication),
+                  child: Text('웹에서 보기 · $privacyPolicyUrl', style: RgText.meta.copyWith(color: RgColors.textSecondary)),
+                ),
+              ),
+            ]),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+enum MdBlock { title, heading, bullet, paragraph }
+
+// docs/privacy.md에 쓰는 마크다운만 읽는다: 앞머리(---), #, ##, - 목록, 빈 줄로 나눈 문단.
+List<(MdBlock, String)> privacyBlocks(String md) {
+  var lines = md.split('\n');
+  if (lines.firstOrNull?.trim() == '---') {
+    final end = lines.indexWhere((l) => l.trim() == '---', 1);
+    lines = lines.sublist(end + 1);
+  }
+  final out = <(MdBlock, String)>[];
+  final para = <String>[];
+  void flush() {
+    if (para.isNotEmpty) out.add((MdBlock.paragraph, para.join(' ')));
+    para.clear();
+  }
+
+  for (final raw in lines) {
+    final l = raw.trim();
+    if (l.isEmpty) {
+      flush();
+    } else if (l.startsWith('## ')) {
+      flush();
+      out.add((MdBlock.heading, l.substring(3)));
+    } else if (l.startsWith('# ')) {
+      flush();
+      out.add((MdBlock.title, l.substring(2)));
+    } else if (l.startsWith('- ')) {
+      flush();
+      out.add((MdBlock.bullet, l.substring(2)));
+    } else {
+      para.add(l);
+    }
+  }
+  flush();
+  return out;
 }

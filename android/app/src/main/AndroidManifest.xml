@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Supabase에서 논문 데이터를 받는다. debug·profile 매니페스트에만 있어 release 빌드가 통신하지 못했다(iOS QA 중 발견). -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="ROOTGIST"
         android:name="${applicationName}"
@@ -40,6 +42,15 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- url_launcher(Android 11+): 원문 링크는 브라우저, 문의하기는 메일 앱 -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SENDTO"/>
+            <data android:scheme="mailto"/>
         </intent>
     </queries>
 </manifest>

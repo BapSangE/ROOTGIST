@@ -1,0 +1,13 @@
+# GitHub Pages(소스: main 브랜치 /docs). 개인정보 처리방침(privacy.md → /privacy/)만 페이지로 내보낸다.
+# 나머지 문서는 레포에서 읽는다. docs/에 새 파일·폴더를 만들면 여기에도 넣는다.
+title: ROOTGIST
+lang: ko
+exclude:
+  - HANDOFF.md
+  - IOS_QA.md
+  - PROPOSALS.md
+  - contract
+  - design
+  - reference
+  - spec
+  - "*.xlsx"

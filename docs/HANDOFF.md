@@ -586,8 +586,8 @@ S02·S03은 탭 위에 푸시되어 **탭바를 숨긴다**. S02의 AI 안내 �
 | 읽기 | 글자 크기 | 현재 단계(「기본」) bodySmall textSecondary + chevron-right 18 → S03과 같은 4단계 시트 |
 | 안내 | AI 생성 안내 | chevron → C03 시트 |
 | 안내 | 데이터 출처 | chevron → 출처 설명 화면(시안 없음, 10장 G7) |
-| 정보 | 개인정보 처리방침 | chevron → 인앱 웹뷰(URL 미정) |
-| 정보 | 문의하기 | chevron → 메일 앱(주소 미정) |
+| 정보 | 개인정보 처리방침 | chevron → 앱 안 텍스트 화면(`docs/privacy.md`를 읽어 그림, 맨 아래 「웹에서 보기」). 같은 파일이 GitHub Pages `/privacy/` |
+| 정보 | 문의하기 | chevron → 메일 앱(`contactEmail` = help.rootgist@gmail.com) |
 | 정보 | 앱 버전 | 버전 문자열 bodySmall textSecondary, 탭 없음 |
 
 C03(RgBottomSheet): bodySummary 문단 3개 — ① 초록만 기반으로 생성 ② 핵심 내용은 원문 문장 근거가 있는 것만 표시 ③ 번역·요약에 오류가 있을 수 있음. **논문 본문 전체를 읽었다는 표현은 쓰지 않는다.** 설명 수준 선택은 MVP에서 노출하지 않는다.
@@ -643,7 +643,7 @@ C03(RgBottomSheet): bodySummary 문단 3개 — ① 초록만 기반으로 생�
 | 아이콘 | `flutter_svg` + `docs/design/ui_v2.1/icons/*.svg`(앱의 `assets/icons/`로 복사) |
 | 특정 문장 스크롤 | `scrollable_positioned_list` 또는 `GlobalKey` + `Scrollable.ensureVisible` |
 | 외부 링크·공유·메일 | `url_launcher`, `share_plus` |
-| 웹뷰 | `webview_flutter` (개인정보 처리방침) |
+| 웹뷰 | 쓰지 않음. 처리방침은 앱 안 텍스트 화면(iOS QA P7) |
 | 연결 상태 | `connectivity_plus` |
 
 ### 9.2 폴더 구조 [명세]
@@ -716,7 +716,7 @@ assets/
 | G10 | S04 「대표 분야」 | 정의 없음 | 그날 노출 논문의 `topic_primary` 최빈값(동률이면 주요 연구의 분야) |
 | G11 | 추천 카드 불릿 2개 고정 vs 3개 | PDF 15장 남은 결정 | 2개로 시작, 실기기 높이 확인 |
 | G12 | serif 어울림, 4탭 라벨 200%, 오류·경고 색, 브랜드 강조색 | PDF 15장 남은 결정 | 명세대로 구현 후 실기기에서 판단 |
-| G13 | 개인정보 처리방침 URL, 문의 메일 주소 | 미정 | 자리만 만들고 상수로 분리 |
+| G13 | 개인정보 처리방침 URL, 문의 메일 주소 | 처리방침 확정(iOS QA P7): 원본 `docs/privacy.md` 하나, 앱 안 화면 + GitHub Pages(`https://bapsange.github.io/ROOTGIST/privacy/`). 문의 메일 help.rootgist@gmail.com | 메일을 바꾸면 `contactEmail`과 privacy.md 7장을 같이 고친다 |
 | G14 | 해설 준비 중(`pending`) 논문 표시 | 한국어 제목·분야가 없다 | 목록·상세 제목은 `title_en`으로 대신 보이고 분야 배지·카테고리 줄은 생략. 분야 필터에서는 빠지고 「전체」에만 나옴. 주요 연구로 뽑지 않음 |
 
 ---

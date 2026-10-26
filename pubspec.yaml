@@ -65,6 +65,7 @@ flutter:
     - fixtures/
     - fixtures/digests/
     - fixtures/papers/
+    - docs/privacy.md # 개인정보 처리방침 원본(GitHub Pages와 같은 파일)
   fonts:
     - family: Pretendard
       fonts:

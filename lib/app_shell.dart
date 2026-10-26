@@ -48,7 +48,10 @@ final router = GoRouter(
           GoRoute(
             path: '/settings',
             builder: (_, _) => const SettingsScreen(),
-            routes: [GoRoute(path: 'source', pageBuilder: (_, state) => _page(state, const DataSourceScreen()))],
+            routes: [
+              GoRoute(path: 'source', pageBuilder: (_, state) => _page(state, const DataSourceScreen())),
+              GoRoute(path: 'privacy', pageBuilder: (_, state) => _page(state, const PrivacyScreen())),
+            ],
           ),
         ]),
       ],

@@ -382,6 +382,34 @@ void main() {
     expect(find.text('We propose a method that dynamically allocates inference compute according to input complexity.'), findsOneWidget);
   });
 
+  test('G13: 처리방침 마크다운 — 앞머리는 빼고 제목·절·목록·문단으로', () {
+    final blocks = privacyBlocks('---\ntitle: x\npermalink: /privacy/\n---\n\n# 제목\n\n첫 줄\n이어진 줄\n\n## 1. 절\n\n- 가\n- 나\n');
+    expect(blocks, [
+      (MdBlock.title, '제목'),
+      (MdBlock.paragraph, '첫 줄 이어진 줄'),
+      (MdBlock.heading, '1. 절'),
+      (MdBlock.bullet, '가'),
+      (MdBlock.bullet, '나'),
+    ]);
+  });
+
+  testWidgets('G13: 설정 → 개인정보 처리방침은 앱 안 화면(docs/privacy.md)', (tester) async {
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+    router.go('/settings');
+    await settle(tester);
+
+    await tester.tap(find.text('개인정보 처리방침'));
+    await settle(tester);
+    expect(find.text(keepAll('ROOTGIST 개인정보 처리방침')), findsOneWidget);
+    expect(find.text(keepAll('2. 기기 안에만 저장되는 정보')), findsOneWidget);
+    expect(find.textContaining('permalink'), findsNothing); // 앞머리는 안 보인다
+    expect(find.text('웹에서 보기 · $privacyPolicyUrl'), findsOneWidget);
+    expect(find.text(keepAll('메일: $contactEmail')), findsOneWidget); // 처리방침 7장과 「문의하기」가 같은 주소
+  });
+
   test('C03 문구: 본문 전체를 읽었다는 표현 금지(7.8)', () {
     for (final p in aiNoticeParagraphs) {
       expect(p.contains('본문'), isFalse, reason: p);
