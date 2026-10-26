@@ -1,0 +1,100 @@
+{
+  "collected_at": "2026-10-19T00:00:00+00:00",
+  "window_days": 14,
+  "items": [
+    {
+      "source": "anthropic",
+      "source_label": "Anthropic",
+      "category": "Research",
+      "title_en": "A fictional study on example agents",
+      "title_ko": "예시 에이전트에 관한 가상 연구",
+      "published_at": "2026-10-18T00:00:00+00:00",
+      "url": "https://example.com/fixture/anthropic-1"
+    },
+    {
+      "source": "openai",
+      "source_label": "OpenAI",
+      "category": "Product",
+      "title_en": "Introducing a fictional example API",
+      "title_ko": "가상의 예시 API를 소개합니다",
+      "published_at": "2026-10-17T17:00:00+00:00",
+      "url": "https://example.com/fixture/openai-1",
+      "summary_ko": "가상의 예시 API를 소개하는 가상 글이에요. 실제 내용이 아니에요.",
+      "key_points": [
+        {
+          "text": "예시 요청을 더 빠르게 처리해요",
+          "para": 2,
+          "quote": "fictional example quote"
+        },
+        {
+          "text": "예시 요금이 낮아요",
+          "para": 4,
+          "quote": "another fictional quote"
+        }
+      ]
+    },
+    {
+      "source": "deepmind",
+      "source_label": "Google DeepMind",
+      "category": null,
+      "title_en": "An example map made for fixtures",
+      "title_ko": "fixture용으로 만든 예시 지도",
+      "published_at": "2026-10-16T14:30:00+00:00",
+      "url": "https://example.com/fixture/deepmind-1"
+    },
+    {
+      "source": "google_research",
+      "source_label": "Google Research",
+      "category": "Health & Bioscience",
+      "title_en": "Fictional screening research for tests",
+      "title_ko": null,
+      "published_at": "2026-10-15T18:00:00+00:00",
+      "url": "https://example.com/fixture/google-research-1"
+    },
+    {
+      "source": "huggingface",
+      "source_label": "Hugging Face",
+      "category": null,
+      "title_en": "Running example models on example hardware",
+      "title_ko": "예시 하드웨어에서 예시 모델 실행하기",
+      "published_at": "2026-10-14T16:00:00+00:00",
+      "url": "https://example.com/fixture/huggingface-1"
+    },
+    {
+      "source": "openai_community",
+      "source_label": "OpenAI 커뮤니티",
+      "kind": "notice",
+      "category": "Announcement",
+      "title_en": "Fictional example feature is now available",
+      "title_ko": "가상의 예시 기능을 이제 쓸 수 있어요",
+      "summary_ko": "가상의 예시 기능을 알리는 가상 공지예요.",
+      "key_points": [
+        {
+          "text": "예시 설정에서 켤 수 있어요",
+          "para": 1,
+          "quote": "fictional setting"
+        }
+      ],
+      "published_at": "2026-10-17T09:00:00+00:00",
+      "url": "https://example.com/fixture/community-1"
+    },
+    {
+      "source": "claude_code",
+      "source_label": "Claude Code",
+      "kind": "release",
+      "category": "Release",
+      "title_en": "Claude Code v0.0.1~v0.0.3 (3 releases)",
+      "title_ko": "Claude Code 업데이트 3건 (v0.0.1~v0.0.3)",
+      "key_points": [
+        {
+          "text": "가상의 예시 도구가 추가됐어요"
+        },
+        {
+          "text": "예시 오류를 고쳤어요"
+        }
+      ],
+      "published_at": "2026-10-18T12:00:00+00:00",
+      "url": "https://example.com/fixture/releases"
+    }
+  ]
+}

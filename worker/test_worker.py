@@ -3,7 +3,7 @@ import json
 import unittest
 from unittest import mock
 
-from . import build, collect, llm, split, validate
+from . import build, collect, llm, official_news, split, validate
 
 ABSTRACT = (
     "We study toy routing in example graphs, e.g. small grids. Our method improves accuracy by 3.5 pp. "
@@ -228,6 +228,82 @@ class PromptTest(unittest.TestCase):
         user = msgs[1]["content"]
         self.assertIn('"kind": "link"', user)  # link·meta도 넣어 모델이 건너뛰게 한다
         self.assertIn(f"abstract_sha256: {llm.sha256(ABSTRACT)}", user)
+
+
+
+FEED = b"""<?xml version="1.0"?><rss><channel>
+<item><title>Research post</title><link>https://example.com/a</link><category>Research</category><pubDate>Thu, 22 Oct 2026 10:00:00 GMT</pubDate></item>
+<item><title>Customer story</title><link>https://example.com/b</link><category>Story</category><pubDate>Thu, 22 Oct 2026 10:00:00 GMT</pubDate></item>
+<item><title>Old research</title><link>https://example.com/c</link><category>Research</category><pubDate>Mon, 01 Sep 2026 10:00:00 GMT</pubDate></item>
+</channel></rss>"""
+HF_FEED = b"""<?xml version="1.0"?><rss><channel>
+<item><title>Official</title><link>https://huggingface.co/blog/official-post</link><pubDate>Thu, 22 Oct 2026 10:00:00 GMT</pubDate></item>
+<item><title>Community</title><link>https://huggingface.co/blog/some-org/community-post</link><pubDate>Thu, 22 Oct 2026 10:00:00 GMT</pubDate></item>
+</channel></rss>"""
+
+
+class OfficialNewsTest(unittest.TestCase):
+    NOW = official_news.datetime(2026, 10, 26, tzinfo=official_news.timezone.utc)
+
+    def test_openai_keeps_dev_categories_within_window(self):
+        with mock.patch.object(official_news, "fetch", return_value=FEED):
+            got = official_news.pick(official_news.from_rss("openai", "OpenAI", "x"), self.NOW)
+        self.assertEqual([i["title_en"] for i in got], ["Research post"])  # 사례 글·14일 넘은 글 제외
+
+    def test_hf_keeps_only_official_posts(self):
+        with mock.patch.object(official_news, "fetch", return_value=HF_FEED):
+            got = official_news.from_rss("huggingface", "Hugging Face", "x")
+        self.assertEqual([i["title_en"] for i in got], ["Official"])
+
+    def test_releases_grouped_into_one_item(self):
+        atom = b"""<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom">
+<entry><title>v1.2</title><updated>2026-10-23T10:00:00Z</updated><content type="html">&lt;p&gt;Added B&lt;/p&gt;</content></entry>
+<entry><title>v1.1</title><updated>2026-10-21T10:00:00Z</updated><content type="html">&lt;p&gt;Fixed A&lt;/p&gt;</content></entry>
+<entry><title>v1.0</title><updated>2026-10-01T10:00:00Z</updated><content type="html">old</content></entry>
+</feed>"""
+        with mock.patch.object(official_news, "fetch", return_value=atom):
+            got = official_news.from_releases("x", "Tool", "u", "page", self.NOW)
+        self.assertEqual(len(got), 1)  # 이번 주 두 버전을 한 항목으로, 3주 전 것은 뺀다
+        self.assertEqual(got[0]["title_ko"], "Tool 업데이트 2건 (v1.1~v1.2)")
+        self.assertEqual(got[0]["kind"], "release")
+        self.assertIn("[v1.2]\nAdded B", got[0]["notes"])  # 최신 버전 노트가 먼저
+
+    def test_claude_api_notes_by_date_heading(self):
+        page = (b'<h2>2026</h2><h3 id="october-22-2026">October 22, 2026</h3><ul><li>Added <code>x</code> tool</li><li>Fixed y</li></ul>'
+                b'<h3 id="august-01-2026">August 1, 2026</h3><ul><li>old</li></ul>')
+        with mock.patch.object(official_news, "fetch", return_value=page):
+            got = official_news.from_claude_api_notes(self.NOW)
+        self.assertEqual(got[0]["title_ko"], "Claude API 변경 사항 2건")
+        self.assertIn("- Added x tool", got[0]["notes"])
+        self.assertNotIn("old", got[0]["notes"])
+
+    def test_community_feed_is_notice(self):
+        with mock.patch.object(official_news, "fetch", return_value=HF_FEED):
+            got = official_news.from_rss("openai_community", "OpenAI 커뮤니티", "x")
+        self.assertEqual({i["kind"] for i in got}, {"notice"})
+
+    def test_paragraphs_from_whole_page(self):
+        page = "<nav><p>menu menu menu menu menu menu menu menu menu menu</p></nav><div><p>" + "A" * 50 + "</p><li>short</li></div>"
+        self.assertEqual(official_news.paragraphs(page), ["A" * 50])  # nav·짧은 줄 제외
+
+    def test_post_points_need_evidence_and_real_quote(self):
+        paras = ["Alpha model is faster than before on long inputs.", "Pricing drops by half for everyone."]
+        reply = {"summary": "요약", "points": [{"text": "빨라졌다", "para": 1, "quote": "faster than before"},
+                                             {"text": "싸졌다", "para": 2, "quote": "not in the paragraph"}]}
+        with mock.patch.object(llm, "stream_chat", return_value={"content": json.dumps(reply, ensure_ascii=False), "finish_reason": "stop"}):
+            summary, points = official_news.summarize_post("T", paras, "k", lambda e: None)
+        self.assertEqual(summary, "요약")
+        self.assertEqual([p["quote"] for p in points], ["faster than before", None])  # 문단에 없는 구절은 링크에서 뺀다
+        bad = {"summary": "요약", "points": [{"text": "근거 없음", "para": 9, "quote": "x"}]}
+        with mock.patch.object(llm, "stream_chat", return_value={"content": json.dumps(bad), "finish_reason": "stop"}):
+            self.assertIsNone(official_news.summarize_post("T", paras, "k", lambda e: None))  # 없는 문단 번호는 받지 않는다
+
+    def test_date_without_timezone_is_utc(self):
+        self.assertEqual(official_news._date("2026-10-22").tzinfo, official_news.timezone.utc)
+
+    def test_translate_requires_one_title_each(self):
+        with mock.patch.object(llm, "stream_chat", side_effect=lambda *a: {"content": json.dumps({"titles": ["하나"]}), "finish_reason": "stop"}):
+            self.assertIsNone(official_news.translate(["one", "two"], "k", lambda e: None, ))
 
 
 if __name__ == "__main__":

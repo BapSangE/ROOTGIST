@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:convert';
 
 import 'package:flutter/services.dart';
@@ -306,6 +307,49 @@ void main() {
     }
   });
 
+  testWidgets('P8d: 탐색은 옆으로 밀어 논문 ↔ 공식 소식, 발표 | 업데이트, 요약·핵심 내용과 근거', (tester) async {
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+    router.go('/explore');
+    await settle(tester);
+    expect(find.text('지난 날짜의 연구를 다시 볼 수 있어요'), findsOneWidget);
+
+    // 왼쪽으로 밀면 공식 소식
+    await tester.fling(find.byType(PageView), const Offset(-300, 0), 1000);
+    await settle(tester);
+    expect(find.text('OpenAI · 제품 · 10월 18일'), findsOneWidget); // UTC 17시 = KST 다음 날
+    expect(find.text(keepAll('가상의 예시 API를 소개합니다')), findsOneWidget);
+    expect(find.text('Introducing a fictional example API'), findsOneWidget);
+    expect(find.text(keepAll('가상의 예시 API를 소개하는 가상 글이에요. 실제 내용이 아니에요.')), findsOneWidget); // AI 요약
+    expect(find.text('근거 · 원문 소개문'), findsNWidgets(2)); // OpenAI는 피드 소개문이 근거
+    expect(find.text('Google Research · 10월 16일'), findsOneWidget); // 한국어로 옮기지 않는 분류는 숨김
+    expect(find.text(keepAll('Fictional screening research for tests')), findsOneWidget); // 번역 없으면 원문만
+    expect(find.text('Claude Code · 릴리스 · 10월 18일'), findsNothing); // 릴리스는 「업데이트」에
+
+    await tester.tap(find.text('업데이트'));
+    await tester.pumpAndSettle();
+    expect(find.text('Claude Code · 릴리스 · 10월 18일'), findsOneWidget);
+    expect(find.text(keepAll('가상의 예시 도구가 추가됐어요')), findsOneWidget);
+    expect(find.text('릴리스 노트 전체 보기'), findsOneWidget);
+    expect(find.text('근거 · 원문 1번째 문단'), findsOneWidget); // 커뮤니티 공지
+
+    // 오른쪽으로 밀면 다시 논문
+    await tester.fling(find.byType(PageView), const Offset(300, 0), 1000);
+    await settle(tester);
+    expect(find.text('지난 날짜의 연구를 다시 볼 수 있어요'), findsOneWidget);
+  });
+
+  test('P8d: 근거 링크는 원문 구절 위치로(#:~:text=), 구절이 없으면 글 주소', () {
+    final n = OfficialNews.fromJson({
+      'source': 's', 'source_label': 'S', 'title_en': 't', 'published_at': '2026-10-18T00:00:00Z', 'url': 'https://e.com/a',
+      'key_points': [{'text': '가', 'para': 1, 'quote': 'two words'}, {'text': '나', 'para': 2}],
+    });
+    expect(n.evidenceUrl(n.keyPoints[0]), 'https://e.com/a#:~:text=two%20words');
+    expect(n.evidenceUrl(n.keyPoints[1]), 'https://e.com/a');
+  });
+
   testWidgets('S03: 모드 전환, 용어 탭 → C02', (tester) async {
     tester.view.physicalSize = const Size(390, 2400);
     tester.view.devicePixelRatio = 1;
@@ -429,7 +473,7 @@ void main() {
   });
 
   test('G13: 처리방침 마크다운 — 앞머리는 빼고 제목·절·목록·문단으로', () {
-    final blocks = privacyBlocks('---\ntitle: x\npermalink: /privacy/\n---\n\n# 제목\n\n첫 줄\n이어진 줄\n\n## 1. 절\n\n- 가\n- 나\n');
+    final blocks = markdownBlocks('---\ntitle: x\npermalink: /privacy/\n---\n\n# 제목\n\n첫 줄\n이어진 줄\n\n## 1. 절\n\n- 가\n- 나\n');
     expect(blocks, [
       (MdBlock.title, '제목'),
       (MdBlock.paragraph, '첫 줄 이어진 줄'),
@@ -475,6 +519,27 @@ void main() {
     await settle(tester);
     expect(copied, contactEmail);
     expect(find.text('메일 앱을 열 수 없어 주소를 복사했어요 · $contactEmail'), findsOneWidget);
+  });
+
+  testWidgets('공지사항: 설정 → 공지사항은 docs/notices.md, 사용 모델은 배치 설정과 같다', (tester) async {
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+    router.go('/settings');
+    await settle(tester);
+
+    await tester.tap(find.text('공지사항'));
+    await settle(tester);
+    expect(find.byType(NoticesScreen), findsOneWidget);
+    expect(find.text(keepAll('AI가 만든 내용과 사용한 모델')), findsOneWidget);
+    // 공지에 적은 모델이 바뀌면 이 테스트가 알려 준다(worker/llm.py PRIMARY·FALLBACK)
+    final notices = File('docs/notices.md').readAsStringSync();
+    final llm = File('worker/llm.py').readAsStringSync();
+    expect(llm, contains('"deepseek-ai/deepseek-v4.1-flash"'));
+    expect(llm, contains('"z-ai/glm-5.3-flash"'));
+    expect(notices, allOf(contains('DeepSeek V4.1 Flash'), contains('GLM-5.3 Flash')));
+    expect(notices.contains('본문 전체를 읽'), isFalse); // C03과 같은 원칙
   });
 
   test('C03 문구: 본문 전체를 읽었다는 표현 금지(7.8)', () {

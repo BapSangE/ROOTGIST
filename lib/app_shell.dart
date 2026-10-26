@@ -55,6 +55,7 @@ final router = GoRouter(
             routes: [
               GoRoute(path: 'source', pageBuilder: (_, state) => _page(state, const DataSourceScreen())),
               GoRoute(path: 'privacy', pageBuilder: (_, state) => _page(state, const PrivacyScreen())),
+              GoRoute(path: 'notices', pageBuilder: (_, state) => _page(state, const NoticesScreen())),
             ],
           ),
         ]),

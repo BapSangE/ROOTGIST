@@ -79,6 +79,15 @@ class SupabaseRepository extends Repository {
     if (j == null) throw const LoadError();
     return PaperDetail.fromJson(j);
   }
+
+  // ponytail: 미리보기 전용. 수집 결과(worker/out/official_news.define.json)를 빌드에 --dart-define-from-file로 넣는다.
+  // DB 테이블·읽기 RPC가 생기면 _rpc로 바꾼다. 없으면 빈 목록.
+  static const _officialNewsPreview = String.fromEnvironment('OFFICIAL_NEWS_PREVIEW');
+
+  @override
+  Future<List<OfficialNews>> listOfficialNews() async => _officialNewsPreview.isEmpty
+      ? const []
+      : [for (final n in jsonDecode(_officialNewsPreview)['items']) OfficialNews.fromJson(n)];
 }
 
 class _ServerError implements Exception {

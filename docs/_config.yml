@@ -6,6 +6,7 @@ exclude:
   - HANDOFF.md
   - IOS_QA.md
   - PROPOSALS.md
+  - notices.md
   - contract
   - design
   - reference

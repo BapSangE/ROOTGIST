@@ -73,6 +73,7 @@ class SettingsScreen extends StatelessWidget {
         ]),
         group('안내'),
         _SettingsCard(children: [
+          _Row(label: '공지사항', onTap: () => context.go('/settings/notices')),
           _Row(label: 'AI 생성 안내', onTap: () => showAiNoticeSheet(context)),
           _Row(label: '데이터 출처', onTap: () => context.go('/settings/source')),
         ]),
@@ -208,15 +209,28 @@ class DataSourceScreen extends StatelessWidget {
 }
 
 // 개인정보 처리방침(G13): docs/privacy.md를 그대로 읽어 보여 준다. 같은 파일이 GitHub Pages 페이지다.
-class PrivacyScreen extends StatefulWidget {
-  const PrivacyScreen({super.key});
-
-  @override
-  State<PrivacyScreen> createState() => _PrivacyScreenState();
+class PrivacyScreen extends DocScreen {
+  const PrivacyScreen({super.key}) : super(asset: 'docs/privacy.md', webUrl: privacyPolicyUrl);
 }
 
-class _PrivacyScreenState extends State<PrivacyScreen> {
-  late final _doc = rootBundle.loadString('docs/privacy.md').then(privacyBlocks);
+// 공지사항(실기기 QA 요청): docs/notices.md. 「## 제목」마다 공지 하나, 바로 아래 줄이 날짜.
+// ponytail: 앱에 묶인 고정 공지. 자주 바뀌면 PROPOSALS P6대로 서버 테이블로 옮긴다.
+class NoticesScreen extends DocScreen {
+  const NoticesScreen({super.key}) : super(asset: 'docs/notices.md');
+}
+
+// 레포의 마크다운 문서 하나를 텍스트 화면으로(처리방침·공지사항).
+class DocScreen extends StatefulWidget {
+  const DocScreen({super.key, required this.asset, this.webUrl});
+  final String asset;
+  final String? webUrl; // 있으면 맨 아래 「웹에서 보기」
+
+  @override
+  State<DocScreen> createState() => _DocScreenState();
+}
+
+class _DocScreenState extends State<DocScreen> {
+  late final _doc = rootBundle.loadString(widget.asset).then(markdownBlocks);
 
   @override
   Widget build(BuildContext context) {
@@ -260,14 +274,16 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
                     child: KeepAllText(text, style: body),
                   ),
                 },
-              const SizedBox(height: RgSpace.s20),
-              Semantics(
-                link: true,
-                child: RgPressable(
-                  onTap: () => launchUrl(Uri.parse(privacyPolicyUrl), mode: LaunchMode.externalApplication),
-                  child: Text('웹에서 보기 · $privacyPolicyUrl', style: RgText.meta.copyWith(color: RgColors.textSecondary)),
+              if (widget.webUrl case final url?) ...[
+                const SizedBox(height: RgSpace.s20),
+                Semantics(
+                  link: true,
+                  child: RgPressable(
+                    onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+                    child: Text('웹에서 보기 · $url', style: RgText.meta.copyWith(color: RgColors.textSecondary)),
+                  ),
                 ),
-              ),
+              ],
             ]),
           ),
         ],
@@ -278,8 +294,8 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
 
 enum MdBlock { title, heading, bullet, paragraph }
 
-// docs/privacy.md에 쓰는 마크다운만 읽는다: 앞머리(---), #, ##, - 목록, 빈 줄로 나눈 문단.
-List<(MdBlock, String)> privacyBlocks(String md) {
+// docs/의 처리방침·공지에 쓰는 마크다운만 읽는다: 앞머리(---), #, ##, - 목록, 빈 줄로 나눈 문단.
+List<(MdBlock, String)> markdownBlocks(String md) {
   var lines = md.split('\n');
   if (lines.firstOrNull?.trim() == '---') {
     final end = lines.indexWhere((l) => l.trim() == '---', 1);

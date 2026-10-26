@@ -165,3 +165,59 @@ String kstDateTime(DateTime utc) {
   final k = utc.toUtc().add(const Duration(hours: 9));
   return '${k.month}월 ${k.day}일 ${kstTime(utc)}';
 }
+
+// 연구소 공식 소식(PROPOSALS P8d). 제목·출처·날짜·링크만, 본문은 옮기지 않는다. 모양은 worker/official_news.py 출력.
+class OfficialNews {
+  OfficialNews.fromJson(Map<String, dynamic> j)
+      : source = j['source'],
+        sourceLabel = j['source_label'],
+        kind = j['kind'] ?? 'post',
+        summaryKo = j['summary_ko'],
+        keyPoints = [for (final k in j['key_points'] ?? const []) NewsPoint.fromJson(k)],
+        category = j['category'],
+        titleEn = j['title_en'],
+        titleKo = j['title_ko'],
+        publishedAt = DateTime.parse(j['published_at']),
+        url = j['url'];
+
+  final String source; // openai, anthropic, …
+  final String sourceLabel;
+  final String kind; // post(블로그 글) | notice(커뮤니티 공지) | release(릴리스 묶음)
+  final String? summaryKo; // AI 요약 1~2문장(원문 근거만). 릴리스는 없음
+  final List<NewsPoint> keyPoints; // 핵심 내용 최대 3개
+  final String? category; // 피드의 분류(원문)
+  final String titleEn;
+  final String? titleKo; // 제목만 LLM이 옮긴다. 없으면 원문 제목만
+  final DateTime publishedAt; // UTC
+  final String url;
+
+  bool get isUpdate => kind != 'post'; // 「업데이트」 칸(공지·릴리스)
+
+  // 근거 문장으로 바로 여는 원문 주소(브라우저 텍스트 위치 링크 #:~:text=). 인용이 없으면 글 주소.
+  String evidenceUrl(NewsPoint p) =>
+      p.quote == null ? url : '$url#:~:text=${Uri.encodeComponent(p.quote!)}';
+
+  // 분류는 개발 소식에 가까운 것만 한국어로. 나머지(Google Research 주제 등)는 표시하지 않는다.
+  String? get categoryKo => switch (category) {
+    'Research' => '연구',
+    'Product' => '제품',
+    'Safety' || 'Safety & Alignment' => '안전',
+    'Publication' => '논문',
+    'News' => '소식',
+    'Announcement' => '공지',
+    'Release' => '릴리스',
+    _ => null,
+  };
+}
+
+// 공식 소식 핵심 내용 1개. para·quote는 원문 근거(몇 번째 문단, 그 문단의 짧은 원문 구절). 릴리스는 근거 없이 문장만.
+class NewsPoint {
+  NewsPoint.fromJson(Map<String, dynamic> j)
+      : text = j['text'],
+        para = j['para'],
+        quote = j['quote'];
+
+  final String text;
+  final int? para; // 1부터
+  final String? quote; // 화면에 보이지 않는다. 원문 링크의 위치 지정에만 쓴다
+}

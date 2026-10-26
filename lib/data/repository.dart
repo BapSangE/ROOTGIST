@@ -26,6 +26,7 @@ abstract class Repository {
   Future<List<Digest>> listDigests(); // ① 최신순
   Future<Digest?> getDigest([String? date]); // ② date가 없으면 오늘. 없는 날은 null
   Future<PaperDetail> getPaper(String id); // ③
+  Future<List<OfficialNews>> listOfficialNews(); // P8d 공식 소식, 최신순
   Future<Digest?> today() => getDigest();
 }
 
@@ -70,6 +71,11 @@ class FixtureRepository extends Repository {
 
   @override
   Future<PaperDetail> getPaper(String id) async => PaperDetail.fromJson(await _load('papers/$id.json'));
+
+  @override
+  Future<List<OfficialNews>> listOfficialNews() async => [
+        for (final n in (await _load('official_news.json'))['items']) OfficialNews.fromJson(n),
+      ];
 }
 
 // 빌드에 --dart-define=SUPABASE_URL=… --dart-define=SUPABASE_ANON_KEY=…(공개 키)를 주면 실제 데이터,
