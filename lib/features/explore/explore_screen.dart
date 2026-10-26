@@ -9,9 +9,10 @@ import '../../design/widgets/rg_card.dart';
 import '../../design/widgets/rg_pressable.dart';
 import '../../design/widgets/rg_states.dart';
 import 'official_news.dart';
+import 'trending_models.dart';
 
 // S04 탐색 (HANDOFF 7.6). 오늘은 홈에서 보이므로 뺀다.
-// 위쪽 「논문 | 공식 소식」 칸(PROPOSALS P9 A안의 첫 단계, 브랜치 feature/official-news).
+// 위쪽 「논문 | 공식 소식 | 모델」 칸(PROPOSALS P9 A안, 브랜치 feature/official-news). 옆으로 밀어 넘긴다.
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
 
@@ -28,7 +29,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     ];
   });
 
-  var _tab = 0; // 0 논문, 1 공식 소식
+  var _tab = 0; // 0 논문, 1 공식 소식, 2 모델
   final _pages = PageController();
 
   @override
@@ -59,7 +60,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
             ),
           ),
           _Tabs(
-            labels: const ['논문', '공식 소식'],
+            labels: const ['논문', '공식 소식', '모델'],
             selected: _tab,
             onTap: (i) => _pages.animateToPage(i, duration: const Duration(milliseconds: 250), curve: Curves.easeOut),
           ),
@@ -67,7 +68,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
             child: PageView(
               controller: _pages,
               onPageChanged: (i) => setState(() => _tab = i),
-              children: [_papers(), const OfficialNewsSection()],
+              children: [_papers(), const OfficialNewsSection(), const TrendingModelsSection()],
             ),
           ),
         ],

@@ -14,6 +14,7 @@ import 'package:http/testing.dart';
 import 'package:rootgist/data/storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rootgist/features/settings/ai_notice_sheet.dart';
+import 'package:rootgist/features/settings/notices.dart';
 import 'package:rootgist/features/settings/settings_screen.dart';
 import 'package:rootgist/debug/widget_gallery.dart';
 import 'package:rootgist/design/typography.dart';
@@ -321,12 +322,20 @@ void main() {
     await settle(tester);
     expect(find.text('OpenAI · 제품 · 10월 18일'), findsOneWidget); // UTC 17시 = KST 다음 날
     expect(find.text(keepAll('가상의 예시 API를 소개합니다')), findsOneWidget);
-    expect(find.text('Introducing a fictional example API'), findsOneWidget);
-    expect(find.text(keepAll('가상의 예시 API를 소개하는 가상 글이에요. 실제 내용이 아니에요.')), findsOneWidget); // AI 요약
-    expect(find.text('근거 · 원문 소개문'), findsNWidgets(2)); // OpenAI는 피드 소개문이 근거
+    expect(find.text('Introducing a fictional example API'), findsNothing); // 발표 목록은 논문처럼 짧게(제목만)
+    expect(find.text(keepAll('가상의 예시 API를 소개하는 가상 글이에요. 실제 내용이 아니에요.')), findsNothing);
     expect(find.text('Google Research · 10월 16일'), findsOneWidget); // 한국어로 옮기지 않는 분류는 숨김
     expect(find.text(keepAll('Fictional screening research for tests')), findsOneWidget); // 번역 없으면 원문만
     expect(find.text('Claude Code · 릴리스 · 10월 18일'), findsNothing); // 릴리스는 「업데이트」에
+
+    // 누르면 상세: 원제·AI 요약·핵심 내용과 근거
+    await tester.tap(find.text(keepAll('가상의 예시 API를 소개합니다')));
+    await settle(tester);
+    expect(find.text('Introducing a fictional example API'), findsOneWidget);
+    expect(find.text(keepAll('가상의 예시 API를 소개하는 가상 글이에요. 실제 내용이 아니에요.')), findsOneWidget); // AI 요약
+    expect(find.text('근거 · 원문 소개문'), findsNWidgets(2)); // OpenAI는 피드 소개문이 근거
+    router.pop();
+    await settle(tester);
 
     await tester.tap(find.text('업데이트'));
     await tester.pumpAndSettle();
@@ -339,6 +348,34 @@ void main() {
     await tester.fling(find.byType(PageView), const Offset(300, 0), 1000);
     await settle(tester);
     expect(find.text('지난 날짜의 연구를 다시 볼 수 있어요'), findsOneWidget);
+  });
+
+  testWidgets('P9: 탐색 「모델」 칸은 HF 트렌딩 순위, 누르면 제작사 강점·점수, 카드가 없으면 안내', (tester) async {
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+    router.go('/explore');
+    await settle(tester);
+    await tester.tap(find.text('모델'));
+    await settle(tester);
+    expect(find.text('example-coder'), findsOneWidget);
+    expect(find.text(keepAll('example-lab 공개 · 400억 파라미터 텍스트 생성 모델')), findsOneWidget);
+
+    await tester.tap(find.text('example-coder'));
+    await settle(tester);
+    expect(find.text('트렌딩 1위'), findsOneWidget);
+    expect(find.text('제작사가 내세운 강점'), findsOneWidget);
+    expect(find.text(keepAll('가상의 코딩 에이전트용 모델이에요.')), findsOneWidget);
+    expect(find.text('SWE-bench Verified'), findsOneWidget);
+    expect(find.text('12.3%'), findsOneWidget);
+    router.pop();
+    await settle(tester);
+
+    await tester.tap(find.text('example-video'));
+    await settle(tester);
+    expect(find.text(keepAll('제작사가 모델 카드에 강점이나 평가 결과를 밝히지 않았어요. 연결된 논문에서 확인해 보세요.')), findsOneWidget);
+    expect(find.text('arXiv · 0000.00001'), findsOneWidget);
   });
 
   test('P8d: 근거 링크는 원문 구절 위치로(#:~:text=), 구절이 없으면 글 주소', () {
@@ -532,14 +569,24 @@ void main() {
     await tester.tap(find.text('공지사항'));
     await settle(tester);
     expect(find.byType(NoticesScreen), findsOneWidget);
+    // 목록은 제목·날짜만, 누르면 시트로 내용
+    final notices = parseNotices(File('docs/notices.md').readAsStringSync());
+    expect(notices.length, greaterThanOrEqualTo(3));
+    expect(notices.every((n) => RegExp(r'^\d{4}\.\d{2}\.\d{2}$').hasMatch(n.date)), isTrue); // 제목마다 날짜
     expect(find.text(keepAll('AI가 만든 내용과 사용한 모델')), findsOneWidget);
+    expect(find.textContaining(keepAll('DeepSeek V4.1 Flash')), findsNothing);
+    await tester.tap(find.text(keepAll('AI가 만든 내용과 사용한 모델')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining(keepAll('DeepSeek V4.1 Flash')), findsOneWidget);
+    await tester.tap(find.text('닫기'));
+    await tester.pumpAndSettle();
     // 공지에 적은 모델이 바뀌면 이 테스트가 알려 준다(worker/llm.py PRIMARY·FALLBACK)
-    final notices = File('docs/notices.md').readAsStringSync();
+    final md = File('docs/notices.md').readAsStringSync();
     final llm = File('worker/llm.py').readAsStringSync();
     expect(llm, contains('"deepseek-ai/deepseek-v4.1-flash"'));
     expect(llm, contains('"z-ai/glm-5.3-flash"'));
-    expect(notices, allOf(contains('DeepSeek V4.1 Flash'), contains('GLM-5.3 Flash')));
-    expect(notices.contains('본문 전체를 읽'), isFalse); // C03과 같은 원칙
+    expect(md, allOf(contains('DeepSeek V4.1 Flash'), contains('GLM-5.3 Flash')));
+    expect(md.contains('본문 전체를 읽'), isFalse); // C03과 같은 원칙
   });
 
   test('C03 문구: 본문 전체를 읽었다는 표현 금지(7.8)', () {

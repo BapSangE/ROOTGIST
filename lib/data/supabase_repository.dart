@@ -88,6 +88,11 @@ class SupabaseRepository extends Repository {
   Future<List<OfficialNews>> listOfficialNews() async => _officialNewsPreview.isEmpty
       ? const []
       : [for (final n in jsonDecode(_officialNewsPreview)['items']) OfficialNews.fromJson(n)];
+
+  @override
+  Future<List<TrendingModel>> listTrendingModels() async => _officialNewsPreview.isEmpty
+      ? const []
+      : [for (final m in jsonDecode(_officialNewsPreview)['models'] ?? const []) TrendingModel.fromJson(m)];
 }
 
 class _ServerError implements Exception {

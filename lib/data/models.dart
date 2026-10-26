@@ -169,7 +169,8 @@ String kstDateTime(DateTime utc) {
 // 연구소 공식 소식(PROPOSALS P8d). 제목·출처·날짜·링크만, 본문은 옮기지 않는다. 모양은 worker/official_news.py 출력.
 class OfficialNews {
   OfficialNews.fromJson(Map<String, dynamic> j)
-      : source = j['source'],
+      : id = j['id'] ?? j['url'], // 상세 화면 주소. fixture에는 없어 url로
+        source = j['source'],
         sourceLabel = j['source_label'],
         kind = j['kind'] ?? 'post',
         summaryKo = j['summary_ko'],
@@ -180,6 +181,7 @@ class OfficialNews {
         publishedAt = DateTime.parse(j['published_at']),
         url = j['url'];
 
+  final String id;
   final String source; // openai, anthropic, …
   final String sourceLabel;
   final String kind; // post(블로그 글) | notice(커뮤니티 공지) | release(릴리스 묶음)
@@ -220,4 +222,83 @@ class NewsPoint {
   final String text;
   final int? para; // 1부터
   final String? quote; // 화면에 보이지 않는다. 원문 링크의 위치 지정에만 쓴다
+}
+
+// Hugging Face 트렌딩 모델(PROPOSALS P9). 메타데이터 + 모델 카드에 적힌 제작사 주장(card). 모양은 worker/official_news.py 출력.
+class TrendingModel {
+  TrendingModel.fromJson(Map<String, dynamic> j)
+      : id = j['id'],
+        author = j['author'],
+        name = j['name'],
+        task = j['task'],
+        params = j['params'],
+        license = j['license'],
+        likes = j['likes'],
+        downloads = j['downloads'],
+        createdAt = j['created_at'] == null ? null : DateTime.parse(j['created_at']),
+        rank = j['rank'],
+        arxiv = (j['arxiv'] as List?)?.firstOrNull,
+        url = j['url'],
+        strengths = [for (final s in j['card']?['strengths'] ?? const []) s as String],
+        benchmarks = [for (final b in j['card']?['benchmarks'] ?? const []) (b['name'] as String, b['score'] as String)],
+        limitation = j['card']?['limitation'];
+
+  final String id; // 만든곳/이름
+  final String author, name;
+  final String? task; // pipeline_tag
+  final int? params;
+  final String? license;
+  final int? likes, downloads;
+  final DateTime? createdAt;
+  final int rank;
+  final String? arxiv;
+  final String url;
+  final List<String> strengths; // 비면 「제작사가 밝히지 않았어요」
+  final List<(String, String)> benchmarks; // (이름, 점수) 제작사 측정
+  final String? limitation;
+
+  String get taskKo => switch (task) {
+    'text-generation' => '텍스트 생성',
+    'image-text-to-text' => '이미지·텍스트 이해',
+    'text-to-image' => '이미지 생성',
+    'image-to-image' => '이미지 편집',
+    'image-to-video' => '이미지 → 영상 생성',
+    'text-to-video' => '영상 생성',
+    'text-to-speech' => '음성 합성',
+    'automatic-speech-recognition' => '음성 인식',
+    'any-to-any' => '여러 입출력',
+    'feature-extraction' || 'sentence-similarity' => '임베딩',
+    _ => task ?? '과제 정보 없음',
+  };
+
+  // 278억 파라미터, 1.2조 파라미터
+  String? get paramsKo {
+    final p = params;
+    if (p == null) return null;
+    if (p >= 1e12) return '${(p / 1e12).toStringAsFixed(1)}조 파라미터';
+    return '${_comma((p / 1e8).round())}억 파라미터';
+  }
+
+  String? get licenseKo => switch (license) {
+    null => null,
+    'other' => '개별 라이선스',
+    final l => l.toUpperCase() == 'MIT' ? 'MIT' : l.replaceFirstMapped(RegExp(r'^apache'), (_) => 'Apache'),
+  };
+}
+
+// 숫자: 1,234 / 8.5만 / 776만
+String _comma(int n) => n.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => ',');
+String countKo(int n) => n >= 10000 ? '${(n / 10000).toStringAsFixed(n < 100000 ? 1 : 0)}만' : _comma(n);
+
+// 모델 카드에 자주 나오는 벤치마크의 한국어 풀이. 없는 이름은 풀이 없이 이름만(P9).
+String? benchmarkKo(String name) {
+  final n = name.toLowerCase();
+  if (n.contains('swe-bench')) return '실제 GitHub 이슈를 고치는 코딩 능력';
+  if (n.contains('terminal-bench')) return '터미널에서 명령으로 일을 끝내는 능력';
+  if (n.contains('gpqa')) return '대학원 수준 과학 문제 풀이';
+  if (n.contains('livecodebench') || n.contains('humaneval')) return '코딩 문제 풀이';
+  if (n.contains('aime') || n.contains('math')) return '수학 문제 풀이';
+  if (n.contains('mmlu')) return '여러 분야 지식 문제';
+  if (n.contains('mmmu')) return '이미지가 섞인 전문 문제 풀이';
+  return null;
 }

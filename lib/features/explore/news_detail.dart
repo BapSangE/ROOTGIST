@@ -1,0 +1,351 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../../data/models.dart';
+import '../../data/repository.dart';
+import '../../design/tokens.dart';
+import '../../design/typography.dart';
+import '../../design/widgets/rg_buttons.dart';
+import '../../design/widgets/rg_card.dart';
+import '../../design/widgets/rg_pressable.dart';
+import '../../design/widgets/rg_states.dart';
+import 'official_news.dart';
+
+// 공식 소식 상세(실기기 QA 요청): S02처럼 배지·제목 → AI 요약·핵심 내용(근거) → 원문 링크. 글 전체는 옮기지 않는다.
+class NewsDetailScreen extends StatefulWidget {
+  const NewsDetailScreen({super.key, required this.id});
+  final String id;
+
+  @override
+  State<NewsDetailScreen> createState() => _NewsDetailScreenState();
+}
+
+class _NewsDetailScreenState extends State<NewsDetailScreen> {
+  late final _req = Reloadable(
+    () async => (await repository.listOfficialNews()).where((n) => n.id == widget.id).firstOrNull,
+  );
+
+  @override
+  void dispose() {
+    _req.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: _req,
+      builder: (context, _) => FutureBuilder(
+        future: _req.future,
+        builder: (context, snap) {
+          final n = snap.data;
+          return ListView(
+            padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top, bottom: RgSpace.bottomScrollInset),
+            children: [
+              _TopBar(url: n?.url),
+              if (snap.hasError) RgErrorCard(error: snap.error, onRetry: _req.reload),
+              if (snap.connectionState == ConnectionState.done && n == null)
+                Padding(
+                  padding: const EdgeInsets.all(RgSpace.gutterText),
+                  child: KeepAllText('이 소식을 찾을 수 없어요', style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
+                ),
+              if (n != null) ..._body(n),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  List<Widget> _body(OfficialNews n) => [
+    Padding(
+      padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s12, RgSpace.gutterText, 0),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        RgBadge(label: n.sourceLabel, onCard: false),
+        const SizedBox(height: RgSpace.s12),
+        HeadingTextScale(child: Semantics(header: true, child: KeepAllText(n.titleKo ?? n.titleEn, style: RgText.titleDetail))),
+        if (n.titleKo != null) ...[
+          const SizedBox(height: RgSpace.s8),
+          Text(n.titleEn, style: RgText.serifSubtitle.copyWith(color: RgColors.textSecondary)),
+        ],
+        const SizedBox(height: RgSpace.s8),
+        Text(newsMeta(n), style: RgText.meta.copyWith(color: RgColors.textSecondary)),
+      ]),
+    ),
+    const SizedBox(height: RgSpace.s24),
+    if (n.summaryKo != null || n.keyPoints.isNotEmpty)
+      RgCard(
+        padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s18),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          if (n.summaryKo case final s?) ...[
+            Semantics(header: true, child: Text('AI 요약', style: RgText.titleCard)),
+            const SizedBox(height: RgSpace.s8),
+            KeepAllText(s, style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
+          ],
+          if (n.keyPoints.isNotEmpty) ...[
+            if (n.summaryKo != null)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: RgSpace.s16),
+                child: Divider(height: 1, thickness: 1, color: RgColors.dividerCard),
+              ),
+            Semantics(header: true, child: Text('핵심 내용', style: RgText.titleCard)),
+            const SizedBox(height: RgSpace.s10),
+            NewsPoints(news: n),
+          ],
+        ]),
+      )
+    else
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
+        child: KeepAllText('이 글은 요약을 만들지 못했어요. 원문에서 읽어 주세요.', style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
+      ),
+    const SizedBox(height: RgSpace.s12),
+    const _Note('원문만 보고 AI가 한국어로 정리했어요. 글 전체를 옮기지 않으니 자세한 내용은 원문에서 읽어요.'),
+    const SizedBox(height: RgSpace.s28),
+    _LinkCard(label: '원문', value: n.sourceLabel, url: n.url),
+  ];
+}
+
+// HF 트렌딩 모델 상세(P9 시안 ③·④): 한눈에 → 제작사가 내세운 강점 → 연결 논문 → 모델 카드 링크.
+class ModelDetailScreen extends StatefulWidget {
+  const ModelDetailScreen({super.key, required this.id});
+  final String id;
+
+  @override
+  State<ModelDetailScreen> createState() => _ModelDetailScreenState();
+}
+
+class _ModelDetailScreenState extends State<ModelDetailScreen> {
+  late final _req = Reloadable(
+    () async => (await repository.listTrendingModels()).where((m) => m.id == widget.id).firstOrNull,
+  );
+
+  @override
+  void dispose() {
+    _req.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: _req,
+      builder: (context, _) => FutureBuilder(
+        future: _req.future,
+        builder: (context, snap) {
+          final m = snap.data;
+          return ListView(
+            padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top, bottom: RgSpace.bottomScrollInset),
+            children: [
+              _TopBar(url: m?.url),
+              if (snap.hasError) RgErrorCard(error: snap.error, onRetry: _req.reload),
+              if (snap.connectionState == ConnectionState.done && m == null)
+                Padding(
+                  padding: const EdgeInsets.all(RgSpace.gutterText),
+                  child: KeepAllText('이 모델을 찾을 수 없어요', style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
+                ),
+              if (m != null) ..._body(m),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  List<Widget> _body(TrendingModel m) {
+    final c = m.createdAt?.toUtc().add(const Duration(hours: 9));
+    final body = RgText.bodySummary.copyWith(color: RgColors.textBody);
+    return [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s12, RgSpace.gutterText, 0),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(spacing: RgSpace.s8, children: [
+            const RgBadge(label: '모델', onCard: false),
+            Text('트렌딩 ${m.rank}위', style: RgText.caption.copyWith(color: RgColors.textSecondary)),
+          ]),
+          const SizedBox(height: RgSpace.s12),
+          HeadingTextScale(child: Semantics(header: true, child: Text(m.name, style: RgText.titleDetail))),
+          const SizedBox(height: RgSpace.s8),
+          Text(
+            [m.author, if (c != null) '${c.year}.${c.month.toString().padLeft(2, '0')}.${c.day.toString().padLeft(2, '0')} 공개'].join(' · '),
+            style: RgText.meta.copyWith(color: RgColors.textSecondary),
+          ),
+        ]),
+      ),
+      const SizedBox(height: RgSpace.s24),
+      RgCard(
+        padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s18),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Semantics(header: true, child: Text('한눈에', style: RgText.titleCard)),
+          const SizedBox(height: RgSpace.s8),
+          KeepAllText(modelLine(m), style: body),
+          const SizedBox(height: RgSpace.s6),
+          _Fact('하는 일', m.taskKo),
+          _Fact('크기', m.paramsKo ?? '공개된 정보 없음', muted: m.paramsKo == null),
+          _Fact('라이선스', m.licenseKo ?? '정보 없음', muted: m.licenseKo == null),
+          _Fact('반응', ['좋아요 ${countKo(m.likes ?? 0)}', '다운로드 ${countKo(m.downloads ?? 0)}'].join(' · '), last: true),
+        ]),
+      ),
+      const SizedBox(height: RgSpace.s12),
+      RgCard(
+        padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s18),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Semantics(header: true, child: Text('제작사가 내세운 강점', style: RgText.titleCard)),
+          const SizedBox(height: RgSpace.s10),
+          if (m.strengths.isEmpty && m.benchmarks.isEmpty)
+            KeepAllText(
+              m.arxiv != null ? '제작사가 모델 카드에 강점이나 평가 결과를 밝히지 않았어요. 연결된 논문에서 확인해 보세요.' : '제작사가 모델 카드에 강점이나 평가 결과를 밝히지 않았어요.',
+              style: body.copyWith(color: RgColors.textSecondary),
+            ),
+          for (final s in m.strengths)
+            Padding(
+              padding: const EdgeInsets.only(bottom: RgSpace.s6),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s10, children: [
+                Container(
+                  width: 4,
+                  height: 4,
+                  margin: EdgeInsets.only(top: (MediaQuery.textScalerOf(context).scale(23) - 4) / 2),
+                  decoration: const BoxDecoration(color: RgColors.textBody, shape: BoxShape.circle),
+                ),
+                Expanded(child: KeepAllText(s, style: body)),
+              ]),
+            ),
+          if (m.benchmarks.isNotEmpty) ...[
+            const SizedBox(height: RgSpace.s12),
+            Text('제작사 측정 점수', style: RgText.bodySmall.copyWith(fontWeight: FontWeight.w600)),
+            for (final (i, (name, score)) in m.benchmarks.indexed)
+              _Fact(name, score, sub: benchmarkKo(name), strong: true, last: i == m.benchmarks.length - 1),
+          ],
+          if (m.limitation case final l?) ...[
+            const SizedBox(height: RgSpace.s16),
+            Text('제작사가 밝힌 한계', style: RgText.bodySmall.copyWith(fontWeight: FontWeight.w600)),
+            const SizedBox(height: RgSpace.s6),
+            KeepAllText(l, style: RgText.bodySmall.copyWith(color: RgColors.textBody)),
+          ],
+        ]),
+      ),
+      const SizedBox(height: RgSpace.s12),
+      const _Note('모델 카드에 적힌 제작사 발표를 AI가 정리했어요. 독립적으로 검증된 결과가 아니고, 평가 방식은 출처마다 달라요.'),
+      const SizedBox(height: RgSpace.s28),
+      _LinkCard(
+        label: '모델 카드',
+        value: 'Hugging Face',
+        url: m.url,
+        extra: m.arxiv == null ? null : ('연결된 논문', 'arXiv · ${m.arxiv}', 'https://arxiv.org/abs/${m.arxiv}'),
+      ),
+    ];
+  }
+}
+
+// 「Qwen 공개 · 278억 파라미터 이미지·텍스트 이해 모델」: 메타데이터만으로 만든 한 줄(LLM 없음, P9 1단계)
+String modelLine(TrendingModel m) => [
+  '${m.author} 공개',
+  [?m.paramsKo, '${m.taskKo} 모델'].join(' '),
+].join(' · ');
+
+class _TopBar extends StatelessWidget {
+  const _TopBar({required this.url});
+  final String? url;
+
+  @override
+  Widget build(BuildContext context) => ChromeTextScale(
+    child: SizedBox(
+      height: RgSpace.topBar,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
+        child: Row(children: [
+          RgCircleButton(semanticLabel: '뒤로', icon: 'chevron-left', onTap: () => context.pop()),
+          const Spacer(),
+          if (url case final u?)
+            RgCircleButton(
+              semanticLabel: '원문 열기',
+              icon: 'arrow-up-right',
+              onTap: () => launchUrl(Uri.parse(u), mode: LaunchMode.externalApplication),
+            ),
+        ]),
+      ),
+    ),
+  );
+}
+
+class _Fact extends StatelessWidget {
+  const _Fact(this.label, this.value, {this.sub, this.muted = false, this.strong = false, this.last = false});
+  final String label, value;
+  final String? sub; // 벤치마크 한국어 풀이
+  final bool muted, strong, last;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: EdgeInsets.only(top: RgSpace.s12, bottom: last ? 0 : RgSpace.s12),
+    decoration: const BoxDecoration(border: Border(top: BorderSide(color: RgColors.dividerCard))),
+    child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s16, children: [
+      Expanded(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(label, style: RgText.bodySmall.copyWith(color: strong ? RgColors.textPrimary : RgColors.textSecondary)),
+          if (sub != null) Text(sub!, style: RgText.meta.copyWith(color: RgColors.textSecondary)),
+        ]),
+      ),
+      Flexible(
+        child: Text(
+          value,
+          textAlign: TextAlign.end,
+          style: strong
+              ? RgText.titleList.copyWith(fontWeight: FontWeight.w700)
+              : RgText.bodySmall.copyWith(color: muted ? RgColors.textSecondary : RgColors.textPrimary),
+        ),
+      ),
+    ]),
+  );
+}
+
+class _Note extends StatelessWidget {
+  const _Note(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
+    child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s6, children: [
+      const Padding(padding: EdgeInsets.only(top: 2), child: RgIcon('info', size: 14, color: RgColors.textSecondary)),
+      Expanded(child: KeepAllText(text, style: RgText.caption.copyWith(color: RgColors.textSecondary))),
+    ]),
+  );
+}
+
+// 외부 링크 행(S02 정보 카드와 같은 모양, ↗)
+class _LinkCard extends StatelessWidget {
+  const _LinkCard({required this.label, required this.value, required this.url, this.extra});
+  final String label, value, url;
+  final (String, String, String)? extra;
+
+  @override
+  Widget build(BuildContext context) => RgCard(
+    padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s4),
+    child: Column(children: [
+      if (extra case (final l, final v, final u)) _row(l, v, u, divider: true),
+      _row(label, value, url),
+    ]),
+  );
+
+  Widget _row(String label, String value, String url, {bool divider = false}) => DecoratedBox(
+    decoration: BoxDecoration(border: divider ? const Border(bottom: BorderSide(color: RgColors.dividerCard)) : null),
+    child: Semantics(
+      link: true,
+      label: '$label, $value 열기',
+      excludeSemantics: true,
+      onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+      child: RgPressable(
+        onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: RgSpace.s14),
+          child: Row(spacing: RgSpace.s16, children: [
+            Text(label, style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
+            Expanded(child: Text(value, textAlign: TextAlign.end, style: RgText.bodySmall)),
+            const RgIcon('arrow-up-right', size: 14, color: RgColors.textTertiary),
+          ]),
+        ),
+      ),
+    ),
+  );
+}

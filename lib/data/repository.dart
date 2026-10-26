@@ -27,6 +27,7 @@ abstract class Repository {
   Future<Digest?> getDigest([String? date]); // ② date가 없으면 오늘. 없는 날은 null
   Future<PaperDetail> getPaper(String id); // ③
   Future<List<OfficialNews>> listOfficialNews(); // P8d 공식 소식, 최신순
+  Future<List<TrendingModel>> listTrendingModels(); // P9 HF 트렌딩 모델, 순위순
   Future<Digest?> today() => getDigest();
 }
 
@@ -75,6 +76,11 @@ class FixtureRepository extends Repository {
   @override
   Future<List<OfficialNews>> listOfficialNews() async => [
         for (final n in (await _load('official_news.json'))['items']) OfficialNews.fromJson(n),
+      ];
+
+  @override
+  Future<List<TrendingModel>> listTrendingModels() async => [
+        for (final m in (await _load('trending_models.json'))['models']) TrendingModel.fromJson(m),
       ];
 }
 

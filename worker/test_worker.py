@@ -298,6 +298,25 @@ class OfficialNewsTest(unittest.TestCase):
         with mock.patch.object(llm, "stream_chat", return_value={"content": json.dumps(bad), "finish_reason": "stop"}):
             self.assertIsNone(official_news.summarize_post("T", paras, "k", lambda e: None))  # 없는 문단 번호는 받지 않는다
 
+    def test_trending_filters_tasks_and_blocked_names(self):
+        listing = json.dumps([
+            {"id": "a/good", "pipeline_tag": "text-generation", "tags": ["license:mit", "arxiv:2601.00001"]},
+            {"id": "b/Model-Uncensored", "pipeline_tag": "text-generation", "tags": []},
+            {"id": "c/robot", "pipeline_tag": "robotics", "tags": []},
+        ]).encode()
+        detail = json.dumps({"author": "a", "safetensors": {"total": 27_000_000_000}, "likes": 5, "downloads": 9}).encode()
+        with mock.patch.object(official_news, "fetch", side_effect=lambda u: listing if "sort=" in u else detail):
+            got = official_news.from_hf_trending()
+        self.assertEqual([m["id"] for m in got], ["a/good"])
+        self.assertEqual((got[0]["params"], got[0]["license"], got[0]["arxiv"]), (27_000_000_000, "mit", ["2601.00001"]))
+
+    def test_card_scores_must_appear_in_card(self):
+        card = "Our model scores 74.2% on SWE-bench Verified."
+        reply = {"strengths": ["코딩용"], "benchmarks": [{"name": "SWE-bench Verified", "score": "74.2%"}, {"name": "X", "score": "99%"}], "limitation": None}
+        with mock.patch.object(llm, "stream_chat", return_value={"content": json.dumps(reply, ensure_ascii=False), "finish_reason": "stop"}):
+            out = official_news.summarize_card(card, "k", lambda e: None)
+        self.assertEqual([b["score"] for b in out["benchmarks"]], ["74.2%"])  # 카드에 없는 점수는 버린다
+
     def test_date_without_timezone_is_utc(self):
         self.assertEqual(official_news._date("2026-10-22").tzinfo, official_news.timezone.utc)
 

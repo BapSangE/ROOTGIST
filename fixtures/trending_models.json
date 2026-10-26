@@ -1,0 +1,52 @@
+{
+  "models": [
+    {
+      "id": "example-lab/example-coder",
+      "author": "example-lab",
+      "name": "example-coder",
+      "task": "text-generation",
+      "params": 40000000000,
+      "license": "apache-2.0",
+      "likes": 1234,
+      "downloads": 56789,
+      "created_at": "2026-10-15T00:00:00Z",
+      "rank": 1,
+      "arxiv": null,
+      "url": "https://example.com/fixture/model-1",
+      "card": {
+        "strengths": [
+          "가상의 코딩 에이전트용 모델이에요.",
+          "예시 GPU 한 장으로 돌아가요."
+        ],
+        "benchmarks": [
+          {
+            "name": "SWE-bench Verified",
+            "score": "12.3%"
+          },
+          {
+            "name": "Example-Bench",
+            "score": "45.6"
+          }
+        ],
+        "limitation": "가상 모델이라 실제로 쓸 수 없어요."
+      }
+    },
+    {
+      "id": "example-lab/example-video",
+      "author": "example-lab",
+      "name": "example-video",
+      "task": "image-to-video",
+      "params": null,
+      "license": "other",
+      "likes": 99,
+      "downloads": 123456,
+      "created_at": "2026-09-01T00:00:00Z",
+      "rank": 2,
+      "arxiv": [
+        "0000.00001"
+      ],
+      "url": "https://example.com/fixture/model-2",
+      "card": null
+    }
+  ]
+}

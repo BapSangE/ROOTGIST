@@ -213,12 +213,6 @@ class PrivacyScreen extends DocScreen {
   const PrivacyScreen({super.key}) : super(asset: 'docs/privacy.md', webUrl: privacyPolicyUrl);
 }
 
-// 공지사항(실기기 QA 요청): docs/notices.md. 「## 제목」마다 공지 하나, 바로 아래 줄이 날짜.
-// ponytail: 앱에 묶인 고정 공지. 자주 바뀌면 PROPOSALS P6대로 서버 테이블로 옮긴다.
-class NoticesScreen extends DocScreen {
-  const NoticesScreen({super.key}) : super(asset: 'docs/notices.md');
-}
-
 // 레포의 마크다운 문서 하나를 텍스트 화면으로(처리방침·공지사항).
 class DocScreen extends StatefulWidget {
   const DocScreen({super.key, required this.asset, this.webUrl});
@@ -234,7 +228,6 @@ class _DocScreenState extends State<DocScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final body = RgText.bodySummary.copyWith(color: RgColors.textBody);
     return FutureBuilder(
       future: _doc,
       builder: (context, snap) => ListView(
@@ -252,28 +245,7 @@ class _DocScreenState extends State<DocScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s12, RgSpace.gutterText, 0),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              for (final (kind, text) in snap.data ?? const <(MdBlock, String)>[])
-                switch (kind) {
-                  MdBlock.title => Padding(
-                    padding: const EdgeInsets.only(bottom: RgSpace.s16),
-                    child: HeadingTextScale(child: Semantics(header: true, child: KeepAllText(text, style: RgText.titleDetail))),
-                  ),
-                  MdBlock.heading => Padding(
-                    padding: const EdgeInsets.only(top: RgSpace.s20, bottom: RgSpace.s8),
-                    child: Semantics(header: true, child: KeepAllText(text, style: RgText.titleSection)),
-                  ),
-                  MdBlock.bullet => Padding(
-                    padding: const EdgeInsets.only(bottom: RgSpace.s6),
-                    child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s8, children: [
-                      Text('·', style: body),
-                      Expanded(child: KeepAllText(text, style: body)),
-                    ]),
-                  ),
-                  MdBlock.paragraph => Padding(
-                    padding: const EdgeInsets.only(bottom: RgSpace.s12),
-                    child: KeepAllText(text, style: body),
-                  ),
-                },
+              ...markdownWidgets(snap.data ?? const []),
               if (widget.webUrl case final url?) ...[
                 const SizedBox(height: RgSpace.s20),
                 Semantics(
@@ -293,6 +265,35 @@ class _DocScreenState extends State<DocScreen> {
 }
 
 enum MdBlock { title, heading, bullet, paragraph }
+
+// 문서 블록을 화면 글로(처리방침 화면, 공지 팝업).
+List<Widget> markdownWidgets(List<(MdBlock, String)> blocks) {
+  final body = RgText.bodySummary.copyWith(color: RgColors.textBody);
+  return [
+    for (final (kind, text) in blocks)
+      switch (kind) {
+        MdBlock.title => Padding(
+          padding: const EdgeInsets.only(bottom: RgSpace.s16),
+          child: HeadingTextScale(child: Semantics(header: true, child: KeepAllText(text, style: RgText.titleDetail))),
+        ),
+        MdBlock.heading => Padding(
+          padding: const EdgeInsets.only(top: RgSpace.s20, bottom: RgSpace.s8),
+          child: Semantics(header: true, child: KeepAllText(text, style: RgText.titleSection)),
+        ),
+        MdBlock.bullet => Padding(
+          padding: const EdgeInsets.only(bottom: RgSpace.s6),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s8, children: [
+            Text('·', style: body),
+            Expanded(child: KeepAllText(text, style: body)),
+          ]),
+        ),
+        MdBlock.paragraph => Padding(
+          padding: const EdgeInsets.only(bottom: RgSpace.s12),
+          child: KeepAllText(text, style: body),
+        ),
+      },
+  ];
+}
 
 // docs/의 처리방침·공지에 쓰는 마크다운만 읽는다: 앞머리(---), #, ##, - 목록, 빈 줄로 나눈 문단.
 List<(MdBlock, String)> markdownBlocks(String md) {

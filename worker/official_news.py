@@ -8,7 +8,11 @@
 - release: SDK·도구 릴리스와 API 릴리스 노트. 버전 제목은 뜻이 없어 출처마다 기간 안의 것을 한 항목으로 묶고,
   릴리스 노트 본문만 근거로 개발자용 3줄 요약을 만든다.
 
-결과는 worker/out/(커밋 금지, HANDOFF 0.1)에 쓴다.
+- models: Hugging Face 트렌딩 모델(PROPOSALS P9). 메타데이터(만든 곳·과제·크기·라이선스·반응)와, 모델 카드에 적힌 내용만
+  근거로 한 「제작사가 내세운 강점」(강점·제작사 측정 점수·한계). 성인·검열 해제 계열은 거른다.
+
+결과는 worker/out/(커밋 금지, HANDOFF 0.1)에 쓴다. 한 번 만든 번역·요약은 worker/out/digest_cache.json에 두고
+다음 실행에서 건너뛴다(ponytail: 정식 배치에서는 DB).
 
     python3 -m worker.official_news            # 수집 + 제목 번역(NVIDIA_API_KEY 필요, 없으면 원문만)
     python3 -m worker.official_news --no-llm   # 번역 없이
@@ -19,6 +23,7 @@ worker/out/official_news.define.json   앱 미리보기용(--dart-define-from-fi
 import argparse
 import email.utils
 import gzip
+import hashlib
 import html
 import json
 import re
@@ -42,6 +47,15 @@ PER_SOURCE = 5  # 출처마다 최신 몇 개
 # 목록 페이지(/news, /research)도 최신 글을 다 싣지 않는다. 그래서 글마다 한 번 읽어 게시일을 저장하고, 다음부터는 새 주소만 읽는다.
 # ponytail: 미리보기에서는 worker/out/의 파일, 정식 배치에서는 DB 테이블에 둔다.
 ANTHROPIC_SEEN = OUT / "anthropic_seen.json"
+DIGEST_CACHE = OUT / "digest_cache.json"  # 주소(릴리스는 제목) → 번역·요약
+
+HF_TRENDING = "https://huggingface.co/api/models?sort=trendingScore&limit=40"
+TRENDING_TOP = 10
+# 앱에 보일 과제만(위에서부터 많이 쓰이는 것). 나머지 과제와 아래 낱말이 이름·태그에 있는 모델은 뺀다.
+MODEL_TASKS = {"text-generation", "image-text-to-text", "text-to-image", "image-to-image", "image-to-video", "text-to-video",
+               "text-to-speech", "automatic-speech-recognition", "any-to-any", "feature-extraction", "sentence-similarity"}
+MODEL_BLOCK = re.compile(r"uncensor|nsfw|abliterat|erotic|porn|lewd|hentai|nude|18\+", re.I)
+CARD_CHARS = 20000
 
 # OpenAI 피드에는 회사 소식·사례·정책 글이 섞여 있다. 개발 소식에 가까운 분류만.
 OPENAI_CATEGORIES = {"Research", "Product", "Safety", "Safety & Alignment", "Publication"}
@@ -302,6 +316,55 @@ def summarize_post(title: str, paras: list[str], api_key: str, log) -> tuple[str
     return out["summary"].strip(), points
 
 
+def from_hf_trending() -> list[dict]:
+    out = []
+    for m in json.loads(fetch(HF_TRENDING)):
+        tags = m.get("tags") or []
+        if m.get("pipeline_tag") not in MODEL_TASKS or MODEL_BLOCK.search(m["id"] + " " + " ".join(tags)):
+            continue
+        info = json.loads(fetch(f"https://huggingface.co/api/models/{m['id']}"))
+        lic = next((t.split(":", 1)[1] for t in tags if t.startswith("license:")), None)
+        out.append({"id": m["id"], "author": info.get("author") or m["id"].split("/")[0], "name": m["id"].split("/")[-1],
+                    "task": m.get("pipeline_tag"), "params": (info.get("safetensors") or {}).get("total"),
+                    "license": lic, "likes": info.get("likes"), "downloads": info.get("downloads"),
+                    "created_at": info.get("createdAt"), "rank": len(out) + 1,
+                    "arxiv": [t.split(":", 1)[1] for t in tags if t.startswith("arxiv:")][:1] or None,
+                    "url": f"https://huggingface.co/{m['id']}"})
+        if len(out) == TRENDING_TOP:
+            break
+    return out
+
+
+CARD_SYSTEM = (
+    "You read a Hugging Face model card and report, in Korean, only what the model's makers claim in it. Do not guess or use outside knowledge. "
+    "Return only a JSON object: {\"strengths\": [\"...\"], \"benchmarks\": [{\"name\": \"...\", \"score\": \"...\"}], \"limitation\": \"...\" or null}. "
+    "strengths: up to 3 short Korean sentences on what the makers say the model is for or good at. "
+    "benchmarks: up to 4 benchmark results the makers report for this model, name exactly as written and score as written (e.g. \"74.2%\"). "
+    "limitation: one Korean sentence on a limitation the makers state, or null. Use empty lists when the card says nothing."
+)
+
+
+def summarize_card(card: str, api_key: str, log) -> dict | None:
+    msgs = [{"role": "system", "content": CARD_SYSTEM}, {"role": "user", "content": card[:CARD_CHARS]}]
+
+    def check(out):
+        if not isinstance(out, dict):
+            return ["not_object"]
+        st, bm, lim = out.get("strengths"), out.get("benchmarks"), out.get("limitation")
+        ok = (isinstance(st, list) and len(st) <= 3 and all(isinstance(x, str) for x in st)
+              and isinstance(bm, list) and len(bm) <= 4
+              and all(isinstance(b, dict) and isinstance(b.get("name"), str) and isinstance(b.get("score"), str) for b in bm)
+              and (lim is None or isinstance(lim, str)))
+        return [] if ok else ["card_shape"]
+
+    out, _ = llm.generate(api_key, msgs, check, log)
+    if not out:
+        return None
+    # 점수는 카드 원문에 그대로 있어야 한다(지어낸 숫자를 막는다)
+    out["benchmarks"] = [b for b in out["benchmarks"] if b["score"].strip() and b["score"].strip() in card]
+    return out
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-llm", action="store_true")
@@ -338,12 +401,25 @@ def main(argv=None):
     except Exception as e:
         report.append(f"Claude API 릴리스 노트: 실패 {e!r}")
 
+    try:
+        models = from_hf_trending()
+        report.append(f"HF 트렌딩 모델: {len(models)}개")
+    except Exception as e:
+        models = []
+        report.append(f"HF 트렌딩 모델: 실패 {e!r}")
+
     key = None if args.no_llm else setting("NVIDIA_API_KEY")
-    ko = translate([i["title_en"] for i in items], key, lambda e: None) if key and items else None
-    report.append("제목 번역: " + ("완료" if ko else "건너뜀(키 없음)" if not key else "실패, 원문만"))
-    for i, item in enumerate(items):
+    cache = json.loads(DIGEST_CACHE.read_text(encoding="utf-8")) if DIGEST_CACHE.exists() else {}
+    for item in items:
+        item.update({k: v for k, v in cache.get(item["url"], {}).items() if k in ("title_ko", "summary_ko", "key_points")})
+    todo = [i for i in items if not i.get("title_ko")]
+    ko = translate([i["title_en"] for i in todo], key, lambda e: None) if key and todo else None
+    report.append(f"제목 번역: 새 {len(todo)}개 " + ("완료" if ko or not todo else "건너뜀(키 없음)" if not key else "실패, 원문만"))
+    for i, item in enumerate(todo):
         item["title_ko"] = ko[i] if ko else None
     def digest_post(item):
+        if item.get("summary_ko"):
+            return  # 지난 실행에서 요약했다
         try:
             paras = body_paragraphs(item)
         except Exception:
@@ -352,22 +428,48 @@ def main(argv=None):
         item["summary_ko"], item["key_points"] = got if got else (None, [])
 
     def digest_release(r):
-        r["key_points"] = (summarize_release(r["notes"], key, lambda e: None) if key else None) or []
+        hit = cache.get(r["title_en"])
+        r["key_points"] = hit["key_points"] if hit else (summarize_release(r["notes"], key, lambda e: None) if key else None) or []
 
-    with ThreadPoolExecutor(max_workers=4) as pool:  # 글·릴리스마다 LLM 호출이 하나씩이라 몇 개씩 같이 돌린다
+    def digest_model(m):
+        hit = cache.get(m["url"])
+        if hit:
+            m["card"] = hit["card"]
+            return
+        try:
+            card = fetch(f"https://huggingface.co/{m['id']}/raw/main/README.md").decode("utf-8", "replace")
+        except OSError:
+            card = ""
+        # 설명이 거의 없는 카드(예 LTX-2.5, 126자)는 「밝히지 않았어요」로 둔다
+        m["card"] = summarize_card(card, key, lambda e: None) if key and len(card) >= 300 else None
+
+    with ThreadPoolExecutor(max_workers=4) as pool:  # 글·릴리스·모델마다 LLM 호출이 하나씩이라 몇 개씩 같이 돌린다
         list(pool.map(digest_post, items))
         list(pool.map(digest_release, releases))
+        list(pool.map(digest_model, models))
     report.append(f"글 요약: {sum(bool(i['summary_ko']) for i in items)}/{len(items)}, "
-                  f"릴리스 요약: {sum(bool(r['key_points']) for r in releases)}/{len(releases)}")
+                  f"릴리스 요약: {sum(bool(r['key_points']) for r in releases)}/{len(releases)}, "
+                  f"모델 카드: {sum(bool(m['card']) for m in models)}/{len(models)}")
+    for i in items:
+        if i.get("summary_ko"):
+            cache[i["url"]] = {"title_ko": i["title_ko"], "summary_ko": i["summary_ko"], "key_points": i["key_points"]}
+    for r in releases:
+        if r["key_points"]:
+            cache[r["title_en"]] = {"key_points": r["key_points"]}
+    for m in models:
+        if m["card"] is not None:
+            cache[m["url"]] = {"card": m["card"]}
+    DIGEST_CACHE.write_text(json.dumps(cache, ensure_ascii=False, indent=1), encoding="utf-8")
     items += releases
     for item in items:
         item.pop("_desc", None)
         item.pop("notes", None)
+        item["id"] = hashlib.sha1(item["url"].encode()).hexdigest()[:12]  # 앱 상세 화면 주소용
         item["published_at"] = item["published_at"].astimezone(timezone.utc).isoformat()
 
     items.sort(key=lambda i: i["published_at"], reverse=True)
     OUT.mkdir(parents=True, exist_ok=True)
-    doc = {"collected_at": now.isoformat(), "window_days": WINDOW_DAYS, "items": items}
+    doc = {"collected_at": now.isoformat(), "window_days": WINDOW_DAYS, "items": items, "models": models}
     (OUT / "official_news.json").write_text(json.dumps(doc, ensure_ascii=False, indent=2), encoding="utf-8")
     (OUT / "official_news.define.json").write_text(
         json.dumps({"OFFICIAL_NEWS_PREVIEW": json.dumps(doc, ensure_ascii=False)}, ensure_ascii=False), encoding="utf-8")

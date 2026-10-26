@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/models.dart';
@@ -96,7 +97,30 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
           ],
         ),
       ),
-      for (final n in shown) ...[const SizedBox(height: RgSpace.s12), _NewsCard(news: n)],
+      // 발표는 논문 목록처럼 짧은 행, 누르면 상세(실기기 QA: 한 화면이 너무 길었다). 업데이트는 4~5개라 카드 그대로.
+      if (_updates)
+        for (final n in shown) ...[const SizedBox(height: RgSpace.s12), _NewsCard(news: n)]
+      else ...[
+        const SizedBox(height: RgSpace.s12),
+        RgCard(
+          child: Column(children: [
+            for (final (i, n) in shown.indexed)
+              RgListRow(
+                showDivider: i < shown.length - 1,
+                onTap: () => context.go('/explore/news/${Uri.encodeComponent(n.id)}'),
+                trailing: const Padding(
+                  padding: EdgeInsets.only(top: 2, right: RgSpace.s12),
+                  child: RgIcon('chevron-right', size: 18, color: RgColors.textTertiary),
+                ),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(newsMeta(n), style: RgText.caption.copyWith(color: RgColors.textSecondary)),
+                  const SizedBox(height: RgSpace.s4),
+                  KeepAllText(n.titleKo ?? n.titleEn, style: RgText.titleList),
+                ]),
+              ),
+          ]),
+        ),
+      ],
       Padding(
         padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s12, RgSpace.gutterText, 0),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s6, children: [
@@ -121,8 +145,7 @@ class _NewsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final k = news.publishedAt.toUtc().add(const Duration(hours: 9));
-    final meta = [news.sourceLabel, ?news.categoryKo, '${k.month}월 ${k.day}일'].join(' · ');
+    final meta = newsMeta(news);
     final linkStyle = RgText.meta.copyWith(color: RgColors.textSecondary);
     final release = news.kind == 'release';
     return RgCard(
@@ -159,37 +182,7 @@ class _NewsCard extends StatelessWidget {
           const SizedBox(height: RgSpace.s12),
           KeepAllText(s, style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
         ],
-        if (news.keyPoints.isNotEmpty) ...[
-          const SizedBox(height: RgSpace.s12),
-          Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s10, children: [
-            for (final (i, p) in news.keyPoints.indexed)
-              Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s10, children: [
-                Text('${i + 1}', style: RgText.meta.copyWith(height: 23 / 13, fontWeight: FontWeight.w600, color: RgColors.textTertiary)),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    KeepAllText(p.text, style: RgText.bodySummary),
-                    if (p.para != null)
-                      Semantics(
-                        link: true,
-                        label: '근거, ${_evidence(p)}',
-                        excludeSemantics: true,
-                        onTap: () => _open(news.evidenceUrl(p)),
-                        child: RgPressable(
-                          onTap: () => _open(news.evidenceUrl(p)),
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(minHeight: 36),
-                            child: Row(mainAxisSize: MainAxisSize.min, spacing: RgSpace.s2, children: [
-                              Flexible(child: Text('근거 · ${_evidence(p)}', style: linkStyle)),
-                              const RgIcon('chevron-right', size: 14, color: RgColors.textSecondary),
-                            ]),
-                          ),
-                        ),
-                      ),
-                  ]),
-                ),
-              ]),
-          ]),
-        ],
+        if (news.keyPoints.isNotEmpty) ...[const SizedBox(height: RgSpace.s12), NewsPoints(news: news)],
         if (release) ...[
           const SizedBox(height: RgSpace.s6),
           Semantics(
@@ -210,7 +203,53 @@ class _NewsCard extends StatelessWidget {
     );
   }
 
-  // OpenAI 글·커뮤니티 공지는 피드의 소개문·본문이 근거다
+  void _open(String url) => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+}
+
+String newsMeta(OfficialNews n) {
+  final k = n.publishedAt.toUtc().add(const Duration(hours: 9));
+  return [n.sourceLabel, ?n.categoryKo, '${k.month}월 ${k.day}일'].join(' · ');
+}
+
+// 번호 붙은 핵심 내용. 근거가 있으면 「근거 · 원문 N번째 문단 ›」 → 원문의 그 구절 위치로.
+class NewsPoints extends StatelessWidget {
+  const NewsPoints({super.key, required this.news});
+  final OfficialNews news;
+
+  @override
+  Widget build(BuildContext context) {
+    final linkStyle = RgText.meta.copyWith(color: RgColors.textSecondary);
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s10, children: [
+      for (final (i, p) in news.keyPoints.indexed)
+        Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s10, children: [
+          Text('${i + 1}', style: RgText.meta.copyWith(height: 23 / 13, fontWeight: FontWeight.w600, color: RgColors.textTertiary)),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              KeepAllText(p.text, style: RgText.bodySummary),
+              if (p.para != null)
+                Semantics(
+                  link: true,
+                  label: '근거, ${_evidence(p)}',
+                  excludeSemantics: true,
+                  onTap: () => _open(news.evidenceUrl(p)),
+                  child: RgPressable(
+                    onTap: () => _open(news.evidenceUrl(p)),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 36),
+                      child: Row(mainAxisSize: MainAxisSize.min, spacing: RgSpace.s2, children: [
+                        Flexible(child: Text('근거 · ${_evidence(p)}', style: linkStyle)),
+                        const RgIcon('chevron-right', size: 14, color: RgColors.textSecondary),
+                      ]),
+                    ),
+                  ),
+                ),
+            ]),
+          ),
+        ]),
+    ]);
+  }
+
+  // OpenAI 글은 피드 소개문이 근거다
   String _evidence(NewsPoint p) => news.source == 'openai' ? '원문 소개문' : '원문 ${p.para}번째 문단';
 
   void _open(String url) => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);

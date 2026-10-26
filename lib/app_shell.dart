@@ -8,10 +8,12 @@ import 'design/tokens.dart';
 import 'design/widgets/rg_bottom_tab_bar.dart';
 import 'debug/widget_gallery.dart';
 import 'features/explore/explore_screen.dart';
+import 'features/explore/news_detail.dart';
 import 'features/home/home_screen.dart';
 import 'features/library/library_screen.dart';
 import 'features/paper/paper_screen.dart';
 import 'features/reader/reader_screen.dart';
+import 'features/settings/notices.dart';
 import 'features/settings/settings_screen.dart';
 
 const _tabs = [
@@ -42,6 +44,15 @@ final router = GoRouter(
             path: '/explore',
             builder: (_, _) => const ExploreScreen(),
             routes: [
+              // 공식 소식·모델 상세. 한 칸짜리 :date보다 먼저 둔다. id는 encodeComponent(모델 id에 / 가 있다).
+              GoRoute(
+                path: 'news/:id',
+                pageBuilder: (_, state) => _page(state, NewsDetailScreen(id: Uri.decodeComponent(state.pathParameters['id']!))),
+              ),
+              GoRoute(
+                path: 'model/:id',
+                pageBuilder: (_, state) => _page(state, ModelDetailScreen(id: Uri.decodeComponent(state.pathParameters['id']!))),
+              ),
               // 지난 날짜의 S01. 탐색 탭 스택 안이라 탭바가 보인다.
               GoRoute(path: ':date', pageBuilder: (_, state) => _page(state, HomeScreen(date: state.pathParameters['date']))),
             ],
