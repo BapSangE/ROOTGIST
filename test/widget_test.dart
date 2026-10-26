@@ -373,7 +373,7 @@ void main() {
     expect(find.text('제작사가 내세운 강점'), findsOneWidget);
     expect(find.text(keepAll('가상의 코딩 에이전트용 모델이에요.')), findsOneWidget);
     expect(find.text('SWE-bench Verified'), findsOneWidget);
-    expect(find.text('12.3%'), findsOneWidget);
+    expect(find.text(keepAll('12.3%')), findsOneWidget);
     router.pop();
     await settle(tester);
 
@@ -401,6 +401,16 @@ void main() {
     await tester.tap(find.descendant(of: find.byType(NewsRow).first, matching: find.bySemanticsLabel('북마크에 저장')));
     await tester.pump();
     expect(bookmarks.value.values.last.kind, 'news');
+
+    // 홈에서 연 상세는 뒤로 가면 홈으로(탐색으로 가지 않는다)
+    await tester.tap(find.text('example-coder'));
+    await settle(tester);
+    expect(find.text('제작사가 내세운 강점'), findsOneWidget);
+    // 쉘 밖 화면도 Material 위에 그린다(없으면 글자 밑에 노란 두 줄)
+    expect(find.ancestor(of: find.text('제작사가 내세운 강점'), matching: find.byType(Material)), findsWidgets);
+    router.pop();
+    await settle(tester);
+    expect(find.text('주목받는 모델'), findsOneWidget);
 
     await tester.tap(find.text('업데이트 더 보기'));
     await settle(tester);

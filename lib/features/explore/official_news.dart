@@ -152,7 +152,7 @@ class NewsRow extends StatelessWidget {
     final n = news;
     return RgListRow(
       showDivider: !last,
-      onTap: () => context.go('/explore/news/${Uri.encodeComponent(n.id)}'),
+      onTap: () => context.push('/news/${Uri.encodeComponent(n.id)}'),
       trailing: newsActions(n),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(newsMeta(n), style: RgText.caption.copyWith(color: RgColors.textSecondary)),

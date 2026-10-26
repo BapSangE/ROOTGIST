@@ -29,7 +29,8 @@ const _tabs = [
 Page<void> _page(GoRouterState state, Widget child) => MaterialPage<void>(
   key: state.pageKey,
   name: state.name ?? state.path,
-  child: ColoredBox(color: RgColors.bgApp, child: child),
+  // Material도 깐다: Scaffold 없는 화면을 쉘 밖으로 띄우면 글자 밑에 노란 두 줄(Material 없음 표시)이 생겼다(실기기 QA).
+  child: ColoredBox(color: RgColors.bgApp, child: Material(type: MaterialType.transparency, child: child)),
 );
 
 final router = GoRouter(
@@ -44,15 +45,6 @@ final router = GoRouter(
             path: '/explore',
             builder: (_, _) => const ExploreScreen(),
             routes: [
-              // 공식 소식·모델 상세. 한 칸짜리 :date보다 먼저 둔다. id는 encodeComponent(모델 id에 / 가 있다).
-              GoRoute(
-                path: 'news/:id',
-                pageBuilder: (_, state) => _page(state, NewsDetailScreen(id: Uri.decodeComponent(state.pathParameters['id']!))),
-              ),
-              GoRoute(
-                path: 'model/:id',
-                pageBuilder: (_, state) => _page(state, ModelDetailScreen(id: Uri.decodeComponent(state.pathParameters['id']!))),
-              ),
               // 지난 날짜의 S01. 탐색 탭 스택 안이라 탭바가 보인다.
               GoRoute(path: ':date', pageBuilder: (_, state) => _page(state, HomeScreen(date: state.pathParameters['date']))),
             ],
@@ -71,6 +63,16 @@ final router = GoRouter(
           ),
         ]),
       ],
+    ),
+    // 공식 소식·모델 상세도 논문 상세처럼 쉘 위로 푸시한다. 탐색 탭 안에 두면 홈·보관함에서 열었을 때
+    // 탭이 탐색으로 바뀌고 뒤로 가기가 탐색으로 갔다(실기기 QA). id는 encodeComponent(모델 id에 / 가 있다).
+    GoRoute(
+      path: '/news/:id',
+      pageBuilder: (_, state) => _page(state, NewsDetailScreen(id: Uri.decodeComponent(state.pathParameters['id']!))),
+    ),
+    GoRoute(
+      path: '/model/:id',
+      pageBuilder: (_, state) => _page(state, ModelDetailScreen(id: Uri.decodeComponent(state.pathParameters['id']!))),
     ),
     // S02·S03은 탭바 없이 쉘 위로 푸시된다(7.0).
     GoRoute(

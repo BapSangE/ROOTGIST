@@ -291,7 +291,8 @@ class _Fact extends StatelessWidget {
       ),
       Flexible(
         child: Text(
-          value,
+          keepAll(value), // 「9.6 / 만」처럼 숫자와 단위가 갈라지지 않게
+          semanticsLabel: value,
           textAlign: TextAlign.end,
           style: strong
               ? RgText.titleList.copyWith(fontWeight: FontWeight.w700)

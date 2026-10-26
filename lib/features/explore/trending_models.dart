@@ -79,7 +79,7 @@ class ModelRow extends StatelessWidget {
     final m = model;
     return RgListRow(
       showDivider: !last,
-      onTap: () => context.go('/explore/model/${Uri.encodeComponent(m.id)}'),
+      onTap: () => context.push('/model/${Uri.encodeComponent(m.id)}'),
       trailing: modelActions(m),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s12, children: [
         SizedBox(

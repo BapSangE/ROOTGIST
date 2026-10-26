@@ -68,8 +68,7 @@ class LibraryScreen extends StatelessWidget {
                   for (final (i, b) in list.indexed)
                     RgListRow(
                       showDivider: i < list.length - 1,
-                      // 논문은 쉘 위로, 소식·모델은 탐색 탭 안의 상세로
-                      onTap: () => b.kind == 'paper' ? context.push(b.path) : context.go(b.path),
+                      onTap: () => context.push(b.path),
                       trailing: RgBookmarkButton(
                         saved: true,
                         variant: RgCircleVariant.plain,

@@ -109,8 +109,8 @@ class Bookmark {
 
   // 보관함에서 눌렀을 때 갈 화면
   String get path => switch (kind) {
-    'news' => '/explore/news/${Uri.encodeComponent(id)}',
-    'model' => '/explore/model/${Uri.encodeComponent(id)}',
+    'news' => '/news/${Uri.encodeComponent(id)}',
+    'model' => '/model/${Uri.encodeComponent(id)}',
     _ => '/paper/$id',
   };
 
