@@ -32,7 +32,7 @@ abstract class RgText {
   static final meta = _s(13, 18, FontWeight.w400, 0);
   static final caption = _s(12, 16, FontWeight.w400, 0);
   static final tabLabel = _s(11, 14, FontWeight.w500, 0);
-  static final serifTogether = _s(15, 25, FontWeight.w400, 0, isSerif: true);
+  static final serifTogether = _s(14, 22, FontWeight.w400, 0, isSerif: true); // iOS QA: 15/25 → 14/22(번역이 주, 원문은 대조용)
   static final serifOnly = _s(18, 30, FontWeight.w400, 0, isSerif: true);
   static final serifTerm = _s(26, 32, FontWeight.w600, 0, isSerif: true);
   static final serifSubtitle = _s(15, 22, FontWeight.w400, 0, isSerif: true);

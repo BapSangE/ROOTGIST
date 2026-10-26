@@ -167,8 +167,6 @@ class _ReaderScreenState extends State<ReaderScreen> {
                       ],
                     );
                   }
-                  final highlights = firstHighlights(p);
-                  final highlightsKo = firstHighlights(p, korean: true);
                   return SingleChildScrollView(
                     controller: _scroll,
                     padding: EdgeInsets.fromLTRB(
@@ -187,20 +185,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
                         // 글자 크기 단계는 본문에만, 시스템 글자 크기와 곱해서 적용한다.
                         MediaQuery(
                           data: mq.copyWith(textScaler: TextScaler.linear(mq.textScaler.scale(1) * readerScale.value)),
-                          child: Column(
-                            spacing: RgSpace.s28,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              for (final s in p.sentences.where((s) => s.kind == 'text'))
-                                _Pair(
-                                  key: _keys.putIfAbsent(s.id, GlobalKey.new),
-                                  sentence: s,
-                                  mode: _mode,
-                                  highlights: highlights[s.id] ?? const [],
-                                  highlightsKo: highlightsKo[s.id] ?? const [],
-                                ),
-                            ],
-                          ),
+                          child: _PairList(paper: p, mode: _mode, keys: _keys),
                         ),
                       ],
                     ),
@@ -211,6 +196,43 @@ class _ReaderScreenState extends State<ReaderScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+// 본문 문장 쌍 목록. 쌍마다 문장 번호, 쌍 사이 구분선(iOS QA 디자인 A+B). keys는 쌍마다 달아 스크롤 보정에 쓴다.
+class _PairList extends StatelessWidget {
+  const _PairList({required this.paper, required this.mode, required this.keys});
+  final PaperDetail paper;
+  final ReaderMode mode;
+  final Map<String, GlobalKey> keys;
+
+  @override
+  Widget build(BuildContext context) {
+    final highlights = firstHighlights(paper);
+    final highlightsKo = firstHighlights(paper, korean: true);
+    final pairs = [
+      for (final s in paper.sentences.where((s) => s.kind == 'text'))
+        _Pair(
+          key: keys.putIfAbsent(s.id, GlobalKey.new),
+          sentence: s,
+          mode: mode,
+          highlights: highlights[s.id] ?? const [],
+          highlightsKo: highlightsKo[s.id] ?? const [],
+        ),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final (i, pair) in pairs.indexed) ...[
+          if (i > 0)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: RgSpace.s12),
+              child: Divider(height: 1, thickness: 1, color: RgColors.dividerCard),
+            ),
+          pair,
+        ],
+      ],
     );
   }
 }
@@ -237,12 +259,39 @@ class _Pair extends StatelessWidget {
     final enStyle = mode == ReaderMode.together
         ? RgText.serifTogether.copyWith(color: RgColors.textBody)
         : RgText.serifOnly;
-    return Column(
+    final enText = Text.rich(_highlighted(latexDisplay(sentence.text), highlights, enStyle, (s) => s));
+    final body = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: RgSpace.s8,
       children: [
         if (showKo) Text.rich(_highlighted(ko, highlightsKo, RgText.bodyReaderKo, keepAll)),
-        if (showEn) Text.rich(_highlighted(latexDisplay(sentence.text), highlights, enStyle, (s) => s)),
+        if (showEn)
+          if (showKo)
+            // A: 번역 아래 원문은 왼쪽 세로선 + 들여쓰기
+            Container(
+              padding: const EdgeInsets.only(left: RgSpace.s12),
+              decoration: const BoxDecoration(border: Border(left: BorderSide(color: RgColors.borderDefault, width: 2))),
+              child: enText,
+            )
+          else
+            enText,
+      ],
+    );
+    // B: 문장 번호(상세 「초록 N번째 문장」과 같은 번호). 첫 줄 행간에 맞춰 세로 가운데.
+    final firstLine = showKo ? 29.0 : (mode == ReaderMode.together ? enStyle.fontSize! * enStyle.height! : 30.0);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: RgSpace.s20,
+          child: ExcludeSemantics(
+            child: Text(
+              '${sentenceNumber(sentence.id)}',
+              style: RgText.meta.copyWith(height: firstLine / 13, fontWeight: FontWeight.w600, color: RgColors.textTertiary),
+            ),
+          ),
+        ),
+        Expanded(child: body),
       ],
     );
   }

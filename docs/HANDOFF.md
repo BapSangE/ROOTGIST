@@ -254,7 +254,7 @@ HF Daily Papers에서 **매일 상위 10편**을 골라, 초록만 근거로 한
 | `meta` | 13/18 | 400 | 0 | 저자·날짜, 근거 링크 |
 | `caption` | 12/16~17 | 400~500 | 0 | 배지, 캡션, 카테고리 |
 | `tabLabel` | 11/14 | 500 (선택 600) | 0 | 하단 탭 라벨 |
-| `serifTogether` | 15/25 serif | 400 | 0 | 함께 보기 영문 |
+| `serifTogether` | 14/22 serif | 400 | 0 | 함께 보기 영문(iOS QA에서 15/25 → 14/22) |
 | `serifOnly` | 18/30 serif | 400 | 0 | 원문만 보기 영문 |
 | `serifTerm` | 26/32 serif | 600 | 0 | C02 용어 원어 |
 | `serifSubtitle` | 15/22 serif | 400 | 0 | S02 영문 원제 |
@@ -364,7 +364,7 @@ abstract class RgText {
   static final meta = _s(13, 18, FontWeight.w400, 0);
   static final caption = _s(12, 16, FontWeight.w400, 0);
   static final tabLabel = _s(11, 14, FontWeight.w500, 0);
-  static final serifTogether = _s(15, 25, FontWeight.w400, 0, serif: true);
+  static final serifTogether = _s(14, 22, FontWeight.w400, 0, serif: true);
   static final serifOnly = _s(18, 30, FontWeight.w400, 0, serif: true);
   static final serifTerm = _s(26, 32, FontWeight.w600, 0, serif: true);
   static final serifSubtitle = _s(15, 22, FontWeight.w400, 0, serif: true);
@@ -501,12 +501,12 @@ S02·S03은 탭 위에 푸시되어 **탭바를 숨긴다**. S02의 AI 안내 �
 | 1 | 상단 바 | 높이 52, 좌우 16, 간격 8. 뒤로 RgCircleButton neutral → RgSegmented(함께/번역/원문, 남은 폭) → 글자 크기 RgCircleButton neutral(「가」 15/600). 스크롤 시 상단 고정, 배경 bgReading | SafeArea |
 | 2 | 상위 라벨 | 「초록 · 원문과 번역」 caption textSecondary, 좌우 24 | 20 |
 | 3 | 논문 제목 | titleReader | 6 |
-| 4 | 문장 쌍 목록 | 쌍 간격 28. 쌍 안: 한국어 bodyReaderKo textPrimary → 영문 serifTogether textBody, 간격 8 | 28 |
+| 4 | 문장 쌍 목록 | 쌍 사이 dividerCard 1(위아래 12). 쌍 왼쪽에 문장 번호 meta 600 textTertiary(폭 20, 첫 줄 행간에 세로 가운데, 상세 「초록 N번째 문장」과 같은 번호, 화면 읽기 제외). 쌍 안: 한국어 bodyReaderKo textPrimary → 영문 serifTogether textBody, 간격 8. 「함께」에서 한국어 아래 영문은 왼쪽 세로선 borderDefault 2 + 들여쓰기 12(iOS QA 디자인 A+B) | 28 |
 | 5 | 하단 여백 | 40 + SafeArea 하단 | — |
 
 | 모드 | 한국어 | 영문 |
 |---|---|---|
-| 함께(기본) | bodyReaderKo 17/29 | serifTogether 15/25 textBody |
+| 함께(기본) | bodyReaderKo 17/29 | serifTogether 14/22 textBody |
 | 번역 | bodyReaderKo 17/29 | 숨김 |
 | 원문 | 숨김 | serifOnly 18/30 textPrimary |
 

@@ -244,6 +244,22 @@ void main() {
     expect(find.byType(HomeScreen), findsOneWidget);
   }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
+  testWidgets('S03: 문장 번호·쌍 구분선, 「함께」 영문은 세로선 + 14/22(iOS QA 디자인)', (tester) async {
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+    router.push('/paper/0000.00001/reader');
+    await settle(tester);
+
+    final en = find.byWidgetPredicate((w) => w is Text && w.textSpan?.style?.fontFamily == RgText.serif);
+    expect(find.text('3'), findsOneWidget); // A03 문장 번호
+    expect(find.byType(Divider), findsWidgets);
+    expect(tester.widget<Text>(en.first).textSpan!.style!.fontSize, 14);
+    // 원문은 번역 아래 왼쪽 세로선 안에
+    expect(find.ancestor(of: en.first, matching: find.byWidgetPredicate((w) => w is Container && w.decoration is BoxDecoration && (w.decoration as BoxDecoration).border != null)), findsOneWidget);
+  });
+
   testWidgets('S03: 모드 전환, 용어 탭 → C02', (tester) async {
     tester.view.physicalSize = const Size(390, 2400);
     tester.view.devicePixelRatio = 1;
