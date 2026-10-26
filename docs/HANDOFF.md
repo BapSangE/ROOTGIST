@@ -442,7 +442,7 @@ S02·S03은 탭 위에 푸시되어 **탭바를 숨긴다**. S02의 AI 안내 �
 | 1 | 상단 바 | 높이 52, 좌우 20. 워드마크 「ROOTGIST」 17/700 자간 +1.2. 오른쪽 비움 | SafeArea |
 | 2 | 헤드라인 | displayHome 2줄. 1줄 날짜·요일 textTertiary(예: 10월 19일 월요일), 2줄 「새 논문 N편이 올라왔어요」 textPrimary | 4 |
 | 3 | 필터 행 | RgFilterChip 가로 스크롤, 칩 간격 8, 좌우 여백 20. 첫 칩 「전체」, 이후 분야명 | 20 |
-| 4 | 추천 카드 | RgCard. ① 배지(분야) + 「오늘의 주요 연구」 caption textSecondary, 간격 8 ② 제목 titleFeatured(위 12) ③ 「저자 외 · YYYY.MM.DD」 meta(위 6) ④ 불릿 0~2개 bodySummary textBody, 점 4×4, 항목 간격 6(위 14) ⑤ 「자세히 읽기」 RgPrimaryButton 48(남은 폭) + 북마크 RgCircleButton outline 48, 간격 8(위 18) | 20 |
+| 4 | 추천 카드 | RgCard. ① 배지(분야) + 「오늘의 주요 연구」 caption textSecondary, 간격 8 ② 제목 titleFeatured(위 12) ③ 「저자 외 · YYYY.MM.DD」 meta(위 6) ④ 불릿 0~2개 bodySummary textBody, 점 4×4, 항목 간격 6(위 14). 카드 전체가 눌림(→ S02), 북마크는 ①~③ 오른쪽 위 RgBookmarkButton plain 44(iOS QA P5에서 「자세히 읽기」 버튼 삭제) | 20 |
 | 5 | 섹션 헤더 | 「새로 올라온 연구」 titleSection + 편수 14pt textSecondary, 간격 8, 기준선 정렬. 좌우 20, 아래 12 | 28 |
 | 6 | 논문 목록 | RgCard 한 장 안에 RgListRow 반복. 행: 카테고리 caption(「전체」 필터일 때만) → 제목 titleList(위 4) → 「날짜 · 저자 외」 meta(위 4) | 0 |
 | 7 | 하단 여백 | 136 | — |
@@ -452,7 +452,7 @@ S02·S03은 탭 위에 푸시되어 **탭바를 숨긴다**. S02의 AI 안내 �
 - 필터 선택 → 추천 카드와 목록을 해당 분야로 거른다. **헤드라인 편수는 전체 기준 유지.**
 - 추천 논문은 아래 목록에 다시 넣지 않는다. 섹션 편수 = 전체 − 1.
 - 추천 카드 불릿은 근거 있는 `key_points`의 `claim_ko` 최대 2개. 0개면 불릿 영역을 통째로 뺀다.
-- 「자세히 읽기」·행 탭 → S02. 북마크 탭 → 로컬 저장 토글(이동 없음).
+- 추천 카드·행 탭 → S02. 북마크 탭 → 로컬 저장 토글(이동 없음).
 - 당일 데이터 없음 → 헤드라인 2줄 「아직 올라온 논문이 없어요」, 추천 카드 숨김. 지연 → 13장.
 - 당일이 `empty`(0편)이거나 아직 없으면 가장 최근 `published` 다이제스트를 대신 보여 준다(iOS QA P4. 다이제스트는 HF 전날분이라 일·월요일은 늘 0편). 헤드라인은 오늘 날짜 그대로 「오늘은 새 논문이 없어요」(아직 없음이면 기존 문구), 바로 아래 RgCard 안내 bodySmall textSecondary 「[일·월요일이면 「주말에는 새 논문이 발표되지 않아요.」] 가장 최근인 M월 D일 요일 연구를 보여 드려요.」(위 20). 추천 카드 caption은 「M월 D일 주요 연구」, 섹션 헤더는 「그날 올라온 연구」. 최근 다이제스트를 못 불러오면 기존 빈 상태. 지연은 대체하지 않는다.
 
@@ -587,7 +587,7 @@ S02·S03은 탭 위에 푸시되어 **탭바를 숨긴다**. S02의 AI 안내 �
 | 안내 | AI 생성 안내 | chevron → C03 시트 |
 | 안내 | 데이터 출처 | chevron → 출처 설명 화면(시안 없음, 10장 G7) |
 | 정보 | 개인정보 처리방침 | chevron → 앱 안 텍스트 화면(`docs/privacy.md`를 읽어 그림, 맨 아래 「웹에서 보기」). 같은 파일이 GitHub Pages `/privacy/` |
-| 정보 | 문의하기 | chevron → 메일 앱(`contactEmail` = help.rootgist@gmail.com) |
+| 정보 | 문의하기 | chevron → 메일 앱(`contactEmail` = help.rootgist@gmail.com). 메일 앱을 열지 못하면 주소를 클립보드에 복사하고 스낵바 「메일 앱을 열 수 없어 주소를 복사했어요 · 주소」 4초(S05 해제 스낵바 자리) |
 | 정보 | 앱 버전 | 버전 문자열 bodySmall textSecondary, 탭 없음 |
 
 C03(RgBottomSheet): bodySummary 문단 3개 — ① 초록만 기반으로 생성 ② 핵심 내용은 원문 문장 근거가 있는 것만 표시 ③ 번역·요약에 오류가 있을 수 있음. **논문 본문 전체를 읽었다는 표현은 쓰지 않는다.** 설명 수준 선택은 MVP에서 노출하지 않는다.

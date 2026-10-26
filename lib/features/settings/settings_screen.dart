@@ -81,7 +81,7 @@ class SettingsScreen extends StatelessWidget {
           _Row(label: '개인정보 처리방침', onTap: () => context.go('/settings/privacy')),
           _Row(
             label: '문의하기',
-            onTap: () => launchUrl(Uri(scheme: 'mailto', path: contactEmail)),
+            onTap: () => _contact(context),
           ),
           _Row(label: '앱 버전', value: appVersion, chevron: false),
         ]),
@@ -142,6 +142,24 @@ class _Row extends StatelessWidget {
     );
     return Semantics(button: onTap != null, child: RgPressable(onTap: onTap, child: row));
   }
+}
+
+// 메일 앱이 없거나(시뮬레이터, 기본 메일 앱 삭제) 열리지 않으면 주소를 복사해 알린다.
+Future<void> _contact(BuildContext context) async {
+  final opened = await launchUrl(Uri(scheme: 'mailto', path: contactEmail)).catchError((_) => false);
+  if (opened || !context.mounted) return;
+  await Clipboard.setData(const ClipboardData(text: contactEmail));
+  if (!context.mounted) return;
+  final bottom = MediaQuery.paddingOf(context).bottom;
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(
+      content: const Text('메일 앱을 열 수 없어 주소를 복사했어요 · $contactEmail'),
+      duration: const Duration(seconds: 4),
+      behavior: SnackBarBehavior.floating,
+      // 떠 있는 탭바(64) 위로(S05 해제 스낵바와 같은 자리)
+      margin: EdgeInsets.fromLTRB(RgSpace.gutterCard, 0, RgSpace.gutterCard, (bottom > 30 ? bottom : 30) + 64 + RgSpace.s8),
+    ));
 }
 
 // 데이터 출처 (G7, 시안 없음): 텍스트 화면.

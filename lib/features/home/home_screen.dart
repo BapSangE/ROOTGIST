@@ -7,6 +7,7 @@ import '../../design/tokens.dart';
 import '../../design/typography.dart';
 import '../../design/widgets/rg_buttons.dart';
 import '../../design/widgets/rg_card.dart';
+import '../../design/widgets/rg_pressable.dart';
 import '../../design/widgets/rg_states.dart';
 
 // S01 오늘의 연구 (HANDOFF 7.1). 로딩·오류·지연·빈 상태는 8.1.
@@ -279,9 +280,7 @@ class _HomeSkeleton extends StatelessWidget {
                 RgBar(lineHeight: 18, widthFactor: 0.45),
                 SizedBox(height: RgSpace.s8),
                 RgBar(lineHeight: 23),
-                RgBar(lineHeight: 23, widthFactor: 0.7),
-                SizedBox(height: RgSpace.s12),
-                RgBar(lineHeight: 48, barHeight: 48),
+                RgBar(lineHeight: 23, widthFactor: 0.7), // 「자세히 읽기」 버튼 자리는 없앴다(P5)
               ],
             ),
           ),
@@ -302,68 +301,87 @@ class _FeaturedCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bullets = paper.keyPoints.take(2); // G11
-    return RgCard(
-      padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 큰 글자에서 한 줄에 안 들어가면 다음 줄로
-          Wrap(
-            spacing: RgSpace.s8,
-            runSpacing: RgSpace.s4,
-            crossAxisAlignment: WrapCrossAlignment.center,
+    // iOS QA P5: 「자세히 읽기」 버튼 없이 카드 전체가 S02로(목록 행과 같은 방식). 북마크는 오른쪽 위에 따로.
+    return Semantics(
+      button: true,
+      child: RgPressable(
+        onTap: () => context.push('/paper/${paper.id}'),
+        child: RgCard(
+          padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (paper.topicLabel != null) RgBadge(label: paper.topicLabel!),
-              Text(label, style: RgText.caption.copyWith(color: RgColors.textSecondary)),
-            ],
-          ),
-          const SizedBox(height: RgSpace.s12),
-          HeadingTextScale(child: KeepAllText(paper.title, style: RgText.titleFeatured)),
-          const SizedBox(height: RgSpace.s6),
-          KeepAllText('${paper.authors} · ${paper.date}', style: RgText.meta.copyWith(color: RgColors.textSecondary)),
-          if (bullets.isNotEmpty) ...[
-            const SizedBox(height: RgSpace.s14),
-            Column(
-              spacing: RgSpace.s6,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (final b in bullets)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    spacing: RgSpace.s10,
-                    children: [
-                      Container(
-                        width: 4,
-                        height: 4,
-                        // 첫 줄(행간 23 × 글자 배율)의 가운데. 고정 10이면 큰 글자에서 점이 위로 뜬다(에뮬레이터 QA)
-                        margin: EdgeInsets.only(top: (MediaQuery.textScalerOf(context).scale(23) - 4) / 2),
-                        decoration: const BoxDecoration(color: RgColors.textBody, shape: BoxShape.circle),
-                      ),
-                      Expanded(
-                        // 실제 핵심 내용은 3~5줄짜리 문장이라 카드가 길어진다(2026-10-22 실데이터). 항목당 2줄, 전문은 S02.
-                        child: KeepAllText(
-                          b,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: RgText.bodySummary.copyWith(color: RgColors.textBody),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: RgSpace.s8,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 큰 글자에서 한 줄에 안 들어가면 다음 줄로
+                        Wrap(
+                          spacing: RgSpace.s8,
+                          runSpacing: RgSpace.s4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            if (paper.topicLabel != null) RgBadge(label: paper.topicLabel!),
+                            Text(label, style: RgText.caption.copyWith(color: RgColors.textSecondary)),
+                          ],
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: RgSpace.s12),
+                        HeadingTextScale(child: KeepAllText(paper.title, style: RgText.titleFeatured)),
+                        const SizedBox(height: RgSpace.s6),
+                        KeepAllText('${paper.authors} · ${paper.date}', style: RgText.meta.copyWith(color: RgColors.textSecondary)),
+                      ],
+                    ),
                   ),
-              ],
-            ),
-          ],
-          const SizedBox(height: RgSpace.s18),
-          Row(
-            spacing: RgSpace.s8,
-            children: [
-              Expanded(
-                child: RgPrimaryButton(label: '자세히 읽기', onTap: () => context.push('/paper/${paper.id}')),
+                  // 누르는 영역 44는 그대로 두고 모양만 카드 모서리 쪽으로
+                  Transform.translate(
+                    offset: const Offset(RgSpace.s12, -RgSpace.s10),
+                    child: RgBookmarkButton(
+                      saved: saved,
+                      variant: RgCircleVariant.plain,
+                      onTap: () => toggleBookmark(paper.id, paper.title),
+                    ),
+                  ),
+                ],
               ),
-              RgBookmarkButton(saved: saved, size: 48, onTap: () => toggleBookmark(paper.id, paper.title)),
+              if (bullets.isNotEmpty) ...[
+                const SizedBox(height: RgSpace.s14),
+                Column(
+                  spacing: RgSpace.s6,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (final b in bullets)
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        spacing: RgSpace.s10,
+                        children: [
+                          Container(
+                            width: 4,
+                            height: 4,
+                            // 첫 줄(행간 23 × 글자 배율)의 가운데. 고정 10이면 큰 글자에서 점이 위로 뜬다(에뮬레이터 QA)
+                            margin: EdgeInsets.only(top: (MediaQuery.textScalerOf(context).scale(23) - 4) / 2),
+                            decoration: const BoxDecoration(color: RgColors.textBody, shape: BoxShape.circle),
+                          ),
+                          Expanded(
+                            // 실제 핵심 내용은 3~5줄짜리 문장이라 카드가 길어진다(2026-10-22 실데이터). 항목당 2줄, 전문은 S02.
+                            child: KeepAllText(
+                              b,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: RgText.bodySummary.copyWith(color: RgColors.textBody),
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ],
             ],
           ),
-        ],
+        ),
       ),
     );
   }

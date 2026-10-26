@@ -156,6 +156,24 @@ void main() {
     expect(find.byWidgetPredicate((w) => w is RgIcon && w.name == 'arrow-up-right'), findsNWidgets(2));
   });
 
+  testWidgets('P5: 추천 카드는 버튼 없이 카드 전체가 S02로, 북마크는 이동 없이 토글', (tester) async {
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+
+    expect(find.text('자세히 읽기'), findsNothing);
+    // 추천 카드의 북마크(카드 안 첫 북마크)는 이동하지 않는다
+    await tester.tap(find.bySemanticsLabel('북마크에 저장').first);
+    await tester.pump();
+    expect(bookmarks.value.keys, ['0000.00001']);
+    expect(find.byType(PaperScreen), findsNothing);
+
+    await tester.tap(find.text(keepAll('추론 시점 연산의 효율적 확장')));
+    await settle(tester);
+    expect(find.byType(PaperScreen), findsOneWidget);
+  });
+
   test('8.3 LaTeX 표시 변환과 근거 없는 핵심 내용 제외', () {
     expect(latexDisplay(r'uses 30\% less, a\_b \& c'), 'uses 30% less, a_b & c');
     expect(latexDisplay(r'3 \times 4 and 10\times faster'), '3×4 and 10× faster');
@@ -415,6 +433,27 @@ void main() {
     expect(find.textContaining('permalink'), findsNothing); // 앞머리는 안 보인다
     expect(find.text('웹에서 보기 · $privacyPolicyUrl'), findsOneWidget);
     expect(find.text(keepAll('메일: $contactEmail')), findsOneWidget); // 처리방침 7장과 「문의하기」가 같은 주소
+  });
+
+  testWidgets('G13: 메일 앱을 열 수 없으면 「문의하기」가 주소를 복사하고 알린다', (tester) async {
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    String? copied;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.setData') copied = (call.arguments as Map)['text'] as String;
+      return null;
+    });
+    addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
+    await pumpApp(tester);
+    router.go('/settings');
+    await settle(tester);
+
+    // 테스트에는 url_launcher 플랫폼 구현이 없어 메일 앱 열기가 실패한다
+    await tester.tap(find.text('문의하기'));
+    await settle(tester);
+    expect(copied, contactEmail);
+    expect(find.text('메일 앱을 열 수 없어 주소를 복사했어요 · $contactEmail'), findsOneWidget);
   });
 
   test('C03 문구: 본문 전체를 읽었다는 표현 금지(7.8)', () {
