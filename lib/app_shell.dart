@@ -23,8 +23,12 @@ const _tabs = [
 
 // 뒤로 가는 하위 화면은 MaterialPage를 직접 만든다. go_router 기본 페이지가 전환 없는 NoTransitionPage로
 // 만들어져 iOS 가장자리 밀어서 뒤로가기가 붙지 않았다(iOS QA). MaterialPage는 테마의 플랫폼 기본 전환을 쓴다.
-Page<void> _page(GoRouterState state, Widget child) =>
-    MaterialPage<void>(key: state.pageKey, name: state.name ?? state.path, child: child);
+// 배경을 깐다: Scaffold 없는 화면(S04 날짜, 데이터 출처, 처리방침)은 투명해서 밀려 들어오는 동안 뒤 화면이 비쳤다(실기기 QA).
+Page<void> _page(GoRouterState state, Widget child) => MaterialPage<void>(
+  key: state.pageKey,
+  name: state.name ?? state.path,
+  child: ColoredBox(color: RgColors.bgApp, child: child),
+);
 
 final router = GoRouter(
   initialLocation: '/home',

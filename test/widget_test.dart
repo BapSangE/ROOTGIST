@@ -285,6 +285,27 @@ void main() {
     expect(find.ancestor(of: en.first, matching: find.byWidgetPredicate((w) => w is Container && w.decoration is BoxDecoration && (w.decoration as BoxDecoration).border != null)), findsOneWidget);
   });
 
+  testWidgets('하위 화면은 배경이 불투명하다(전환 중 뒤 화면이 비치지 않게)', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+
+    for (final (path, screen) in [
+      ('/settings/source', DataSourceScreen),
+      ('/settings/privacy', PrivacyScreen),
+      ('/explore/2026-10-18', HomeScreen),
+    ]) {
+      router.go(path);
+      await settle(tester);
+      final opaque = find.ancestor(
+        of: find.byType(screen).last,
+        matching: find.byWidgetPredicate((w) => w is ColoredBox && w.color == RgColors.bgApp),
+      );
+      expect(opaque, findsWidgets, reason: path);
+    }
+  });
+
   testWidgets('S03: 모드 전환, 용어 탭 → C02', (tester) async {
     tester.view.physicalSize = const Size(390, 2400);
     tester.view.devicePixelRatio = 1;
