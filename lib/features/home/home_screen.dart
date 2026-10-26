@@ -20,13 +20,29 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  late final _req = Reloadable(() => repository.getDigest(widget.date));
+  late final _req = Reloadable(_load);
   String? _topic; // null = 전체
 
   @override
   void dispose() {
     _req.dispose();
     super.dispose();
+  }
+
+  // 오늘이 비었으면(0편이거나 아직 없음) 가장 최근 정상 다이제스트를 함께 불러온다(iOS QA P4).
+  // 다이제스트는 HF 전날분이라 일·월요일은 늘 비어 홈이 이틀 연속 빈 화면이 됐다.
+  Future<(Digest?, Digest?)> _load() async {
+    final digest = await repository.getDigest(widget.date);
+    if (widget.date != null || (digest != null && digest.status != 'empty')) return (digest, null);
+    try {
+      final today = await repository.todayKey();
+      final last = (await repository.listDigests())
+          .where((d) => d.status == 'published' && d.dateKey.compareTo(today) < 0)
+          .firstOrNull; // 최신순
+      return (digest, last == null ? null : await repository.getDigest(last.dateKey));
+    } catch (_) {
+      return (digest, null); // 못 불러오면 지금처럼 빈 안내만
+    }
   }
 
   @override
@@ -52,8 +68,10 @@ class _HomeScreenState extends State<HomeScreen> {
               if (children == null)
                 ValueListenableBuilder(
                   valueListenable: bookmarks,
-                  builder: (context, saved, _) =>
-                      Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: _body(snap.data, saved)),
+                  builder: (context, saved, _) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: _body(snap.data?.$1, snap.data?.$2, saved),
+                  ),
                 ),
             ],
           );
@@ -79,15 +97,19 @@ class _HomeScreenState extends State<HomeScreen> {
     ),
   );
 
-  List<Widget> _body(Digest? digest, Map<String, Bookmark> saved) {
-    final view = HomeView(digest?.papers ?? const [], _topic);
+  // fallback: 오늘이 비었을 때 대신 보여 줄 가장 최근 다이제스트(헤드라인은 오늘 기준 그대로).
+  List<Widget> _body(Digest? digest, Digest? fallback, Map<String, Bookmark> saved) {
+    final view = HomeView((fallback ?? digest)?.papers ?? const [], _topic);
     final status = digest?.status;
     final headline = switch (status) {
       'delayed' => '오늘 논문을 아직 모으는 중이에요',
-      _ when view.total == 0 => '아직 올라온 논문이 없어요',
+      'empty' when fallback != null => '오늘은 새 논문이 없어요',
+      _ when fallback != null || view.total == 0 => '아직 올라온 논문이 없어요',
       _ => '새 논문 ${view.total}편이 올라왔어요',
     };
     final date = digest?.date ?? DateTime.now();
+    // 일·월요일 다이제스트는 HF 토·일요일분(arXiv 발표 없음)
+    final weekend = status == 'empty' && (date.weekday == DateTime.sunday || date.weekday == DateTime.monday);
 
     return [
       Padding(
@@ -109,6 +131,16 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
+      if (fallback != null) ...[
+        const SizedBox(height: RgSpace.s20),
+        RgCard(
+          padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s18),
+          child: KeepAllText(
+            [if (weekend) '주말에는 새 논문이 발표되지 않아요.', '가장 최근인 ${koreanDate(fallback.date)} 연구를 보여 드려요.'].join(' '),
+            style: RgText.bodySmall.copyWith(color: RgColors.textSecondary),
+          ),
+        ),
+      ],
       if (view.chips.isNotEmpty) ...[
         // 칩 시각 높이 36, 터치 44(더 큰 텍스트에서는 늘어난다). 시안의 위아래 20은 시각 기준이라 4씩 덜어낸다.
         const SizedBox(height: RgSpace.s16),
@@ -132,7 +164,11 @@ class _HomeScreenState extends State<HomeScreen> {
       ],
       if (view.featured case final p?) ...[
         SizedBox(height: view.chips.isEmpty ? RgSpace.s20 : RgSpace.s16),
-        _FeaturedCard(paper: p, saved: saved.containsKey(p.id)),
+        _FeaturedCard(
+          paper: p,
+          saved: saved.containsKey(p.id),
+          label: fallback == null ? '오늘의 주요 연구' : '${fallback.date.month}월 ${fallback.date.day}일 주요 연구',
+        ),
       ],
       // 8.1 당일 지연: 추천 카드 자리에 마지막 수집 시각 안내.
       if (status == 'delayed') ...[
@@ -153,7 +189,12 @@ class _HomeScreenState extends State<HomeScreen> {
             textBaseline: TextBaseline.alphabetic,
             spacing: RgSpace.s8,
             children: [
-              Flexible(child: Semantics(header: true, child: Text('새로 올라온 연구', style: RgText.titleSection))),
+              Flexible(
+                child: Semantics(
+                  header: true,
+                  child: Text(fallback == null ? '새로 올라온 연구' : '그날 올라온 연구', style: RgText.titleSection),
+                ),
+              ),
               Text('${view.list.length}편', style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
             ],
           ),
@@ -251,9 +292,10 @@ class _HomeSkeleton extends StatelessWidget {
 }
 
 class _FeaturedCard extends StatelessWidget {
-  const _FeaturedCard({required this.paper, required this.saved});
+  const _FeaturedCard({required this.paper, required this.saved, required this.label});
   final PaperItem paper;
   final bool saved;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -270,7 +312,7 @@ class _FeaturedCard extends StatelessWidget {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               if (paper.topicLabel != null) RgBadge(label: paper.topicLabel!),
-              Text('오늘의 주요 연구', style: RgText.caption.copyWith(color: RgColors.textSecondary)),
+              Text(label, style: RgText.caption.copyWith(color: RgColors.textSecondary)),
             ],
           ),
           const SizedBox(height: RgSpace.s12),

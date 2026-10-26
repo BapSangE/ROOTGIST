@@ -372,6 +372,36 @@ void main() {
     }
   });
 
+  testWidgets('P4: 오늘이 0편이면 가장 최근 다이제스트를 안내와 함께 보여 준다', (tester) async {
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+    await tester.runAsync(() async {
+      fixtureMode.value = FixtureMode.empty; // 오늘(10월 19일 월요일)만 0편
+      await tester.pump();
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    });
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining(keepAll('오늘은 새 논문이 없어요'), findRichText: true), findsOneWidget);
+    expect(find.textContaining(keepAll('10월 19일 월요일'), findRichText: true), findsOneWidget); // 헤드라인 날짜는 오늘
+    expect(find.text(keepAll('주말에는 새 논문이 발표되지 않아요. 가장 최근인 10월 18일 일요일 연구를 보여 드려요.')), findsOneWidget);
+    expect(find.text('10월 18일 주요 연구'), findsOneWidget);
+    expect(find.text('그날 올라온 연구'), findsOneWidget);
+    expect(find.text('2편'), findsOneWidget); // 10월 18일 3편 − 추천 1
+
+    // 지연은 대체하지 않고 지금처럼 수집 안내만
+    await tester.runAsync(() async {
+      fixtureMode.value = FixtureMode.delayed;
+      await tester.pump();
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    });
+    await tester.pumpAndSettle();
+    expect(find.text('그날 올라온 연구'), findsNothing);
+    expect(find.textContaining(keepAll('모으는'), findRichText: true), findsWidgets);
+  });
+
   testWidgets('M3: fixture 스위치로 8.1 상태 재현(로딩·오류·오프라인·지연·없음), 다시 시도', (tester) async {
     tester.view.physicalSize = const Size(390, 1600);
     tester.view.devicePixelRatio = 1;
