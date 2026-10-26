@@ -180,7 +180,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
                       children: [
                         Text('초록 · 원문과 번역', style: RgText.caption.copyWith(color: RgColors.textSecondary)),
                         const SizedBox(height: RgSpace.s6),
-                        Semantics(header: true, child: KeepAllText(p.title, style: RgText.titleReader)),
+                        HeadingTextScale(child: Semantics(header: true, child: KeepAllText(p.title, style: RgText.titleReader))),
                         const SizedBox(height: RgSpace.s28),
                         // 글자 크기 단계는 본문에만, 시스템 글자 크기와 곱해서 적용한다.
                         MediaQuery(

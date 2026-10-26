@@ -16,7 +16,7 @@ Future<void> showTermSheet(BuildContext context, GlossaryTerm t) {
         const SizedBox(height: 22),
         Text('용어', style: RgText.caption.copyWith(color: RgColors.textSecondary)),
         const SizedBox(height: RgSpace.s6),
-        Semantics(header: true, child: Text(t.term, style: RgText.serifTerm)),
+        HeadingTextScale(child: Semantics(header: true, child: Text(t.term, style: RgText.serifTerm))),
         // 약어면 정식 명칭 한 줄(예: SLAM → Simultaneous Localization and Mapping)
         if (t.fullForm != null) ...[
           const SizedBox(height: RgSpace.s4),

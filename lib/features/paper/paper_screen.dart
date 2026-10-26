@@ -60,7 +60,7 @@ class _PaperScreenState extends State<PaperScreen> {
                         if (savedTitle != null)
                           Padding(
                             padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s12, RgSpace.gutterText, 0),
-                            child: Semantics(header: true, child: KeepAllText(savedTitle, style: RgText.titleDetail)),
+                            child: HeadingTextScale(child: Semantics(header: true, child: KeepAllText(savedTitle, style: RgText.titleDetail))),
                           ),
                         const SizedBox(height: RgSpace.s24),
                         RgErrorCard(error: snap.error, onRetry: _req.reload),
@@ -108,7 +108,7 @@ class _PaperScreenState extends State<PaperScreen> {
               RgBadge(label: p.topicLabel!, onCard: false),
               const SizedBox(height: RgSpace.s14),
             ],
-            Semantics(header: true, child: KeepAllText(p.title, style: RgText.titleDetail)),
+            HeadingTextScale(child: Semantics(header: true, child: KeepAllText(p.title, style: RgText.titleDetail))),
             if (p.ready && p.titleKo != null) ...[
               const SizedBox(height: RgSpace.s8),
               Text(p.titleEn, style: RgText.serifSubtitle.copyWith(color: RgColors.textBody)),

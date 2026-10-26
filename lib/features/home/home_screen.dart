@@ -114,20 +114,22 @@ class _HomeScreenState extends State<HomeScreen> {
     return [
       Padding(
         padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s4, RgSpace.gutterText, 0),
-        child: Semantics(
-          header: true,
-          child: Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(
-                  text: '${keepAll(koreanDate(date))}\n', // 큰 글자에서 「25 / 일」로 갈라지지 않게
-                  style: const TextStyle(color: RgColors.textTertiary),
-                ),
-                TextSpan(text: keepAll(headline)),
-              ],
+        child: HeadingTextScale(
+          child: Semantics(
+            header: true,
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: '${keepAll(koreanDate(date))}\n', // 큰 글자에서 「25 / 일」로 갈라지지 않게
+                    style: const TextStyle(color: RgColors.textTertiary),
+                  ),
+                  TextSpan(text: keepAll(headline)),
+                ],
+              ),
+              style: RgText.displayHome,
+              semanticsLabel: '${koreanDate(date)} $headline', // 화면 읽기에는 숨은 문자 없이
             ),
-            style: RgText.displayHome,
-            semanticsLabel: '${koreanDate(date)} $headline', // 화면 읽기에는 숨은 문자 없이
           ),
         ),
       ),
@@ -316,7 +318,7 @@ class _FeaturedCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: RgSpace.s12),
-          KeepAllText(paper.title, style: RgText.titleFeatured),
+          HeadingTextScale(child: KeepAllText(paper.title, style: RgText.titleFeatured)),
           const SizedBox(height: RgSpace.s6),
           KeepAllText('${paper.authors} · ${paper.date}', style: RgText.meta.copyWith(color: RgColors.textSecondary)),
           if (bullets.isNotEmpty) ...[

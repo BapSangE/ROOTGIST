@@ -64,3 +64,13 @@ class ChromeTextScale extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MediaQuery.withClampedTextScaling(maxScaleFactor: 1.35, child: child);
 }
+
+// 21pt 이상 큰 제목은 글자 배율을 2배에서 멈춘다. 접근성 최대(3.12배)에서 홈 헤드라인이 94pt가 돼
+// 한 화면을 다 차지했다(iOS QA). 2배여도 본문(최대 약 3배)보다 커서 위계는 남는다.
+class HeadingTextScale extends StatelessWidget {
+  const HeadingTextScale({super.key, required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => MediaQuery.withClampedTextScaling(maxScaleFactor: 2, child: child);
+}

@@ -621,10 +621,12 @@ void main() {
       }
       expect(tester.takeException(), isNull, reason: path);
     }
-    // 화면 틀(탭바)은 1.35배에서 멈춘다
+    // 화면 틀(탭바)은 1.35배, 큰 제목은 2배에서 멈추고 본문은 그대로 커진다
     router.go('/home');
     await settle(tester);
     expect(MediaQuery.textScalerOf(tester.element(find.text('홈'))).scale(1), 1.35);
+    expect(MediaQuery.textScalerOf(tester.element(find.textContaining(keepAll('올라왔어요'), findRichText: true))).scale(1), 2);
+    expect(MediaQuery.textScalerOf(tester.element(find.text('새로 올라온 연구'))).scale(1), 3.12);
   });
 
   testWidgets('S1: 글자 크기 4단계가 S02 AI 요약·핵심 내용에도 적용된다', (tester) async {

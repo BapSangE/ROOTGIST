@@ -177,7 +177,7 @@ class DataSourceScreen extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s12, RgSpace.gutterText, 0),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Semantics(header: true, child: Text('데이터 출처', style: RgText.titleDetail)),
+            HeadingTextScale(child: Semantics(header: true, child: Text('데이터 출처', style: RgText.titleDetail))),
             const SizedBox(height: RgSpace.s16),
             Column(
               spacing: RgSpace.s12,

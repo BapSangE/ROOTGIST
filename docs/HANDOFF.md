@@ -683,7 +683,7 @@ assets/
 | 원문 선택 | `SelectionArea`로 감싸되 용어 탭과 충돌하는지 실기기 확인 |
 | 바텀시트 | `showModalBottomSheet(barrierColor: overlayDim, backgroundColor: surfaceCard, shape: 상단 28, isScrollControlled: true, useSafeArea: true, showDragHandle: false)`, 손잡이 직접 그림 |
 | 세그먼트 | Material `SegmentedButton` 대신 직접 구현 |
-| 글자 확대 | `MediaQuery.textScalerOf(context)` 존중. 리더는 `TextScaler.linear(system × 단계)`. 200%에서 필터·탭 라벨 줄바꿈 허용 |
+| 글자 확대 | `MediaQuery.textScalerOf(context)` 존중. 리더는 `TextScaler.linear(system × 단계)`. 200%에서 필터·탭 라벨 줄바꿈 허용. iOS QA에서 상한 추가: 높이 고정 화면 틀(상단 바 52·하단 탭바)은 1.35배(`ChromeTextScale`), 21pt 이상 큰 제목(displayHome·titleDetail·titleReader·titleFeatured·serifTerm)은 2배(`HeadingTextScale`). 본문은 상한 없음 |
 | 한글 줄바꿈 | Flutter에 keep-all 없음. 제목·본문은 어절 내부 글자 사이에 `⁠`(word joiner)을 넣는 유틸로 흉내 |
 | 상태바 | `SystemUiOverlayStyle.dark`, 배경 투명 |
 
