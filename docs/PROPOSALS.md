@@ -10,7 +10,7 @@
 | 순서 | ID | 제목 | 왜 이 순서 | 크기 |
 |---|---|---|---|---|
 | 1 | P7 | 개인정보 처리방침·문의하기 | 스토어 심사 필수 항목. 내용만 정하면 앱 쪽은 상수 두 개 | S |
-| 2 | P2 | 앱 이름·아이콘·스플래시(앱 ID는 확정) | 외부 공개(지인 베타 포함) 전 필수 | M |
+| 2 | P2 | 앱 이름·ID·아이콘·스플래시 — **반영**, 개발자 계정만 남음 | 외부 공개(지인 베타 포함) 전 필수 | — |
 | 3 | P1 | 외부 링크 표시 | 작고, 사용자가 기능을 못 찾는 문제 | S |
 | 4 | P5 | 추천 카드 「자세히 읽기」 버튼 정리 | 작지만 시안 변경 | S |
 | 5 | P6 | 사용 가이드·공지사항 | 새 화면·저장값·(공지는) 서버 데이터 | M |
@@ -30,21 +30,18 @@
 - **크기**: S
 - **정할 것**: 처리방침 호스팅 위치, 문의 메일 주소, 문서 문구 검토자.
 
-## P2. 앱 이름·앱 ID·아이콘·스플래시
+## P2. 앱 이름·앱 ID·아이콘·스플래시 — 반영(2026-10-26), 개발자 계정만 남음
 
 - **배경**: iOS-앱이름 메모 「아이콘과 앱 실행시 애니메이션은 미리 준비 필요」. 알려진 항목(IOS_QA 3.2 「앱 이름」).
-- **지금 상태**
-  - 홈 화면 이름: iOS `App Repo`, Android `app_repo`.
-  - 앱 ID: **`com.bapsange.rootgist`로 확정**(2026-10-26). iOS 번들 ID·Android `applicationId` 모두 반영. Android `namespace`(코드 패키지 `com.example.app_repo`)는 앱 밖에 보이지 않아 그대로 둔다.
-  - 아이콘: Flutter 기본. 스플래시: 흰 화면.
-  - 무료 Apple ID 서명은 7일마다 다시 설치해야 한다. 지인 베타(TestFlight)는 유료 Apple Developer 계정이 필요하다.
-- **제안**
-  - 이름: 홈 화면 표시명 `ROOTGIST`(또는 한글 이름). 길이는 아이콘 아래 잘리지 않게 10자 안팎.
-  - 아이콘: 불변 원칙(무채색)에 맞춰 오프화이트 바탕 + 검정 워드마크/모노그램. 시안 1장에서 `flutter_launcher_icons`로 두 플랫폼 크기를 만든다.
-  - 스플래시: **정적**(배경 `bgApp` + 가운데 워드마크)을 권한다. 네이티브 스플래시는 애니메이션이 안 되고, Flutter 쪽에 애니메이션을 넣으면 그만큼 첫 화면이 늦어진다. 원하면 첫 프레임에서 워드마크가 짧게(200~300ms) 사라지는 정도만.
-- **바뀌는 곳**: `ios/Runner/Info.plist`(표시 이름), `android/app/src/main/AndroidManifest.xml`(`android:label`), 아이콘 에셋, `flutter_native_splash` 설정.
-- **크기**: M(아이콘 시안 제외)
-- **정할 것**: 표시 이름, 아이콘 시안, 유료 개발자 계정 여부(지인 베타 시점).
+- **정한 것**
+  - 앱 ID `com.bapsange.rootgist`(iOS 번들 ID·Android `applicationId`). Android `namespace`(코드 패키지 `com.example.app_repo`)는 앱 밖에 보이지 않아 그대로 둔다.
+  - 표시 이름 `ROOTGIST`(iOS `CFBundleDisplayName`·`CFBundleName`, Android `android:label`).
+  - 아이콘: 시안 A — `bgApp` 바탕 + 검정 「R」(Pretendard Bold). Android 적응형은 같은 바탕색 + 전경 R.
+  - 스플래시: **정적**. `bgApp` 바탕 + 가운데 워드마크 「ROOTGIST」(화면 24pt, 앱 안 워드마크와 같은 자간). Android 12 이상은 OS 규칙대로 가운데 아이콘(R). 애니메이션은 첫 화면만 늦어져 넣지 않았다.
+  - 원본 이미지 `assets/branding/`(앱에 번들하지 않음)은 `tool/branding.py`가 만들고, 플랫폼 크기는 `flutter_launcher_icons`·`flutter_native_splash`(pubspec 설정)가 만든다. 다시 만들 때는 `tool/branding.py` 맨 위 순서대로.
+  - 주의: `flutter_launcher_icons` 0.14.4는 `project.pbxproj`의 `ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS`를 `AppIcon`으로 잘못 바꾸고, `flutter_native_splash`는 `Info.plist`를 통째로 다시 들여쓴다. 다시 돌린 뒤에는 이 두 파일 diff를 보고 되돌린다.
+- **남은 것**: 무료 Apple ID 서명은 7일마다 다시 설치해야 한다. 지인 베타(TestFlight)는 유료 Apple Developer 계정이, Play 내부 테스트는 Play Console 계정이 필요하다.
+- **정할 것**: 유료 개발자 계정 여부와 시점(지인 베타 전).
 
 ## P1. 외부 링크 표시
 
@@ -108,7 +105,9 @@
 | **P4** 오늘이 0편(일·월요일)이면 가장 최근 다이제스트를 안내와 함께 | `f4481a6` |
 | 리더 디자인: 문장 번호·쌍 구분선, 「함께」 영문 세로선 + 14/22 | `51083e0` |
 | 큰 제목 글자 배율 2배 상한 | `3ad6728` |
-| S02 상단 바 글자 크기(「가」) 버튼 | 이 문서와 같은 커밋 |
+| S02 상단 바 글자 크기(「가」) 버튼 | `a26740d` |
+| **P2** 앱 ID `com.bapsange.rootgist` | `2819cfa` |
+| **P2** 표시 이름 ROOTGIST, 아이콘 A, 정적 스플래시 | 이 표를 고친 커밋 |
 
 ## 참고: QA 중 본 것 중 여기 넣지 않은 것
 
