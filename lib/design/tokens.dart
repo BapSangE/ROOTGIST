@@ -23,6 +23,7 @@ abstract class RgColors {
   static const onAction = Color(0xFFFFFFFF);
   static const overlayDim = Color(0x47111111); // 0.28
   static const grabber = Color(0xFFDDDAD5);
+  static const newDot = Color(0xFFE0533A); // 새 글 점. 흑백 화면에서 유일한 포인트 색
 }
 
 abstract class RgSpace {

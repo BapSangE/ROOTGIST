@@ -1,6 +1,8 @@
 # 매일 KST 새벽 배치 (HANDOFF 3장, ops config 1.1).
 # 1) 어제(KST 기준) D 목록으로 새 다이제스트, 2) 그 전날 D-1 목록 다시 받아 보충(늦게 온 논문·해설 준비 중 재시도),
 # 3) 용어집 LLM 작업(대응어·정식 명칭 초안, 번역문 표기 위치). 3은 늦거나 실패해도 1·2에 영향 없고 다음 날 이어서 한다.
+# 4) official-news 잡: 공식 소식·HF 트렌딩 모델 수집(worker/official_news.py). 논문 잡이 끝난 뒤 돌린다
+#    (같은 LLM 키를 동시에 쓰면 요청 한도에 걸려 논문 해설이 늦어진다). 실패해도 논문에는 영향이 없다.
 # 비밀값: NVIDIA_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (Repository secrets).
 # 실제 초록·번역이 담긴 worker/out은 아티팩트로 올리지 않는다(공개 레포, HANDOFF 0.1).
 name: daily-batch
@@ -51,3 +53,23 @@ jobs:
         timeout-minutes: 35
         continue-on-error: true # 끊겨도 저장된 것까지는 남고, 다음 날 이어서 한다
         run: python -m worker.glossary sync
+
+  official-news:
+    needs: batch
+    if: always() # 논문 잡이 실패해도 돌린다
+    runs-on: ubuntu-latest
+    # 처음 한 번은 캐시가 비어 40분대(사이트맵 페이지·요약을 모두 새로). 이후는 새 글만이라 몇 분.
+    timeout-minutes: 75
+    env:
+      NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r worker/requirements.txt
+      - name: 공식 소식·트렌딩 모델
+        run: python -m worker.official_news

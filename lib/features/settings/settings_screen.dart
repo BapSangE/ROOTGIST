@@ -6,6 +6,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/repository.dart';
 import '../../data/settings.dart';
+import '../../data/unread.dart';
+import 'notices.dart';
+import '../../design/widgets/rg_new_dot.dart';
 import '../../design/tokens.dart';
 import '../../design/typography.dart';
 import '../../design/widgets/rg_buttons.dart';
@@ -73,7 +76,15 @@ class SettingsScreen extends StatelessWidget {
         ]),
         group('안내'),
         _SettingsCard(children: [
-          _Row(label: '공지사항', onTap: () => context.go('/settings/notices')),
+          // 안 읽은 공지가 있으면 오른쪽에 새 글 점
+          FutureBuilder(
+            future: loadNotices(),
+            builder: (context, snap) => ValueListenableBuilder(
+              valueListenable: readItems,
+              builder: (context, _, _) =>
+                  _Row(label: '공지사항', dot: hasNewNotice(snap.data), onTap: () => context.go('/settings/notices')),
+            ),
+          ),
           _Row(label: 'AI 생성 안내', onTap: () => showAiNoticeSheet(context)),
           _Row(label: '데이터 출처', onTap: () => context.go('/settings/source')),
         ]),
@@ -125,11 +136,12 @@ class _SettingsCard extends StatelessWidget {
 }
 
 class _Row extends StatelessWidget {
-  const _Row({required this.label, this.value, this.onTap, this.chevron = true});
+  const _Row({required this.label, this.value, this.onTap, this.chevron = true, this.dot = false});
   final String label;
   final String? value;
   final VoidCallback? onTap;
   final bool chevron;
+  final bool dot; // 새 글
 
   @override
   Widget build(BuildContext context) {
@@ -137,6 +149,7 @@ class _Row extends StatelessWidget {
       constraints: const BoxConstraints(minHeight: 56),
       child: Row(spacing: RgSpace.s4, children: [
         Expanded(child: Text(label, style: RgText.titleList)),
+        if (dot) const Padding(padding: EdgeInsets.only(right: RgSpace.s4), child: RgNewDot()),
         if (value != null) Text(value!, style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
         if (chevron) const RgIcon('chevron-right', size: 18, color: RgColors.textTertiary),
       ]),
@@ -170,8 +183,12 @@ class DataSourceScreen extends StatelessWidget {
   static const paragraphs = [
     'ROOTGIST는 Hugging Face Daily Papers에 매일 올라오는 논문을 모아요.',
     '그날 upvote가 많은 상위 10편을 골라요. 이 순서는 Hugging Face 이용자들의 반응이고, ROOTGIST가 논문을 평가한 결과가 아니에요.',
-    '각 논문의 원문은 상세 화면의 Hugging Face·arXiv 링크에서 확인할 수 있어요.',
-    // 용어 사전 출처 표시 의무(CC BY 4.0·Apache 2.0, 연구 레포 term_collection_plan 3장). 권리 검토(A8) 때 문구 확정.
+    '각 논문의 원문은 상세 화면의 Hugging Face·arXiv 링크에서 확인할 수 있어요. 논문 제목과 초록은 arXiv가 CC0으로 공개한 정보예요.',
+    // 공식 소식·모델(docs/RIGHTS.md 3·4장): 출처와 「원문이 아니라 AI 정리」라는 점, 삭제 요청 창구를 밝힌다.
+    '공식 소식은 OpenAI·Anthropic·Google DeepMind·Google Research·Hugging Face의 공식 블로그와 개발자 공지, Claude Code·SDK·API 릴리스 노트에서 모아요. 제목과 요약·핵심 내용은 AI가 원문을 보고 한국어로 정리한 것이고, 글 전체는 각 원문 링크에서 읽을 수 있어요.',
+    '모델은 Hugging Face 트렌딩 순위와 각 모델 카드에 적힌 제작사 설명을 바탕으로 해요. 점수는 제작사가 직접 측정해 밝힌 값이에요.',
+    '권리자가 요청하면 해당 내용을 바로 내려요. 문의하기($contactEmail)로 알려 주세요.',
+    // 용어 사전 출처 표시 의무(CC BY 4.0·Apache 2.0, 연구 레포 term_collection_plan 3장).
     '일부 용어의 한국어 표기는 Google 「Machine Learning Glossary」(CC BY 4.0)와 Hugging Face Transformers 문서 용어집(Apache 2.0)을 바탕으로 수정·번역했어요.',
   ];
 

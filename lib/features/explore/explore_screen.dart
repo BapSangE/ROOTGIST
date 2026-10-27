@@ -8,6 +8,8 @@ import '../../design/typography.dart';
 import '../../design/widgets/rg_card.dart';
 import '../../design/widgets/rg_pressable.dart';
 import '../../design/widgets/rg_states.dart';
+import '../../data/unread.dart';
+import '../../design/widgets/rg_new_dot.dart';
 import '../home/home_screen.dart';
 import 'official_news.dart';
 import 'trending_models.dart';
@@ -36,6 +38,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
     );
   });
 
+  // 「공식 소식」 칸 이름 옆 새 글 점
+  final _news = repository.listOfficialNews().catchError((_) => <OfficialNews>[]);
   late var _tab = exploreJump.value?.tab ?? 0; // 0 논문, 1 공식 소식, 2 모델
   late final _pages = PageController(initialPage: _tab);
   final _open = <String>{}; // 펼친 지난달
@@ -81,10 +85,17 @@ class _ExploreScreenState extends State<ExploreScreen> {
               ),
             ),
           ),
-          _Tabs(
-            labels: const ['논문', '공식 소식', '모델'],
-            selected: _tab,
-            onTap: (i) => _pages.animateToPage(i, duration: const Duration(milliseconds: 250), curve: Curves.easeOut),
+          FutureBuilder(
+            future: _news,
+            builder: (context, snap) => ValueListenableBuilder(
+              valueListenable: readItems,
+              builder: (context, _, _) => _Tabs(
+                labels: const ['논문', '공식 소식', '모델'],
+                selected: _tab,
+                dots: {if (hasNewNews(snap.data ?? const [])) 1},
+                onTap: (i) => _pages.animateToPage(i, duration: const Duration(milliseconds: 250), curve: Curves.easeOut),
+              ),
+            ),
           ),
           Expanded(
             child: PageView(
@@ -244,9 +255,10 @@ List<(String, List<Digest>)> groupByMonth(List<Digest> days) {
 
 // 출처별 가로 탭(P9 시안): 글자 + 선택된 칸 아래 2pt 선, 전체 아래 구분선. 칸이 늘면 가로로 넘긴다.
 class _Tabs extends StatelessWidget {
-  const _Tabs({required this.labels, required this.selected, required this.onTap});
+  const _Tabs({required this.labels, required this.selected, required this.onTap, this.dots = const {}});
   final List<String> labels;
   final int selected;
+  final Set<int> dots; // 새 글 점
   final ValueChanged<int> onTap;
 
   // 하단 탭바처럼 화면 틀이라 글자 배율은 1.35배에서 멈춘다(ChromeTextScale)
@@ -273,13 +285,16 @@ class _Tabs extends StatelessWidget {
                 decoration: BoxDecoration(
                   border: Border(bottom: BorderSide(color: i == selected ? RgColors.textPrimary : Colors.transparent, width: 2)),
                 ),
-                child: Text(
-                  label,
-                  style: RgText.titleList.copyWith(
-                    fontWeight: i == selected ? FontWeight.w700 : FontWeight.w500,
-                    color: i == selected ? RgColors.textPrimary : RgColors.textSecondary,
+                child: Row(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, spacing: 3, children: [
+                  Text(
+                    label,
+                    style: RgText.titleList.copyWith(
+                      fontWeight: i == selected ? FontWeight.w700 : FontWeight.w500,
+                      color: i == selected ? RgColors.textPrimary : RgColors.textSecondary,
+                    ),
                   ),
-                ),
+                  if (dots.contains(i)) const RgNewDot(),
+                ]),
               ),
             ),
           ),

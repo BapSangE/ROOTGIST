@@ -1,6 +1,7 @@
 """배치 워커 검사. 가상 텍스트만 쓴다(HANDOFF 0.1). 실행: python -m unittest worker.test_worker"""
 import json
 import unittest
+from datetime import datetime, timezone
 from unittest import mock
 
 from . import build, collect, llm, official_news, split, validate
@@ -309,6 +310,29 @@ class OfficialNewsTest(unittest.TestCase):
             got = official_news.from_hf_trending()
         self.assertEqual([m["id"] for m in got], ["a/good"])
         self.assertEqual((got[0]["params"], got[0]["license"], got[0]["arxiv"]), (27_000_000_000, "mit", ["2601.00001"]))
+
+    def test_save_db_upserts_news_and_replaces_models(self):
+        calls = []
+        class FakeDb:
+            def upsert(self, table, rows, on_conflict):
+                calls.append(("upsert", table, rows, on_conflict))
+            def _req(self, method, path, body=None, prefer=None):
+                calls.append((method, path))
+        now = datetime(2026, 10, 27, tzinfo=timezone.utc)
+        item = {"id": "abc", "source": "openai", "source_label": "OpenAI", "kind": "post", "category": None,
+                "title_en": "T", "title_ko": "제목", "url": "https://e.com/a", "published_at": "2026-10-26T00:00:00+00:00",
+                "summary_ko": "요약", "key_points": None, "_desc": "버린다"}
+        official_news.save_db(FakeDb(), [item], [{"id": "a/b", "rank": 1, "url": "u", "card": None}], now)
+        news = calls[0]
+        self.assertEqual((news[1], news[3]), ("official_news", "id"))
+        self.assertNotIn("_desc", news[2][0])  # 테이블에 없는 열은 보내지 않는다
+        self.assertEqual(news[2][0]["key_points"], [])
+        self.assertEqual(calls[1][1], "trending_models")
+        self.assertEqual(calls[2][0], "DELETE")  # 이번 실행에 없는 모델은 지운다
+        self.assertIn("collected_at=lt.", calls[2][1])
+        calls.clear()
+        official_news.save_db(FakeDb(), [item], [], now)
+        self.assertEqual([c[1] for c in calls], ["official_news"])  # 트렌딩을 못 받은 날은 그대로 둔다
 
     def test_haeyo_rejects_hamnida_and_plain_endings(self):
         from worker.official_news import not_haeyo

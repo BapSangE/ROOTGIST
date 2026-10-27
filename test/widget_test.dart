@@ -12,6 +12,8 @@ import 'package:rootgist/data/supabase_repository.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:rootgist/data/storage.dart';
+import 'package:rootgist/data/unread.dart';
+import 'package:rootgist/design/widgets/rg_new_dot.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rootgist/features/settings/ai_notice_sheet.dart';
 import 'package:rootgist/features/settings/notices.dart';
@@ -41,6 +43,10 @@ Future<void> pumpApp(WidgetTester tester) async {
   readerScale.value = 1.0;
   fixtureMode.value = FixtureMode.normal;
   exploreJump.value = null;
+  // 새 글 점은 기본으로 끈다(따로 확인하는 테스트에서 켠다)
+  newSince = DateTime.utc(2100);
+  readItems.value = {};
+  clock = DateTime.now;
   await tester.runAsync(() async {
     await tester.pumpWidget(const RootgistApp());
     await Future<void>.delayed(const Duration(milliseconds: 200));
@@ -372,6 +378,12 @@ void main() {
     expect(find.text('트렌딩 1위'), findsOneWidget);
     expect(find.text('제작사가 내세운 강점'), findsOneWidget);
     expect(find.text(keepAll('가상의 코딩 에이전트용 모델이에요.')), findsOneWidget);
+    // 「한눈에」 값은 모두 오른쪽 끝에 맞춘다(짧은 값이 가운데부터 시작하지 않게)
+    final rights = [
+      for (final v in ['텍스트 생성', '400억 파라미터', 'Apache-2.0'])
+        tester.getTopRight(find.text(keepAll(v))).dx,
+    ];
+    expect(rights.toSet().length, 1, reason: '$rights');
     expect(find.text('SWE-bench Verified'), findsOneWidget);
     expect(find.text(keepAll('12.3%')), findsOneWidget);
     router.pop();
@@ -425,6 +437,59 @@ void main() {
     router.go('/library');
     await settle(tester);
     expect(find.textContaining('공식 소식 · '), findsOneWidget);
+  });
+
+  testWidgets('새 글 점: 안 연 공지·소식에만, 열면 사라진다(설정 탭바·공지 행·탐색 칸·소식 행)', (tester) async {
+    tester.view.physicalSize = const Size(390, 3200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+    // fixture 날짜(10월 중순)에 맞춘 시계, 기준 시각은 10월 1일
+    clock = () => DateTime.utc(2026, 10, 20);
+    newSince = DateTime.utc(2026, 10, 1);
+    readItems.value = {...readItems.value}; // 다시 그리기
+    await settle(tester);
+
+    final notices = (await tester.runAsync(loadNotices))!; // 실제 파일 읽기는 runAsync 안에서
+    final fresh = [for (final n in notices) if (n.isNew) n];
+    expect(fresh, isNotEmpty);
+    expect(find.bySemanticsLabel('설정, 새 글'), findsOneWidget); // 탭바
+
+    // 공지를 모두 열면 설정 탭바 점이 사라진다
+    for (final n in notices) {
+      markRead(n.key);
+    }
+    await tester.pump();
+    expect(find.bySemanticsLabel('설정, 새 글'), findsNothing);
+
+    // 홈의 공식 발표 행: 7일 안의 안 연 글에 점, 상세를 열면 그 글만 사라진다
+    final dots = find.descendant(of: find.byType(NewsRow), matching: find.byType(RgNewDot));
+    final before = dots.evaluate().length;
+    expect(before, greaterThan(0));
+    await tester.tap(find.byType(NewsRow).first);
+    await settle(tester);
+    router.pop();
+    await settle(tester);
+    expect(dots.evaluate().length, before - 1);
+
+    // 7일이 지나면 안 열었어도 점이 없다
+    clock = () => DateTime.utc(2026, 12, 1);
+    readItems.value = {...readItems.value};
+    await tester.pump();
+    expect(dots, findsNothing);
+  });
+
+  test('새 글 규칙: 기준 시각 전·7일 지난 글·읽은 글은 새 글이 아니다', () {
+    clock = () => DateTime.utc(2026, 10, 20);
+    newSince = DateTime.utc(2026, 10, 10);
+    readItems.value = {'a'};
+    expect(isNew('b', DateTime.utc(2026, 10, 18)), isTrue);
+    expect(isNew('a', DateTime.utc(2026, 10, 18)), isFalse); // 읽음
+    expect(isNew('b', DateTime.utc(2026, 10, 9)), isFalse); // 기준 시각 전
+    expect(isNew('b', DateTime.utc(2026, 10, 12)), isFalse); // 8일 지남
+    expect(Notice('t', '2026.10.27', []).publishedAt, DateTime.utc(2026, 10, 26, 15)); // KST 0시
+    clock = DateTime.now;
+    readItems.value = {};
   });
 
   test('P8d: 근거 링크는 원문 구절 위치로(#:~:text=), 구절이 없으면 글 주소', () {
@@ -770,7 +835,7 @@ void main() {
     expect(bullet.overflow, TextOverflow.ellipsis);
   });
 
-  test('M5: Supabase 읽기 함수 호출, 응답 캐시, 실패 시 캐시·오프라인 오류', () async {
+  test('M5: Supabase 읽기 함수 호출(공식 소식·모델 포함), 응답 캐시, 실패 시 캐시·오프라인 오류', () async {
     final calls = <String>[];
     var online = true;
     final client = MockClient((req) async {
@@ -780,6 +845,8 @@ void main() {
       final body = switch (req.url.pathSegments.last) {
         'list_digests' => {'digests': [{'digest_date': '2026-10-22', 'source_date': '2026-10-21', 'status': 'published', 'paper_count': 1, 'primary_topic': 'agent', 'last_success_at': '2026-10-21T20:12:00Z'}], 'next_cursor': null},
         'get_digest' => {'digest_date': '2026-10-22', 'status': 'published', 'last_success_at': '2026-10-21T20:12:00Z', 'featured_paper_id': null, 'papers': []},
+        'list_official_news' => {'items': [{'id': 'abc', 'source': 'openai', 'source_label': 'OpenAI', 'kind': 'post', 'category': null, 'title_en': 'T', 'title_ko': '제목', 'url': 'https://e.com/a', 'published_at': '2026-10-26T00:00:00Z', 'summary_ko': '요약', 'key_points': []}]},
+        'list_trending_models' => {'models': [{'id': 'a/b', 'rank': 1, 'author': 'a', 'name': 'b', 'task': 'text-generation', 'params': null, 'license': 'mit', 'likes': 1, 'downloads': 2, 'created_at': null, 'arxiv': null, 'url': 'https://huggingface.co/a/b', 'card': null}]},
         _ => null,
       };
       return http.Response.bytes(utf8.encode(jsonEncode(body)), 200);
@@ -810,6 +877,15 @@ void main() {
           .having((e) => e.offline, 'offline', true)
           .having((e) => e.lastSuccessAt, 'lastSuccessAt', DateTime.utc(2026, 10, 21, 20, 12))),
     );
+
+    // 공식 소식·트렌딩 모델도 읽기 함수로(미리보기 스냅샷을 넣지 않은 빌드), 오프라인이면 저장본
+    online = true;
+    calls.clear();
+    expect((await repo.listOfficialNews()).single.titleKo, '제목');
+    expect((await repo.listTrendingModels()).single.id, 'a/b');
+    expect(calls, ['/rest/v1/rpc/list_official_news {"lim":60}', '/rest/v1/rpc/list_trending_models {}']);
+    online = false;
+    expect((await repo.listOfficialNews()).single.id, 'abc');
   });
 
   testWidgets('C02: 약어는 정식 명칭 한 줄, 원어와 같은 대응어는 숨김', (tester) async {

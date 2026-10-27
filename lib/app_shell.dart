@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'data/unread.dart';
 import 'design/tokens.dart';
 import 'design/widgets/rg_bottom_tab_bar.dart';
 import 'debug/widget_gallery.dart';
@@ -120,10 +121,18 @@ class AppShell extends StatelessWidget {
             left: RgSpace.gutterCard,
             right: RgSpace.gutterCard,
             bottom: bottom,
-            child: RgBottomTabBar(
-              tabs: _tabs,
-              currentIndex: shell.currentIndex,
-              onTap: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
+            // 안 읽은 공지가 있으면 「설정」에 점(소식은 거의 매일이라 탭바에는 달지 않는다)
+            child: FutureBuilder(
+              future: loadNotices(),
+              builder: (context, snap) => ValueListenableBuilder(
+                valueListenable: readItems,
+                builder: (context, _, _) => RgBottomTabBar(
+                  tabs: _tabs,
+                  currentIndex: shell.currentIndex,
+                  onTap: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
+                  dots: {if (hasNewNotice(snap.data)) 3},
+                ),
+              ),
             ),
           ),
         ],

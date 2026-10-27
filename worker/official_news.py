@@ -11,14 +11,16 @@
 - models: Hugging Face 트렌딩 모델(PROPOSALS P9). 메타데이터(만든 곳·과제·크기·라이선스·반응)와, 모델 카드에 적힌 내용만
   근거로 한 「제작사가 내세운 강점」(강점·제작사 측정 점수·한계). 성인·검열 해제 계열은 거른다.
 
-결과는 worker/out/(커밋 금지, HANDOFF 0.1)에 쓴다. 한 번 만든 번역·요약은 worker/out/digest_cache.json에 두고
-다음 실행에서 건너뛴다(ponytail: 정식 배치에서는 DB).
+SUPABASE_URL·SUPABASE_SERVICE_ROLE_KEY가 있으면 official_news·trending_models 테이블에 저장하고(앱은 RPC로 읽는다),
+실행 사이 상태(번역·요약 캐시, Anthropic 사이트맵 게시일)는 worker_state 테이블에 둔다. 없으면 worker/out/ 파일로만
+(커밋 금지, HANDOFF 0.1). 매일 배치는 .github/workflows/daily-batch.yml의 official-news 잡.
 
-    python3 -m worker.official_news            # 수집 + 제목 번역(NVIDIA_API_KEY 필요, 없으면 원문만)
+    python3 -m worker.official_news            # 수집 + 번역·요약(NVIDIA_API_KEY 필요, 없으면 원문만)
     python3 -m worker.official_news --no-llm   # 번역 없이
+    python3 -m worker.official_news --no-db    # DB 설정이 있어도 파일로만
 
 worker/out/official_news.json          수집 결과
-worker/out/official_news.define.json   앱 미리보기용(--dart-define-from-file). 정식 연결은 DB·RPC로 바꾼다.
+worker/out/official_news.define.json   DB 없이 앱 미리보기용(--dart-define-from-file)
 """
 import argparse
 import email.utils
@@ -29,6 +31,7 @@ import json
 import re
 import sys
 import time
+import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
@@ -36,6 +39,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from . import llm
+from .db import Db
 from .run import setting
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -198,10 +202,9 @@ def from_claude_api_notes(now: datetime) -> list[dict]:
              "url": CLAUDE_API_NOTES, "published_at": days[-1][0], "notes": notes}]
 
 
-def from_anthropic() -> list[dict]:
-    """RSS가 없다. 사이트맵의 /news·/research 글 중 처음 보는 주소만 페이지를 읽어 datePublished·제목을 저장한다."""
+def from_anthropic(seen: dict) -> list[dict]:
+    """RSS가 없다. 사이트맵의 /news·/research 글 중 처음 보는 주소만 페이지를 읽어 datePublished·제목을 seen에 남긴다."""
     root = ET.fromstring(fetch("https://www.anthropic.com/sitemap.xml"))
-    seen = json.loads(ANTHROPIC_SEEN.read_text(encoding="utf-8")) if ANTHROPIC_SEEN.exists() else {}
     out = []
     for u in root:
         loc = _children(u).get("loc", "")
@@ -223,9 +226,40 @@ def from_anthropic() -> list[dict]:
             out.append({"source": "anthropic", "source_label": "Anthropic", "kind": "post",
                         "category": "Research" if m.group(1) == "research" else "News",
                         "title_en": seen[loc]["title_en"], "url": loc, "published_at": _date(seen[loc]["published_at"])})
-    OUT.mkdir(parents=True, exist_ok=True)
-    ANTHROPIC_SEEN.write_text(json.dumps(seen, ensure_ascii=False, indent=1), encoding="utf-8")
     return out
+
+
+# 실행 사이에 남기는 상태(anthropic_seen·digest_cache). DB가 있으면 worker_state 테이블, 없으면 worker/out 파일.
+# GitHub Actions는 매번 빈 머신이라 파일만으로는 첫 실행(40분대)을 매일 되풀이한다.
+def load_state(db, key: str, path: Path) -> dict:
+    if db:
+        rows = db.select("worker_state", f"key=eq.{key}&select=value")
+        if rows:
+            return rows[0]["value"]
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+
+
+def save_state(db, key: str, path: Path, value: dict):
+    OUT.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(value, ensure_ascii=False, indent=1), encoding="utf-8")
+    if db:
+        db.upsert("worker_state", [{"key": key, "value": value, "updated_at": datetime.now(timezone.utc).isoformat()}], "key")
+
+
+NEWS_COLUMNS = ("id", "source", "source_label", "kind", "category", "title_en", "title_ko", "url", "published_at",
+                "summary_ko", "key_points")
+MODEL_COLUMNS = ("id", "rank", "author", "name", "task", "params", "license", "likes", "downloads", "created_at",
+                 "arxiv", "url", "card")
+
+
+def save_db(db, items: list[dict], models: list[dict], now: datetime):
+    """소식은 쌓고(주소마다 한 줄, 다시 모으면 덮어쓴다), 모델 순위는 이번 실행 것으로 바꾼다."""
+    stamp = now.isoformat()
+    db.upsert("official_news", [{**{k: i.get(k) for k in NEWS_COLUMNS}, "key_points": i.get("key_points") or [],
+                                 "collected_at": stamp} for i in items], "id")
+    if models:  # 트렌딩을 못 받은 날은 어제 순위를 그대로 둔다
+        db.upsert("trending_models", [{**{k: m.get(k) for k in MODEL_COLUMNS}, "collected_at": stamp} for m in models], "id")
+        db._req("DELETE", f"trending_models?collected_at=lt.{urllib.parse.quote(stamp)}", prefer="return=minimal")
 
 
 def pick(items: list[dict], now: datetime) -> list[dict]:
@@ -380,8 +414,11 @@ def summarize_card(card: str, api_key: str, log) -> dict | None:
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-llm", action="store_true")
+    ap.add_argument("--no-db", action="store_true", help="Supabase 설정이 있어도 파일로만")
     args = ap.parse_args(argv)
     now = datetime.now(timezone.utc)
+    url, secret = setting("SUPABASE_URL"), setting("SUPABASE_SERVICE_ROLE_KEY")
+    db = Db(url, secret) if url and secret and not args.no_db else None
 
     items, report = [], []
     for source, label, url in RSS_SOURCES:
@@ -392,12 +429,16 @@ def main(argv=None):
             continue
         report.append(f"{label}: {len(got)}개")
         items += got
+    # 권리자 삭제 요청(docs/RIGHTS.md 6장): worker_state의 blocked_urls에 넣은 주소는 다시 모으지 않는다
+    blocked = set(load_state(db, "blocked_urls", OUT / "blocked_urls.json").get("urls", []))
+    seen = load_state(db, "anthropic_seen", ANTHROPIC_SEEN)
     try:
-        got = pick(from_anthropic(), now)
+        got = pick(from_anthropic(seen), now)
         report.append(f"Anthropic: {len(got)}개")
         items += got
     except Exception as e:
         report.append(f"Anthropic: 실패 {e!r}")
+    save_state(db, "anthropic_seen", ANTHROPIC_SEEN, seen)
     releases = []
     for source, label, url, page in RELEASE_SOURCES:
         try:
@@ -420,8 +461,11 @@ def main(argv=None):
         models = []
         report.append(f"HF 트렌딩 모델: 실패 {e!r}")
 
+    items = [i for i in items if i["url"] not in blocked]
+    releases = [r for r in releases if r["url"] not in blocked]
+    models = [m for m in models if m["url"] not in blocked]
     key = None if args.no_llm else setting("NVIDIA_API_KEY")
-    cache = json.loads(DIGEST_CACHE.read_text(encoding="utf-8")) if DIGEST_CACHE.exists() else {}
+    cache = load_state(db, "digest_cache", DIGEST_CACHE)
     for item in items:
         hit = cache.get(item["url"], {})
         if not_haeyo([hit.get("summary_ko")] + [p.get("text") for p in hit.get("key_points") or []]):
@@ -478,7 +522,7 @@ def main(argv=None):
     for m in models:
         if m["card"] is not None:
             cache[m["url"]] = {"card": m["card"]}
-    DIGEST_CACHE.write_text(json.dumps(cache, ensure_ascii=False, indent=1), encoding="utf-8")
+    save_state(db, "digest_cache", DIGEST_CACHE, cache)
     items += releases
     for item in items:
         item.pop("_desc", None)
@@ -492,6 +536,9 @@ def main(argv=None):
     (OUT / "official_news.json").write_text(json.dumps(doc, ensure_ascii=False, indent=2), encoding="utf-8")
     (OUT / "official_news.define.json").write_text(
         json.dumps({"OFFICIAL_NEWS_PREVIEW": json.dumps(doc, ensure_ascii=False)}, ensure_ascii=False), encoding="utf-8")
+    if db:
+        save_db(db, items, models, now)
+        report.append(f"DB 저장: 소식 {len(items)}개, 모델 {len(models)}개")
     print("\n".join(report))
     print(f"총 {len(items)}개 → {OUT / 'official_news.json'}")
 

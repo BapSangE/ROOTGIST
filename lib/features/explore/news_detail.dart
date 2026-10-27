@@ -10,6 +10,7 @@ import '../../design/widgets/rg_buttons.dart';
 import '../../design/widgets/rg_card.dart';
 import '../../design/widgets/rg_pressable.dart';
 import '../../design/widgets/rg_states.dart';
+import '../../data/unread.dart';
 import 'official_news.dart';
 import 'trending_models.dart';
 
@@ -26,6 +27,14 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
   late final _req = Reloadable(
     () async => (await repository.listOfficialNews()).where((n) => n.id == widget.id).firstOrNull,
   );
+
+  @override
+  void initState() {
+    super.initState();
+    // 열었으니 새 글 점을 뗀다(홈·탐색·보관함 어디서 열어도). 그리는 도중에 바꾸면 다른 화면을 다시 그리라는 요청이
+    // 빌드 중에 나가 오류가 나서, 첫 프레임 뒤로 미룬다.
+    WidgetsBinding.instance.addPostFrameCallback((_) => markRead('news:${widget.id}'));
+  }
 
   @override
   void dispose() {
@@ -289,7 +298,8 @@ class _Fact extends StatelessWidget {
           if (sub != null) Text(sub!, style: RgText.meta.copyWith(color: RgColors.textSecondary)),
         ]),
       ),
-      Flexible(
+      // Expanded: Flexible이면 값이 글자 폭만큼만 차지해 가운데부터 왼쪽 정렬처럼 보였다(줄바꿈된 「반응」만 오른쪽 끝)
+      Expanded(
         child: Text(
           keepAll(value), // 「9.6 / 만」처럼 숫자와 단위가 갈라지지 않게
           semanticsLabel: value,

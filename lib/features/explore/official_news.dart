@@ -11,6 +11,8 @@ import '../../design/widgets/rg_card.dart';
 import '../../design/widgets/rg_pressable.dart';
 import '../../design/widgets/rg_segmented.dart';
 import '../../design/widgets/rg_states.dart';
+import '../../data/unread.dart';
+import '../../design/widgets/rg_new_dot.dart';
 import '../common/item_actions.dart';
 
 // S04 「공식 소식」 칸(PROPOSALS P8d·P9 A안). 발표(연구소 블로그) | 업데이트(커뮤니티 공지·릴리스).
@@ -155,13 +157,31 @@ class NewsRow extends StatelessWidget {
       onTap: () => context.push('/news/${Uri.encodeComponent(n.id)}'),
       trailing: newsActions(n),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(newsMeta(n), style: RgText.caption.copyWith(color: RgColors.textSecondary)),
+        NewsMetaLine(news: n),
         const SizedBox(height: RgSpace.s4),
         KeepAllText(n.titleKo ?? n.titleEn, style: RgText.titleList),
       ]),
     );
   }
 }
+
+// 출처·날짜 줄. 안 연 새 글이면 앞에 점(unread.dart)
+class NewsMetaLine extends StatelessWidget {
+  const NewsMetaLine({super.key, required this.news});
+  final OfficialNews news;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: readItems,
+    builder: (context, _, _) => Row(spacing: RgSpace.s6, children: [
+      if (isNew(newsKey(news), news.publishedAt)) const RgNewDot(),
+      Flexible(child: Text(newsMeta(news), style: RgText.caption.copyWith(color: RgColors.textSecondary))),
+    ]),
+  );
+}
+
+String newsKey(OfficialNews n) => 'news:${n.id}';
+bool hasNewNews(Iterable<OfficialNews> news) => news.any((n) => isNew(newsKey(n), n.publishedAt));
 
 ItemActions newsActions(OfficialNews n, {RgCircleVariant variant = RgCircleVariant.plain}) =>
     ItemActions(id: n.id, title: n.titleKo ?? n.titleEn, url: n.url, source: n.sourceLabel, kind: 'news', variant: variant);
@@ -183,13 +203,13 @@ class _NewsCard extends StatelessWidget {
           link: true,
           label: '$meta, ${news.titleKo ?? news.titleEn}, 원문 열기',
           excludeSemantics: true,
-          onTap: () => _open(news.url),
+          onTap: _openCard,
           child: RgPressable(
-            onTap: () => _open(news.url),
+            onTap: _openCard,
             child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s8, children: [
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(meta, style: RgText.caption.copyWith(color: RgColors.textSecondary)),
+                  NewsMetaLine(news: news),
                   const SizedBox(height: RgSpace.s4),
                   KeepAllText(news.titleKo ?? news.titleEn, style: RgText.titleList),
                   if (news.titleKo != null && !release) ...[
@@ -226,6 +246,12 @@ class _NewsCard extends StatelessWidget {
         ],
       ]),
     );
+  }
+
+  // 업데이트 카드는 상세 없이 원문으로 간다: 열면 읽은 것으로
+  void _openCard() {
+    markRead(newsKey(news));
+    _open(news.url);
   }
 
   void _open(String url) => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);

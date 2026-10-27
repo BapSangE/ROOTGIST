@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'models.dart';
 import 'repository.dart';
 
-// M5: Supabase 읽기 함수 3개(supabase/migrations, HANDOFF 4.3)를 공개 키로 부른다.
+// M5: Supabase 읽기 함수(supabase/migrations, HANDOFF 4.3)를 공개 키로 부른다.
 // 받은 응답은 cache.<함수>.<인자>에 저장하고(9.4), 요청이 실패하면 저장본을 보여 준다(8.1 오프라인).
 class SupabaseRepository extends Repository {
   SupabaseRepository(String url, this._key, {http.Client? client})
@@ -80,19 +80,26 @@ class SupabaseRepository extends Repository {
     return PaperDetail.fromJson(j);
   }
 
-  // ponytail: 미리보기 전용. 수집 결과(worker/out/official_news.define.json)를 빌드에 --dart-define-from-file로 넣는다.
-  // DB 테이블·읽기 RPC가 생기면 _rpc로 바꾼다. 없으면 빈 목록.
+  // 공식 소식·HF 트렌딩 모델(supabase/migrations/20261027100000_official_news.sql).
+  // 빌드에 OFFICIAL_NEWS_PREVIEW(worker/out/official_news.define.json)를 넣으면 DB 대신 그 스냅샷을 쓴다
+  // (마이그레이션이 main에 올라가기 전 실기기 확인용).
   static const _officialNewsPreview = String.fromEnvironment('OFFICIAL_NEWS_PREVIEW');
 
   @override
-  Future<List<OfficialNews>> listOfficialNews() async => _officialNewsPreview.isEmpty
-      ? const []
-      : [for (final n in jsonDecode(_officialNewsPreview)['items']) OfficialNews.fromJson(n)];
+  Future<List<OfficialNews>> listOfficialNews() async {
+    final j = _officialNewsPreview.isNotEmpty
+        ? jsonDecode(_officialNewsPreview)
+        : await _rpc('list_official_news', {'lim': 60}, 'official_news');
+    return [for (final n in j['items']) OfficialNews.fromJson(n)];
+  }
 
   @override
-  Future<List<TrendingModel>> listTrendingModels() async => _officialNewsPreview.isEmpty
-      ? const []
-      : [for (final m in jsonDecode(_officialNewsPreview)['models'] ?? const []) TrendingModel.fromJson(m)];
+  Future<List<TrendingModel>> listTrendingModels() async {
+    final j = _officialNewsPreview.isNotEmpty
+        ? jsonDecode(_officialNewsPreview)
+        : await _rpc('list_trending_models', {}, 'trending_models');
+    return [for (final m in j['models'] ?? const []) TrendingModel.fromJson(m)];
+  }
 }
 
 class _ServerError implements Exception {
