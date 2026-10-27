@@ -89,7 +89,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ...?children,
               if (children == null) ...[
                 _headline(digest, fallback),
-                DigestPapers(digest: digest, fallback: fallback, limit: widget.date == null ? 3 : null),
+                DigestPapers(digest: digest, fallback: fallback, limit: widget.date == null ? 3 : null, pastDay: widget.date != null),
                 if (widget.date == null) ...[
                   if ((fallback ?? digest)?.papers.isNotEmpty ?? false)
                     MoreLink(label: '논문 더 보기', onTap: () => openExplore(context, const ExploreJump(0))),
@@ -261,10 +261,11 @@ class MoreLink extends StatelessWidget {
 
 // 그날의 논문: 주제 칩 + 추천 카드 + 목록. limit이 있으면(홈) 칩 없이 앞에서 그만큼만.
 class DigestPapers extends StatefulWidget {
-  const DigestPapers({super.key, required this.digest, this.fallback, this.limit, this.title});
+  const DigestPapers({super.key, required this.digest, this.fallback, this.limit, this.title, this.pastDay = false});
   final Digest? digest;
   final Digest? fallback;
   final int? limit;
+  final bool pastDay; // S04에서 연 지난 날짜: 「오늘의」 대신 그 날짜
   final String? title; // 목록 묶음 제목을 바꿀 때(탐색). null이면 「새로 올라온 논문」/「그날 올라온 논문」
 
   @override
@@ -277,6 +278,7 @@ class _DigestPapersState extends State<DigestPapers> {
   @override
   Widget build(BuildContext context) {
     final fallback = widget.fallback;
+    final day = fallback ?? (widget.pastDay ? widget.digest : null); // 오늘이 아닌 날의 목록이면 그 날짜로 부른다
     final view = HomeView((fallback ?? widget.digest)?.papers ?? const [], _topic);
     final limit = widget.limit;
     final list = limit == null ? view.list : view.list.take(limit - (view.featured == null ? 0 : 1)).toList();
@@ -309,12 +311,12 @@ class _DigestPapersState extends State<DigestPapers> {
           SizedBox(height: chips.isEmpty ? RgSpace.s20 : RgSpace.s16),
           _FeaturedCard(
             paper: p,
-            label: fallback == null ? '오늘의 주요 논문' : '${fallback.date.month}월 ${fallback.date.day}일 주요 논문',
+            label: day == null ? '오늘의 주요 논문' : '${day.date.month}월 ${day.date.day}일 주요 논문',
           ),
         ],
         if (list.isNotEmpty) ...[
           if (limit == null)
-            SectionTitle(widget.title ?? (fallback == null ? '새로 올라온 논문' : '그날 올라온 논문'), count: '${list.length}편')
+            SectionTitle(widget.title ?? (day == null ? '새로 올라온 논문' : '그날 올라온 논문'), count: '${list.length}편')
           else
             const SizedBox(height: RgSpace.s12),
           RgCard(

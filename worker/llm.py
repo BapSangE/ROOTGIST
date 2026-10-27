@@ -1,6 +1,7 @@
 """p2-prompt-v0.5.2 모드 B(auto_select) 호출 (batch_worker_notes.md 3장, ops config 1·2장).
 
-제공처는 NVIDIA 무료 등급(OpenAI 호환). 개발·내부 테스트 전용이며 외부 공개 전에 운영 제공처로 바꾼다(HANDOFF 2장).
+제공처(OpenAI 호환 chat/completions)는 키로 고른다. DEEPSEEK_API_KEY가 있으면 DeepSeek 공식 API(운영, HANDOFF 2장),
+없으면 NVIDIA 무료 등급(개발·내부 테스트 전용. 약관상 생성 결과를 다른 사람에게 보여 주면 안 된다, ops config 1장).
 """
 import hashlib
 import json
@@ -16,12 +17,36 @@ PROMPTS = {"v0.5.2": ROOT / "docs" / "contract" / "p2_prompt_v0.5.2.md",
            "v0.6": ROOT / "docs" / "contract" / "p2_prompt_v0.6.md"}
 DEFAULT_PROMPT = "v0.6"
 SCHEMA_VERSION = "p2-output-v0.2"
-ENDPOINT = "https://integrate.api.nvidia.com/v1/chat/completions"
+NVIDIA_ENDPOINT = "https://integrate.api.nvidia.com/v1/chat/completions"
+DEEPSEEK_ENDPOINT = "https://api.deepseek.com/chat/completions"
 
-# (모델, JSON 강제, 읽기 대기 초). deepseek는 json_object를 켜면 본문이 빈 채로 끝난다.
-PRIMARY = ("deepseek-ai/deepseek-v4.1-flash", False, 600)
-FALLBACK = ("z-ai/glm-5.3-flash", True, 900)
-MAX_TOKENS = 32000
+# (모델, JSON 강제, 읽기 대기 초, 엔드포인트, 최대 출력 토큰). 기본 → 예비 순.
+# DeepSeek: deepseek-flash = DeepSeek-V4.1-Flash-1017(기본이 생각 모드, 생각 토큰도 출력 상한에 든다 → 64K).
+# deepseek-v4-pro(약 3.3배 비쌈)는 쓰지 않는다(2026-10-27 결정). 예비도 flash로 한 번 더(모두 세 번).
+# ponytail: HANDOFF의 예비 제공처 Z.ai는 키가 생기면 예비 자리에 넣는다(지금은 DeepSeek 장애 때 같이 막힌다).
+DEEPSEEK_FLASH = ("deepseek-flash", False, 600, DEEPSEEK_ENDPOINT, 64000)
+DEEPSEEK_MODELS = (DEEPSEEK_FLASH, DEEPSEEK_FLASH)
+# NVIDIA: deepseek는 json_object를 켜면 본문이 빈 채로 끝난다.
+NVIDIA_MODELS = (("deepseek-ai/deepseek-v4.1-flash", False, 600, NVIDIA_ENDPOINT, 32000),
+                 ("z-ai/glm-5.3-flash", True, 900, NVIDIA_ENDPOINT, 32000))
+
+
+def _setting(name: str) -> str | None:
+    from .run import setting  # run이 llm을 불러오므로 여기서
+    return setting(name)
+
+
+def provider() -> str:
+    """deepseek | nvidia. 캐시가 어느 제공처로 만든 것인지 가르는 데도 쓴다."""
+    return "deepseek" if _setting("DEEPSEEK_API_KEY") else "nvidia"
+
+
+def api_key() -> str | None:
+    return _setting("DEEPSEEK_API_KEY") or _setting("NVIDIA_API_KEY")
+
+
+def active_models() -> tuple[tuple, tuple]:
+    return DEEPSEEK_MODELS if provider() == "deepseek" else NVIDIA_MODELS
 
 
 def _section(doc: str, start: str, end: str) -> str:
@@ -78,19 +103,19 @@ class Transient(Exception):
 
 
 def stream_chat(api_key: str, model: tuple, messages: list[dict]) -> dict:
-    model_id, json_mode, read_timeout = model
+    model_id, json_mode, read_timeout, endpoint, max_tokens = model
     payload = {
         "model": model_id,
         "messages": messages,
-        "temperature": 0,
-        "max_tokens": MAX_TOKENS,
+        "temperature": 0,  # DeepSeek 생각 모드에서는 무시된다
+        "max_tokens": max_tokens,
         "stream": True,
         "stream_options": {"include_usage": True},
     }
     if json_mode:
         payload["response_format"] = {"type": "json_object"}
     req = urllib.request.Request(
-        ENDPOINT,
+        endpoint,
         data=json.dumps(payload).encode("utf-8"),
         headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json", "Accept": "text/event-stream"},
     )
@@ -140,11 +165,12 @@ def parse_json(content: str):
         return None
 
 
-def generate(api_key: str, messages: list[dict], check, log, sleep=time.sleep):
+def generate(api_key: str, messages: list[dict], check, log, sleep=time.sleep, models=None):
     """ops config 2장. 기본 모델: 내용 실패(길이·빈 본문·파싱·검증) 1회 재시도, 일시 오류는 10초·20초 두 번 더.
     그래도 안 되면 예비 모델 1회. 성공하면 (출력, 모델 ID), 끝내 실패하면 (None, None).
     check(output) -> 오류 목록(빈 목록이면 통과)."""
-    for model, content_tries in ((PRIMARY, 2), (FALLBACK, 1)):
+    primary, fallback = models or active_models()
+    for model, content_tries in ((primary, 2), (fallback, 1)):
         for _ in range(content_tries):
             result = None
             for wait in (0, 10, 20):

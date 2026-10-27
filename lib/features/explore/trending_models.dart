@@ -90,7 +90,8 @@ class ModelRow extends StatelessWidget {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s4, children: [
             Text(m.name, style: RgText.titleList),
             KeepAllText(modelLine(m), style: RgText.bodySmall.copyWith(color: RgColors.textBody)),
-            Text(
+            // 「다운로드 12 / 만」처럼 숫자와 단위가 갈라지지 않게 어절 단위로 줄을 바꾼다
+            KeepAllText(
               [?m.licenseKo, '좋아요 ${countKo(m.likes ?? 0)}', '다운로드 ${countKo(m.downloads ?? 0)}'].join(' · '),
               style: RgText.meta.copyWith(color: RgColors.textSecondary),
             ),

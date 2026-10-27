@@ -361,10 +361,11 @@ def sync(db: Db, api_key: str | None = None):
 
 
 if __name__ == "__main__":
+    from . import llm
     from .run import setting
 
     db = Db(setting("SUPABASE_URL"), setting("SUPABASE_SERVICE_ROLE_KEY"))
-    key = setting("NVIDIA_API_KEY", "nvidia_key")
+    key = llm.api_key()
     if sys.argv[1:2] == ["import"]:
         import_dictionary(db, Path(sys.argv[2]))
         sync(db, key)

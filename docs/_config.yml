@@ -7,6 +7,8 @@ exclude:
   - IOS_QA.md
   - PROPOSALS.md
   - RIGHTS.md
+  - DESIGN.md
+  - SCREENS.md
   - notices.md
   - contract
   - design

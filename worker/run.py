@@ -8,7 +8,7 @@
 늦게 올라온 논문은 보관 목록(is_exposed=false)에만 더하고, 노출 편 중 해설 준비 중인 것만 다시 만든다.
 
 키: 환경 변수 또는 레포 루트 .env
-    NVIDIA_API_KEY(또는 nvidia_key)         필수
+    DEEPSEEK_API_KEY                      운영(외부에 보여 줄 해설). 없으면 NVIDIA_API_KEY(개발 전용) — llm.py
     SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY  있으면 Supabase에 저장, 없으면 파일로만
 출력: worker/out/ (git 제외). 실제 초록·번역이 들어 있으므로 커밋하거나 외부에 공유하지 않는다(HANDOFF 0.1, NVIDIA 시험 약관).
 """
@@ -68,7 +68,8 @@ def main(argv=None):
         with lock, (raw / "calls.jsonl").open("a", encoding="utf-8") as f:
             f.write(json.dumps({"at": datetime.now(timezone.utc).isoformat(), **rec}, ensure_ascii=False) + "\n")
 
-    key = setting("NVIDIA_API_KEY", "nvidia_key") or sys.exit("NVIDIA API 키가 없습니다(NVIDIA_API_KEY 또는 .env).")
+    key = llm.api_key() or sys.exit("LLM API 키가 없습니다(DEEPSEEK_API_KEY 또는 NVIDIA_API_KEY, 환경 변수나 .env).")
+    print(f"LLM 제공처: {llm.provider()}")
     url, secret = setting("SUPABASE_URL"), setting("SUPABASE_SERVICE_ROLE_KEY")
     db = Db(url, secret) if url and secret else None
     if db is None:

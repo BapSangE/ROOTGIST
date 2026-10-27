@@ -197,20 +197,48 @@ class GenerateTest(unittest.TestCase):
             return {"content": r, "finish_reason": "stop", "model_id": model[0]}
 
         with mock.patch.object(llm, "stream_chat", fake):
-            out, model = llm.generate("k", [], lambda o: validate.check(o, sentences()), lambda r: None, sleep=lambda s: None)
+            out, model = llm.generate("k", [], lambda o: validate.check(o, sentences()), lambda r: None, sleep=lambda s: None,
+                                      models=llm.DEEPSEEK_MODELS)
         return out, model, calls
 
     def test_retry_then_fallback(self):
         good = "```json\n" + json.dumps(output()) + "\n```"  # 코드 펜스도 꺼내 읽는다
         out, model, calls = self.run_with(["not json", "{}", good])
-        self.assertEqual(model, llm.FALLBACK[0])
-        self.assertEqual(calls, [llm.PRIMARY[0], llm.PRIMARY[0], llm.FALLBACK[0]])
+        primary, fallback = llm.DEEPSEEK_MODELS
+        self.assertEqual(model, fallback[0])
+        self.assertEqual(calls, [primary[0], primary[0], fallback[0]])
         self.assertEqual(out["title_ko"], "가상 제목")
 
     def test_transient_retries_then_ok(self):
         out, model, calls = self.run_with([llm.Transient("503"), json.dumps(output())])
-        self.assertEqual(model, llm.PRIMARY[0])
+        self.assertEqual(model, llm.DEEPSEEK_MODELS[0][0])
         self.assertEqual(len(calls), 2)
+
+    def test_provider_by_key(self):
+        with mock.patch.object(llm, "_setting", lambda n: {"DEEPSEEK_API_KEY": "d", "NVIDIA_API_KEY": "n"}.get(n)):
+            self.assertEqual((llm.provider(), llm.api_key(), llm.active_models()), ("deepseek", "d", llm.DEEPSEEK_MODELS))
+        with mock.patch.object(llm, "_setting", lambda n: {"NVIDIA_API_KEY": "n"}.get(n)):
+            self.assertEqual((llm.provider(), llm.api_key(), llm.active_models()), ("nvidia", "n", llm.NVIDIA_MODELS))
+
+    def test_stream_chat_sends_to_model_endpoint(self):
+        sent = {}
+
+        class Resp:
+            headers = {}
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+            def __iter__(self):
+                return iter([b'data: {"choices":[{"delta":{"content":"{}"},"finish_reason":"stop"}]}\n', b"data: [DONE]\n"])
+
+        def fake_open(req, timeout):
+            sent["url"], sent["body"] = req.full_url, json.loads(req.data)
+            return Resp()
+
+        with mock.patch.object(llm.urllib.request, "urlopen", fake_open):
+            r = llm.stream_chat("k", llm.DEEPSEEK_MODELS[0], [])
+        self.assertEqual(sent["url"], "https://api.deepseek.com/chat/completions")
+        self.assertEqual((sent["body"]["model"], sent["body"]["max_tokens"]), ("deepseek-flash", 64000))
+        self.assertEqual(r["content"], "{}")
 
     def test_all_fail(self):
         out, model, calls = self.run_with(["x", "x", "x"])

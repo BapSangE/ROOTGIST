@@ -15,7 +15,7 @@ SUPABASE_URL·SUPABASE_SERVICE_ROLE_KEY가 있으면 official_news·trending_mod
 실행 사이 상태(번역·요약 캐시, Anthropic 사이트맵 게시일)는 worker_state 테이블에 둔다. 없으면 worker/out/ 파일로만
 (커밋 금지, HANDOFF 0.1). 매일 배치는 .github/workflows/daily-batch.yml의 official-news 잡.
 
-    python3 -m worker.official_news            # 수집 + 번역·요약(NVIDIA_API_KEY 필요, 없으면 원문만)
+    python3 -m worker.official_news            # 수집 + 번역·요약(LLM 키 필요, 없으면 원문만. llm.py)
     python3 -m worker.official_news --no-llm   # 번역 없이
     python3 -m worker.official_news --no-db    # DB 설정이 있어도 파일로만
 
@@ -464,8 +464,14 @@ def main(argv=None):
     items = [i for i in items if i["url"] not in blocked]
     releases = [r for r in releases if r["url"] not in blocked]
     models = [m for m in models if m["url"] not in blocked]
-    key = None if args.no_llm else setting("NVIDIA_API_KEY")
+    key = None if args.no_llm else llm.api_key()
     cache = load_state(db, "digest_cache", DIGEST_CACHE)
+    # 다른 제공처로 만든 번역·요약은 버리고 새로 만든다(NVIDIA 무료 등급 결과는 다른 사람에게 보여 줄 수 없다)
+    if key and cache.get("_provider") != llm.provider():
+        report.append(f"캐시 제공처 {cache.get('_provider', '표시 없음')} → {llm.provider()}: 번역·요약 다시 만들기")
+        cache = {}
+    if key:
+        cache["_provider"] = llm.provider()
     for item in items:
         hit = cache.get(item["url"], {})
         if not_haeyo([hit.get("summary_ko")] + [p.get("text") for p in hit.get("key_points") or []]):

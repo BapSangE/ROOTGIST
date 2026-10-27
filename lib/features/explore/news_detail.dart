@@ -50,7 +50,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
         future: _req.future,
         builder: (context, snap) {
           final n = snap.data;
-          return ListView(
+          return StatusBarBand(child: ListView(
             padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top, bottom: RgSpace.bottomScrollInset),
             children: [
               _TopBar(url: n?.url, actions: n == null ? null : newsActions(n, variant: RgCircleVariant.outline)),
@@ -62,7 +62,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
                 ),
               if (n != null) ..._body(n),
             ],
-          );
+          ));
         },
       ),
     );
@@ -145,7 +145,7 @@ class _ModelDetailScreenState extends State<ModelDetailScreen> {
         future: _req.future,
         builder: (context, snap) {
           final m = snap.data;
-          return ListView(
+          return StatusBarBand(child: ListView(
             padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top, bottom: RgSpace.bottomScrollInset),
             children: [
               _TopBar(url: m?.url, actions: m == null ? null : modelActions(m, variant: RgCircleVariant.outline)),
@@ -157,7 +157,7 @@ class _ModelDetailScreenState extends State<ModelDetailScreen> {
                 ),
               if (m != null) ..._body(m),
             ],
-          );
+          ));
         },
       ),
     );
@@ -254,6 +254,24 @@ String modelLine(TrendingModel m) => [
   [?m.paramsKo, '${m.taskKo} 모델'].join(' '),
 ].join(' · ');
 
+// 상태바 밑 배경색 띠. 탭 쉘 밖(쉘 위로 푸시)이라 쉘의 띠가 없어 스크롤한 글이 시계 밑으로 비쳤다(실기기 QA). S02와 같다.
+class StatusBarBand extends StatelessWidget {
+  const StatusBarBand({super.key, required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Stack(children: [
+    Positioned.fill(child: child),
+    Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      height: MediaQuery.paddingOf(context).top,
+      child: const ColoredBox(color: RgColors.bgApp),
+    ),
+  ]);
+}
+
 class _TopBar extends StatelessWidget {
   const _TopBar({required this.url, this.actions});
   final String? url;
@@ -295,7 +313,8 @@ class _Fact extends StatelessWidget {
       Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(label, style: RgText.bodySmall.copyWith(color: strong ? RgColors.textPrimary : RgColors.textSecondary)),
-          if (sub != null) Text(sub!, style: RgText.meta.copyWith(color: RgColors.textSecondary)),
+          // 「코 / 딩 능력」처럼 낱말 중간에서 갈라지지 않게
+          if (sub != null) KeepAllText(sub!, style: RgText.meta.copyWith(color: RgColors.textSecondary)),
         ]),
       ),
       // Expanded: Flexible이면 값이 글자 폭만큼만 차지해 가운데부터 왼쪽 정렬처럼 보였다(줄바꿈된 「반응」만 오른쪽 끝)

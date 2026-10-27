@@ -562,6 +562,8 @@ void main() {
     await settle(tester);
     expect(find.bySemanticsLabel('뒤로'), findsOneWidget);
     expect(find.textContaining(keepAll('10월 18일 일요일'), findRichText: true), findsWidgets);
+    expect(find.text('10월 18일 주요 논문'), findsOneWidget); // 지난 날짜에는 「오늘의」 대신 그 날짜
+    expect(find.text('오늘의 주요 논문'), findsNothing);
 
     await tester.tap(find.bySemanticsLabel('뒤로'));
     await tester.pumpAndSettle();
@@ -696,12 +698,15 @@ void main() {
     expect(find.textContaining(keepAll('DeepSeek V4.1 Flash')), findsOneWidget);
     await tester.tap(find.text('닫기'));
     await tester.pumpAndSettle();
-    // 공지에 적은 모델이 바뀌면 이 테스트가 알려 준다(worker/llm.py PRIMARY·FALLBACK)
+    // 공지에 적은 모델이 바뀌면 이 테스트가 알려 준다(worker/llm.py DEEPSEEK_MODELS: 운영 제공처)
     final md = File('docs/notices.md').readAsStringSync();
     final llm = File('worker/llm.py').readAsStringSync();
-    expect(llm, contains('"deepseek-ai/deepseek-v4.1-flash"'));
-    expect(llm, contains('"z-ai/glm-5.3-flash"'));
-    expect(md, allOf(contains('DeepSeek V4.1 Flash'), contains('GLM-5.3 Flash')));
+    expect(llm, contains('DEEPSEEK_FLASH = ("deepseek-flash"'));
+    expect(llm, contains('DEEPSEEK_MODELS = (DEEPSEEK_FLASH, DEEPSEEK_FLASH)'));
+    expect(llm.contains('"deepseek-v4-pro"'), isFalse); // Pro는 쓰지 않는다(비용)
+    expect(md, allOf(contains('DeepSeek 공식 API'), contains('DeepSeek V4.1 Flash')));
+    expect(md.contains('Pro'), isFalse);
+    expect(md.contains('NVIDIA'), isFalse); // 외부에 보여 주는 결과는 NVIDIA 무료 등급으로 만들지 않는다
     expect(md.contains('본문 전체를 읽'), isFalse); // C03과 같은 원칙
   });
 
