@@ -156,13 +156,145 @@ class NewsRow extends StatelessWidget {
       showDivider: !last,
       onTap: () => context.push('/news/${Uri.encodeComponent(n.id)}'),
       trailing: newsActions(n),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        NewsMetaLine(news: n),
-        const SizedBox(height: RgSpace.s4),
-        KeepAllText(n.titleKo ?? n.titleEn, style: RgText.titleList),
+      // 왼쪽 출처 머리글자 배지(피드백 3차 A안: 묶음마다 모양을 다르게)
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s12, children: [
+        SourceBadge(news: n),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            NewsMetaLine(news: n),
+            const SizedBox(height: RgSpace.s4),
+            KeepAllText(n.titleKo ?? n.titleEn, style: RgText.titleList),
+          ]),
+        ),
       ]),
     );
   }
+}
+
+// 출처 머리글자 배지 32×32(모서리 8, fillNeutral). 로고 대신 글자(상표·이미지 권리 부담 없이 출처를 구분).
+class SourceBadge extends StatelessWidget {
+  const SourceBadge({super.key, required this.news});
+  final OfficialNews news;
+
+  static const _initials = {
+    'openai': 'OA',
+    'openai_community': 'OA',
+    'anthropic': 'An',
+    'deepmind': 'GD',
+    'google_research': 'GR',
+    'huggingface': 'HF',
+    'claude_code': 'CC',
+    'claude_api': 'CA',
+  };
+
+  @override
+  Widget build(BuildContext context) => ExcludeSemantics(
+    child: Container(
+      width: 32,
+      height: 32,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(color: RgColors.fillNeutral, borderRadius: BorderRadius.circular(8)),
+      child: Text(
+        _initials[news.source] ?? news.sourceLabel.substring(0, 2),
+        textScaler: TextScaler.noScaling, // 상자 크기가 고정이라 글자도 고정
+        style: RgText.caption.copyWith(fontWeight: FontWeight.w600, color: RgColors.textBody),
+      ),
+    ),
+  );
+}
+
+// 홈 「연구소 소식」 맨 위 대표 글(피드백 3차 C안): 출처 줄 → 제목(카드 제목 크기) → 요약 두 줄까지. 오른쪽 위 북마크.
+class FeaturedNews extends StatelessWidget {
+  const FeaturedNews({super.key, required this.news, required this.divider});
+  final OfficialNews news;
+  final bool divider;
+
+  @override
+  Widget build(BuildContext context) {
+    final n = news;
+    return DecoratedBox(
+      decoration: BoxDecoration(border: divider ? const Border(bottom: BorderSide(color: RgColors.dividerCard)) : null),
+      child: Semantics(
+        button: true,
+        child: RgPressable(
+          onTap: () => context.push('/news/${Uri.encodeComponent(n.id)}'),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(RgSpace.s20, RgSpace.s18, RgSpace.s8, RgSpace.s18),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s8, children: [
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  NewsMetaLine(news: n),
+                  const SizedBox(height: RgSpace.s6),
+                  KeepAllText(n.titleKo ?? n.titleEn, style: RgText.titleCard),
+                  if (n.summaryKo case final s?) ...[
+                    const SizedBox(height: RgSpace.s6),
+                    KeepAllText(s, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
+                  ],
+                ]),
+              ),
+              newsActions(n),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// 홈 「이번 주 바뀐 도구」 한 줄(피드백 3차 A안): 도구 이름 + 날짜, 오른쪽에 버전 태그. 누르면 상세.
+class UpdateRow extends StatelessWidget {
+  const UpdateRow({super.key, required this.news, required this.last});
+  final OfficialNews news;
+  final bool last;
+
+  @override
+  Widget build(BuildContext context) {
+    final n = news;
+    final release = n.kind == 'release';
+    final k = n.publishedAt.toUtc().add(const Duration(hours: 9));
+    return RgListRow(
+      showDivider: !last,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      padding: const EdgeInsets.fromLTRB(20, 14, 16, 14),
+      onTap: () => context.push('/news/${Uri.encodeComponent(n.id)}'),
+      // 태그는 trailing이 아니라 같은 줄의 Flexible: 큰 글자에서 「v2.1.310 · 7건」이 길어지면 줄을 바꿔 들어간다
+      // 이름 3 : 태그 2. 태그는 제 칸 안에서 오른쪽 끝에(Flexible만 쓰면 칸 가운데부터 놓였다)
+      child: Row(spacing: RgSpace.s8, children: [
+        Expanded(
+          flex: 3,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            KeepAllText(release ? n.sourceLabel : (n.titleKo ?? n.titleEn), style: RgText.titleList),
+            const SizedBox(height: RgSpace.s2),
+            Text(
+              [if (!release) n.sourceLabel, '${k.month}월 ${k.day}일'].join(' · '),
+              style: RgText.meta.copyWith(color: RgColors.textSecondary),
+            ),
+          ]),
+        ),
+        Flexible(
+          flex: 2,
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: RgSpace.s8, vertical: RgSpace.s4),
+              decoration: BoxDecoration(color: RgColors.fillNeutral, borderRadius: BorderRadius.circular(RgRadius.pill)),
+              child: KeepAllText(releaseTag(n), style: RgText.caption.copyWith(color: RgColors.textBody), textAlign: TextAlign.center),
+            ),
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
+// 「v2.1.310 · 7건」. 원제(수집기가 만든 「Claude Code v2.1.304~v2.1.310 (7 releases)」)에서 마지막 버전과 건수를 꺼낸다.
+// 버전이 없으면 건수만(「19건」), 공지는 「공지」.
+String releaseTag(OfficialNews n) {
+  if (n.kind != 'release') return '공지';
+  final ver = RegExp(r'v[\d.]+(?:~(v[\d.]+))?').firstMatch(n.titleEn);
+  final count = RegExp(r'\((\d+) (?:releases?|changes?)\)').firstMatch(n.titleEn)?.group(1);
+  final last = ver == null ? null : (ver.group(1) ?? ver.group(0));
+  return [?last, if (count != null) '$count건'].join(' · ');
 }
 
 // 출처·날짜 줄. 안 연 새 글이면 앞에 점(unread.dart)

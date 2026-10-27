@@ -402,14 +402,22 @@ void main() {
     await pumpApp(tester);
     await settle(tester);
     expect(find.text('오늘의 주요 논문'), findsOneWidget);
-    expect(find.text('공식 발표'), findsOneWidget);
-    expect(find.text('업데이트'), findsOneWidget);
-    expect(find.text('주목받는 모델'), findsOneWidget);
+    // 묶음 제목 문구 ①(피드백 3차), 연구소 소식만 출처 머리말
+    expect(find.text('OpenAI · Anthropic · Google'), findsOneWidget);
+    expect(find.text('연구소 소식'), findsOneWidget);
+    expect(find.text('이번 주 바뀐 도구'), findsOneWidget);
+    expect(find.text('요즘 많이 쓰는 모델'), findsOneWidget);
+    expect(find.byType(FeaturedNews), findsOneWidget); // 대표 소식 1 + 한 줄 1
+    expect(find.byType(NewsRow), findsOneWidget);
+    expect(find.text(keepAll('v0.0.3 · 3건')), findsOneWidget); // 바뀐 도구 버전 태그
+    // 태그는 행 오른쪽 끝(카드 안쪽 390 − 16 − 16 = 358 부근)에 붙는다
+    expect(tester.getTopRight(find.text(keepAll('v0.0.3 · 3건'))).dx, greaterThan(340));
+    expect(find.text(keepAll('공지')), findsOneWidget);
     expect(find.text('example-coder'), findsOneWidget);
     // 홈 논문은 추천 1 + 행 2 = 3편
     // 목록·카드에는 북마크만(공유는 상세 화면에서). 논문 3 + 발표 2 + 업데이트 2 + 모델 2
     expect(find.bySemanticsLabel('공유'), findsNothing);
-    expect(find.bySemanticsLabel('북마크에 저장'), findsNWidgets(3 + 2 + 2 + 2));
+    expect(find.bySemanticsLabel('북마크에 저장'), findsNWidgets(3 + 2 + 2)); // 논문 3 + 소식 2 + 모델 2(바뀐 도구 행은 버전 태그)
 
     // 공식 발표를 저장하면 보관함에 「공식 소식」으로
     await tester.tap(find.descendant(of: find.byType(NewsRow).first, matching: find.bySemanticsLabel('북마크에 저장')));
@@ -424,7 +432,7 @@ void main() {
     expect(find.ancestor(of: find.text('제작사가 내세운 강점'), matching: find.byType(Material)), findsWidgets);
     router.pop();
     await settle(tester);
-    expect(find.text('주목받는 모델'), findsOneWidget);
+    expect(find.text('요즘 많이 쓰는 모델'), findsOneWidget);
 
     await tester.tap(find.text('업데이트 더 보기'));
     await settle(tester);
@@ -497,6 +505,17 @@ void main() {
     expect(Notice('t', '2026.10.27', []).publishedAt, DateTime.utc(2026, 10, 26, 15)); // KST 0시
     clock = DateTime.now;
     readItems.value = {};
+  });
+
+  test('바뀐 도구 버전 태그: 마지막 버전과 건수, 버전이 없으면 건수만, 공지는 「공지」', () {
+    OfficialNews n(String kind, String title) => OfficialNews.fromJson({
+      'id': 'x', 'source': 's', 'source_label': 'S', 'kind': kind, 'title_en': title, 'url': 'u',
+      'published_at': '2026-10-24T00:00:00Z', 'key_points': [],
+    });
+    expect(releaseTag(n('release', 'Claude Code v2.1.304~v2.1.310 (7 releases)')), 'v2.1.310 · 7건');
+    expect(releaseTag(n('release', 'OpenAI Python SDK v3.37.0 (1 release)')), 'v3.37.0 · 1건');
+    expect(releaseTag(n('release', 'Claude API release notes (19 changes)')), '19건');
+    expect(releaseTag(n('notice', 'Fictional example feature is now available')), '공지');
   });
 
   test('P8d: 근거 링크는 원문 구절 위치로(#:~:text=), 구절이 없으면 글 주소', () {

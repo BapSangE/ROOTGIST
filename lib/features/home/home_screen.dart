@@ -179,7 +179,8 @@ class _HomeScreenState extends State<HomeScreen> {
     ]);
   }
 
-  // 공식 발표·업데이트는 2개씩(최신순), 모델은 순위 1·2위.
+  // 피드백 3차(A안 + C안의 대표 카드, 제목 문구 ① 담백한 설명형):
+  // 연구소 소식 = 대표 1개(요약 한 줄) + 한 줄 1개, 바뀐 도구 = 버전 태그 한 줄 2개, 모델 = 큰 순위 숫자 2개.
   Widget _extrasSection(BuildContext context, (List<OfficialNews>, List<TrendingModel>)? data) {
     if (data == null) return const SizedBox.shrink();
     final (news, models) = data;
@@ -188,17 +189,22 @@ class _HomeScreenState extends State<HomeScreen> {
     final top = models.take(2).toList();
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       if (posts.isNotEmpty) ...[
-        const SectionTitle('공식 발표'),
-        RgCard(child: Column(children: [for (final (i, n) in posts.indexed) NewsRow(news: n, last: i == posts.length - 1)])),
-        MoreLink(label: '공식 발표 더 보기', onTap: () => openExplore(context, const ExploreJump(1))),
+        const SectionTitle('연구소 소식', eyebrow: 'OpenAI · Anthropic · Google'),
+        RgCard(
+          child: Column(children: [
+            FeaturedNews(news: posts.first, divider: posts.length > 1),
+            for (final (i, n) in posts.skip(1).indexed) NewsRow(news: n, last: i == posts.length - 2),
+          ]),
+        ),
+        MoreLink(label: '소식 더 보기', onTap: () => openExplore(context, const ExploreJump(1))),
       ],
       if (updates.isNotEmpty) ...[
-        const SectionTitle('업데이트'),
-        RgCard(child: Column(children: [for (final (i, n) in updates.indexed) NewsRow(news: n, last: i == updates.length - 1)])),
+        const SectionTitle('이번 주 바뀐 도구'),
+        RgCard(child: Column(children: [for (final (i, n) in updates.indexed) UpdateRow(news: n, last: i == updates.length - 1)])),
         MoreLink(label: '업데이트 더 보기', onTap: () => openExplore(context, const ExploreJump(1, updates: true))),
       ],
       if (top.isNotEmpty) ...[
-        const SectionTitle('주목받는 모델'),
+        const SectionTitle('요즘 많이 쓰는 모델'),
         RgCard(child: Column(children: [for (final (i, m) in top.indexed) ModelRow(model: m, last: i == top.length - 1)])),
         MoreLink(label: '모델 더 보기', onTap: () => openExplore(context, const ExploreJump(2))),
       ],
@@ -212,23 +218,28 @@ void openExplore(BuildContext context, ExploreJump jump) {
 }
 
 // 묶음 제목(홈 하이라이트, 탐색 논문 칸)
+// eyebrow: 제목 위 작은 머리말(출처 범위, 피드백 3차 C안). 예 「OpenAI · Anthropic · Google」
 class SectionTitle extends StatelessWidget {
-  const SectionTitle(this.text, {super.key, this.count});
+  const SectionTitle(this.text, {super.key, this.count, this.eyebrow});
   final String text;
   final String? count;
+  final String? eyebrow;
 
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s28, RgSpace.gutterText, RgSpace.s12),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.baseline,
-      textBaseline: TextBaseline.alphabetic,
-      spacing: RgSpace.s8,
-      children: [
-        Flexible(child: Semantics(header: true, child: Text(text, style: RgText.titleSection))),
-        if (count != null) Text(count!, style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
-      ],
-    ),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s2, children: [
+      if (eyebrow != null) Text(eyebrow!, style: RgText.caption.copyWith(color: RgColors.textSecondary)),
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        spacing: RgSpace.s8,
+        children: [
+          Flexible(child: Semantics(header: true, child: Text(text, style: RgText.titleSection))),
+          if (count != null) Text(count!, style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
+        ],
+      ),
+    ]),
   );
 }
 
