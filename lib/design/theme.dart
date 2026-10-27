@@ -4,12 +4,13 @@ import 'tokens.dart';
 import 'typography.dart';
 
 // 무채색 고정. 눌림 피드백은 ripple 대신 불투명도(공통 위젯에서 처리).
-final rgTheme = ThemeData(
+// 화면 바탕(흰색·종이)에 따라 바탕색이 달라 부를 때마다 만든다.
+ThemeData get rgTheme => ThemeData(
   useMaterial3: true,
-  colorScheme: const ColorScheme.light(
+  colorScheme: ColorScheme.light(
     primary: RgColors.actionPrimary,
     onPrimary: RgColors.onAction,
-    surface: RgColors.surfaceCard,
+    surface: RgColors.surfaceRaised,
     onSurface: RgColors.textPrimary,
   ),
   scaffoldBackgroundColor: RgColors.bgApp,

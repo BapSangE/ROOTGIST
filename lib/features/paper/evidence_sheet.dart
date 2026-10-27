@@ -33,7 +33,7 @@ Future<void> showEvidenceSheet(
           // 한쪽만 있는 테두리에는 모서리를 줄 수 없다(Flutter 제약). 막대가 곧은 쪽이라 모서리 없이.
           Container(
             padding: const EdgeInsets.fromLTRB(RgSpace.s18, RgSpace.s16, RgSpace.s18, RgSpace.s18),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: RgColors.bgReading,
               border: Border(left: BorderSide(color: RgColors.textPrimary, width: 3)),
             ),

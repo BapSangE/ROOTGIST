@@ -36,13 +36,18 @@ class TextSizePicker extends StatelessWidget {
         label: '미리 보기',
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: RgSpace.s18, vertical: RgSpace.s16),
-          decoration: BoxDecoration(color: RgColors.bgReading, borderRadius: BorderRadius.circular(RgRadius.box)),
+          // 흰 바탕에서는 시트·카드와 같은 흰색이라 가는 선으로 상자를 나눈다
+          decoration: BoxDecoration(
+            color: RgColors.bgReading,
+            borderRadius: BorderRadius.circular(RgRadius.box),
+            border: Border.all(color: RgColors.borderDefault),
+          ),
           child: ReaderTextScale(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s8, children: [
               KeepAllText('AI 요약과 초록 번역이 이 크기로 보여요.', style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
               Container(
                 padding: const EdgeInsets.only(left: RgSpace.s12),
-                decoration: const BoxDecoration(border: Border(left: BorderSide(color: RgColors.borderDefault, width: 2))),
+                decoration: BoxDecoration(border: Border(left: BorderSide(color: RgColors.borderDefault, width: 2))),
                 child: Text('The original abstract looks like this.', style: RgText.serifTogether.copyWith(color: RgColors.textSecondary)),
               ),
             ]),
@@ -147,7 +152,7 @@ class _StepSlider extends StatelessWidget {
                   child: Container(
                     width: 24,
                     height: 24,
-                    decoration: const BoxDecoration(color: RgColors.surfaceCard, shape: BoxShape.circle, boxShadow: RgShadow.thumb),
+                    decoration: const BoxDecoration(color: RgColors.surfaceRaised, shape: BoxShape.circle, boxShadow: RgShadow.thumb),
                   ),
                 ),
               ]),

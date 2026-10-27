@@ -112,7 +112,7 @@ class _SettingsCard extends StatelessWidget {
       child: Column(children: [
         for (final (i, c) in children.indexed) ...[
           c,
-          if (i < children.length - 1) const Divider(height: 1, thickness: 1, color: RgColors.dividerCard, indent: 44),
+          if (i < children.length - 1) Divider(height: 1, thickness: 1, color: RgColors.dividerCard, indent: 44),
         ],
       ]),
     );
@@ -224,6 +224,29 @@ class ReadingSettingsScreen extends StatelessWidget {
         ),
         const SizedBox(height: RgSpace.s12),
         card('글자 크기', 'AI 요약·핵심 내용과 초록 리더 본문에 적용돼요', const TextSizePicker()),
+        const SizedBox(height: RgSpace.s12),
+        // 화면 바탕: 기본은 흰색, 첫 리디자인 시안(따뜻한 종이)은 고를 수 있게 남겼다. 고르면 앱 전체가 바로 바뀐다.
+        card(
+          '화면 바탕',
+          '앱 전체의 바탕과 카드 색이에요',
+          ValueListenableBuilder(
+            valueListenable: backdrop,
+            builder: (_, b, _) => Column(children: [
+              for (final (i, (v, label, desc, palette)) in const [
+                (Backdrop.white, '흰색', '흰 바탕에 연한 회색 카드', RgPalette.white),
+                (Backdrop.paper, '종이', '따뜻한 종이색 바탕에 흰 카드', RgPalette.paper),
+              ].indexed)
+                _RadioRow(
+                  label: label,
+                  desc: desc,
+                  selected: v == b,
+                  divider: i > 0,
+                  trailing: _BackdropSwatch(palette: palette),
+                  onTap: () => backdrop.value = v,
+                ),
+            ]),
+          ),
+        ),
       ],
     );
   }
@@ -231,10 +254,18 @@ class ReadingSettingsScreen extends StatelessWidget {
 
 // 라디오 한 줄: 동그라미(고르면 검정 7pt 테두리) + 이름 + 설명. 행 전체를 누른다.
 class _RadioRow extends StatelessWidget {
-  const _RadioRow({required this.label, required this.desc, required this.selected, required this.divider, required this.onTap});
+  const _RadioRow({
+    required this.label,
+    required this.desc,
+    required this.selected,
+    required this.divider,
+    required this.onTap,
+    this.trailing,
+  });
   final String label, desc;
   final bool selected, divider;
   final VoidCallback onTap;
+  final Widget? trailing; // 오른쪽 견본(화면 바탕)
 
   @override
   Widget build(BuildContext context) => Semantics(
@@ -245,7 +276,7 @@ class _RadioRow extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: RgSpace.s14),
-        decoration: BoxDecoration(border: divider ? const Border(top: BorderSide(color: RgColors.dividerCard)) : null),
+        decoration: BoxDecoration(border: divider ? Border(top: BorderSide(color: RgColors.dividerCard)) : null),
         child: Row(spacing: RgSpace.s12, children: [
           AnimatedContainer(
             duration: const Duration(milliseconds: 150),
@@ -264,7 +295,38 @@ class _RadioRow extends StatelessWidget {
               KeepAllText(desc, style: RgText.meta.copyWith(color: RgColors.textSecondary)),
             ]),
           ),
+          ?trailing,
         ]),
+      ),
+    ),
+  );
+}
+
+// 화면 바탕 견본: 바탕 위에 카드 하나와 새 글 점(고르기 전에 차이가 보이게). 지금 바탕과 상관없이 그 팔레트 색.
+class _BackdropSwatch extends StatelessWidget {
+  const _BackdropSwatch({required this.palette});
+  final RgPalette palette;
+
+  @override
+  Widget build(BuildContext context) => ExcludeSemantics(
+    child: Container(
+      width: 52,
+      height: 38,
+      padding: const EdgeInsets.all(7),
+      decoration: BoxDecoration(
+        color: palette.bgApp,
+        borderRadius: BorderRadius.circular(RgRadius.badge),
+        border: Border.all(color: palette.line),
+      ),
+      child: Container(
+        alignment: Alignment.topRight,
+        padding: const EdgeInsets.all(5),
+        decoration: BoxDecoration(
+          color: palette.surfaceCard,
+          borderRadius: BorderRadius.circular(5), // 한쪽만 테두리면 모서리를 줄 수 없어 사방 테두리
+          border: Border.all(color: palette.line),
+        ),
+        child: Container(width: 6, height: 6, decoration: BoxDecoration(color: palette.newDot, shape: BoxShape.circle)),
       ),
     ),
   );

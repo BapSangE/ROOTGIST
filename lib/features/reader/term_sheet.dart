@@ -26,7 +26,7 @@ Future<void> showTermSheet(BuildContext context, GlossaryTerm t) {
           const SizedBox(height: RgSpace.s6),
           Text(t.termKo!, style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
         ],
-        const Padding(
+        Padding(
           padding: EdgeInsets.symmetric(vertical: RgSpace.s18),
           child: Divider(height: 1, thickness: 1, color: RgColors.dividerCard),
         ),

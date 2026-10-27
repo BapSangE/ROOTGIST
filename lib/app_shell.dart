@@ -28,8 +28,17 @@ Page<void> _page(GoRouterState state, Widget child) => MaterialPage<void>(
   key: state.pageKey,
   name: state.name ?? state.path,
   // Material도 깐다: Scaffold 없는 화면을 쉘 밖으로 띄우면 글자 밑에 노란 두 줄(Material 없음 표시)이 생겼다(실기기 QA).
-  child: ColoredBox(color: RgColors.bgApp, child: Material(type: MaterialType.transparency, child: child)),
+  child: _PageBackground(child: Material(type: MaterialType.transparency, child: child)),
 );
+
+// 페이지 바탕. 페이지 위젯은 라우터가 한 번 만들어 들고 있어, 색을 build에서 읽어야 화면 바탕을 바꿀 때 따라온다.
+class _PageBackground extends StatelessWidget {
+  const _PageBackground({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => ColoredBox(color: RgColors.bgApp, child: child);
+}
 
 final router = GoRouter(
   initialLocation: '/home',
@@ -116,7 +125,7 @@ class AppShell extends StatelessWidget {
             left: 0,
             right: 0,
             height: MediaQuery.paddingOf(context).top,
-            child: const ColoredBox(color: RgColors.bgApp),
+            child: ColoredBox(color: RgColors.bgApp),
           ),
         ],
       ),

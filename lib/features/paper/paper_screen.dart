@@ -75,7 +75,7 @@ class _PaperScreenState extends State<PaperScreen> {
                   left: 0,
                   right: 0,
                   height: MediaQuery.paddingOf(context).top,
-                  child: const ColoredBox(color: RgColors.bgApp),
+                  child: ColoredBox(color: RgColors.bgApp),
                 ),
               ],
               ),
@@ -150,7 +150,7 @@ class _PaperScreenState extends State<PaperScreen> {
                   ],
                 ),
                 if (p.keyPoints.isNotEmpty) ...[
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.symmetric(vertical: RgSpace.s20),
                     child: Divider(height: 1, thickness: 1, color: RgColors.dividerCard),
                   ),
@@ -362,7 +362,7 @@ class _InfoRow extends StatelessWidget {
     );
     return DecoratedBox(
       decoration: BoxDecoration(
-        border: last ? null : const Border(bottom: BorderSide(color: RgColors.dividerCard)),
+        border: last ? null : Border(bottom: BorderSide(color: RgColors.dividerCard)),
       ),
       child: onTap == null
           ? row
@@ -391,7 +391,7 @@ class _MetaPill extends StatelessWidget {
     constraints: const BoxConstraints(minHeight: 30),
     padding: const EdgeInsets.symmetric(horizontal: RgSpace.s10, vertical: RgSpace.s4),
     decoration: BoxDecoration(
-      color: RgColors.surfaceCard,
+      color: RgColors.surfaceRaised,
       borderRadius: BorderRadius.circular(RgRadius.pill),
       border: Border.all(color: RgColors.borderDefault),
     ),
@@ -412,8 +412,8 @@ class _Dock extends StatelessWidget {
     final p = paper;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard, vertical: RgSpace.s10),
-      decoration: const BoxDecoration(
-        color: RgColors.surfaceCard,
+      decoration: BoxDecoration(
+        color: RgColors.surfaceRaised,
         border: Border(top: BorderSide(color: RgColors.borderDefault)),
       ),
       child: Row(spacing: RgSpace.s8, children: [

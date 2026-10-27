@@ -200,7 +200,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
           right: 0,
           bottom: 0,
           height: barBottom + 52 + RgSpace.s40,
-          child: const IgnorePointer(
+          child: IgnorePointer(
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -273,7 +273,7 @@ class _PairList extends StatelessWidget {
       children: [
         for (final (i, pair) in pairs.indexed) ...[
           if (i > 0)
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(vertical: RgSpace.s12),
               child: Divider(height: 1, thickness: 1, color: RgColors.dividerCard),
             ),
@@ -318,7 +318,7 @@ class _Pair extends StatelessWidget {
             // A: 번역 아래 원문은 왼쪽 세로선 + 들여쓰기
             Container(
               padding: const EdgeInsets.only(left: RgSpace.s12),
-              decoration: const BoxDecoration(border: Border(left: BorderSide(color: RgColors.borderDefault, width: 2))),
+              decoration: BoxDecoration(border: Border(left: BorderSide(color: RgColors.borderDefault, width: 2))),
               child: enText,
             )
           else

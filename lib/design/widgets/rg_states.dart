@@ -130,7 +130,7 @@ class RgSkeletonRows extends StatelessWidget {
           Container(
             padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
             decoration: i < count - 1
-                ? const BoxDecoration(border: Border(bottom: BorderSide(color: RgColors.dividerCard)))
+                ? BoxDecoration(border: Border(bottom: BorderSide(color: RgColors.dividerCard)))
                 : null,
             child: const Column(spacing: RgSpace.s4, children: [
               RgBar(lineHeight: 23),

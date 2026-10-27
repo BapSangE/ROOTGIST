@@ -217,7 +217,7 @@ class _ModelDetailScreenState extends State<ModelDetailScreen> {
           // 하는 일 · 크기 · 라이선스 3칸(세로 가는 선으로 나눈다)
           Container(
             padding: const EdgeInsets.only(top: RgSpace.s14),
-            decoration: const BoxDecoration(border: Border(top: BorderSide(color: RgColors.dividerCard))),
+            decoration: BoxDecoration(border: Border(top: BorderSide(color: RgColors.dividerCard))),
             child: IntrinsicHeight(
               child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 _Stat('하는 일', m.taskKo, first: true),
@@ -304,7 +304,7 @@ class StatusBarBand extends StatelessWidget {
       left: 0,
       right: 0,
       height: MediaQuery.paddingOf(context).top,
-      child: const ColoredBox(color: RgColors.bgApp),
+      child: ColoredBox(color: RgColors.bgApp),
     ),
   ]);
 }
@@ -345,7 +345,7 @@ class _Fact extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     padding: EdgeInsets.only(top: RgSpace.s12, bottom: last ? 0 : RgSpace.s12),
-    decoration: const BoxDecoration(border: Border(top: BorderSide(color: RgColors.dividerCard))),
+    decoration: BoxDecoration(border: Border(top: BorderSide(color: RgColors.dividerCard))),
     child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s16, children: [
       Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -377,7 +377,7 @@ class _Stat extends StatelessWidget {
   Widget build(BuildContext context) => Expanded(
     child: Container(
       padding: EdgeInsets.only(left: first ? 0 : RgSpace.s12, right: RgSpace.s4),
-      decoration: BoxDecoration(border: first ? null : const Border(left: BorderSide(color: RgColors.dividerCard))),
+      decoration: BoxDecoration(border: first ? null : Border(left: BorderSide(color: RgColors.dividerCard))),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s2, children: [
         Text(label, style: RgText.caption.copyWith(fontSize: 12.5, color: RgColors.textSecondary)),
         KeepAllText(value, style: RgText.titleList.copyWith(color: muted ? RgColors.textSecondary : RgColors.textPrimary)),
@@ -416,7 +416,7 @@ class _LinkCard extends StatelessWidget {
   );
 
   Widget _row(String label, String value, String url, {bool divider = false}) => DecoratedBox(
-    decoration: BoxDecoration(border: divider ? const Border(bottom: BorderSide(color: RgColors.dividerCard)) : null),
+    decoration: BoxDecoration(border: divider ? Border(bottom: BorderSide(color: RgColors.dividerCard)) : null),
     child: Semantics(
       link: true,
       label: '$label, $value 열기',

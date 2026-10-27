@@ -1,26 +1,75 @@
 import 'package:flutter/material.dart';
 
 // 리디자인 「Ink & Paper」(design-preview/DESIGN_SYSTEM.md). 화면 코드에 HEX·숫자를 직접 쓰지 않는다.
-// 흰 종이 위 검정 잉크: 색은 새 글 점(주황)과 리더 용어 하이라이트(노랑)뿐이다.
+// 검정 잉크와 바탕만으로 위계를 만든다: 색은 새 글 점(빨강)과 리더 용어 하이라이트(노랑)뿐이다.
+
+// 화면 바탕 두 가지(설정 › 읽기 설정 › 화면 바탕). 배치는 같고 바탕·카드·선·새 글 점만 다르다.
+// 흰색(기본): 흰 바탕 + 연한 회색 카드 + 선명한 빨간 점. 종이: 따뜻한 바탕 + 흰 카드 + 로고 주황 점(Ink & Paper 첫 시안).
+enum Backdrop { white, paper }
+
+class RgPalette {
+  const RgPalette({
+    required this.bgApp,
+    required this.bgReading,
+    required this.surfaceCard,
+    required this.fill,
+    required this.line,
+    required this.divider,
+    required this.grabber,
+    required this.newDot,
+  });
+  final Color bgApp, bgReading, surfaceCard, fill, line, divider, grabber, newDot;
+
+  static const white = RgPalette(
+    bgApp: Color(0xFFFFFFFF),
+    bgReading: Color(0xFFFFFFFF),
+    surfaceCard: Color(0xFFF4F4F2), // 연한 회색 카드(보조 글자 대비 4.9:1)
+    fill: Color(0xFFE7E7E3), // 회색 카드 위에서도 칩·태그가 보이게 한 단계 진하게
+    line: Color(0xFFE6E6E3),
+    divider: Color(0xFFE3E3E0),
+    grabber: Color(0xFFD9D9D6),
+    newDot: Color(0xFFF0362B), // 선명한 빨강
+  );
+  static const paper = RgPalette(
+    bgApp: Color(0xFFF4F4F1),
+    bgReading: Color(0xFFFAFAF7),
+    surfaceCard: Color(0xFFFFFFFF),
+    fill: Color(0xFFEBEBE6),
+    line: Color(0xFFE4E4DF),
+    divider: Color(0xFFE4E4DF),
+    grabber: Color(0xFFD9D9D3),
+    newDot: Color(0xFFE0533A), // 로고 주황
+  );
+}
+
+// 지금 고른 바탕. 바꾸면 main.dart가 앱 전체를 다시 그린다. 저장은 storage.dart.
+final backdrop = ValueNotifier(Backdrop.white);
+RgPalette get _p => backdrop.value == Backdrop.paper ? RgPalette.paper : RgPalette.white;
 
 abstract class RgColors {
-  static const bgApp = Color(0xFFF4F4F1); // 따뜻한 종이 바탕(중립 회색과 비교 후 유지)
-  static const bgReading = Color(0xFFFAFAF7);
-  static const surfaceCard = Color(0xFFFFFFFF);
+  // 바탕에 따라 바뀌는 색(getter라 const 안에 쓸 수 없다)
+  static Color get bgApp => _p.bgApp;
+  static Color get bgReading => _p.bgReading;
+  static Color get surfaceCard => _p.surfaceCard; // 카드
+  static Color get fillBadgeOnCard => _p.fill;
+  static Color get fillBadgeOnBg => _p.fill;
+  static Color get fillNeutral => _p.fill;
+  static Color get fillSelected => _p.fill;
+  static Color get borderDefault => _p.line;
+  static Color get dividerCard => _p.divider;
+  static Color get dividerReading => _p.divider;
+  static Color get highlightOriginal => _p.fill; // 「함께」의 원문 쪽 용어는 옅은 회색
+  static Color get grabber => _p.grabber;
+  static Color get newDot => _p.newDot; // 새 글 점. 흑백 화면에서 유일한 포인트 색
+
+  // 두 바탕에 같은 색
+  static const surfaceRaised = Color(0xFFFFFFFF); // 늘 흰 면: 탭바, 시트, 세그먼트 선택 알약, 외곽선 버튼, 하단 버튼 줄
   static const textPrimary = Color(0xFF0E0E0D);
   static const textBody = Color(0xFF33332F);
   static const textSecondary = Color(0xFF6B6B65); // 바탕 대비 5.0:1
   static const textTertiary = Color(0xFF9B9B94); // 번호·셰브론 같은 장식만
-  static const fillBadgeOnCard = Color(0xFFEBEBE6);
-  static const fillBadgeOnBg = Color(0xFFE4E4DF);
-  static const fillNeutral = Color(0xFFEBEBE6);
-  static const fillSelected = Color(0xFFEBEBE6);
-  static const borderDefault = Color(0xFFE4E4DF);
-  static const dividerCard = Color(0xFFE4E4DF);
-  static const dividerReading = Color(0xFFE4E4DF);
   static const highlight = Color(0xFFFFEFA3); // 리더 용어(레퍼런스 011)
   static const highlightActive = Color(0xFFFFE27A);
-  static const highlightOriginal = Color(0xFFEBEBE6); // 「함께」의 원문 쪽 용어는 옅은 회색
   static const actionPrimary = Color(0xFF0E0E0D);
   static const onAction = Color(0xFFFFFFFF);
   static const onInkSecondary = Color(0xFFB9B9B2); // 다크 카드 위 보조 글자(8.6:1)
@@ -29,8 +78,6 @@ abstract class RgColors {
   static const lineOnInk = Color(0x24FFFFFF);
   static const tagOnInk = Color(0x1FFFFFFF); // 다크 카드 위 태그(흰 12%)
   static const overlayDim = Color(0x520E0E0D); // 0.32
-  static const grabber = Color(0xFFD9D9D3);
-  static const newDot = Color(0xFFE0533A); // 새 글 점. 흑백 화면에서 유일한 포인트 색
 }
 
 abstract class RgSpace {

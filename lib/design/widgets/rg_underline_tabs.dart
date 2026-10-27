@@ -19,7 +19,7 @@ class RgUnderlineTabs extends StatelessWidget {
   Widget build(BuildContext context) => ChromeTextScale(
     child: Container(
       margin: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
-      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: RgColors.borderDefault))),
+      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: RgColors.borderDefault))),
       child: Row(spacing: RgSpace.s20, children: [
         for (final (i, label) in labels.indexed)
           Semantics(

@@ -23,6 +23,7 @@ import 'package:rootgist/design/typography.dart';
 import 'package:rootgist/design/theme.dart';
 import 'package:rootgist/design/tokens.dart';
 import 'package:rootgist/design/widgets/rg_buttons.dart';
+import 'package:rootgist/design/widgets/rg_card.dart';
 import 'package:rootgist/design/widgets/rg_pressable.dart';
 import 'package:rootgist/design/widgets/rg_segmented.dart';
 import 'package:flutter/semantics.dart';
@@ -41,6 +42,7 @@ Future<void> pumpApp(WidgetTester tester) async {
   bookmarks.value = {};
   readerDefaultMode.value = ReaderMode.together;
   readerScale.value = 1.0;
+  backdrop.value = Backdrop.white;
   fixtureMode.value = FixtureMode.normal;
   exploreJump.value = null;
   // 새 글 점은 기본으로 끈다(따로 확인하는 테스트에서 켠다)
@@ -437,6 +439,13 @@ void main() {
     await tester.tap(find.text('업데이트 더 보기'));
     await settle(tester);
     expect(find.text('릴리스 노트 전체 보기'), findsOneWidget); // 공식 소식 칸의 「업데이트」
+    // 업데이트 카드는 어디를 눌러도 소식 상세로(실기기 QA: 본문을 눌러도 반응이 없어 새 글 점이 안 지워졌다)
+    await tester.tap(find.byType(RgCard).first);
+    await settle(tester);
+    expect(find.text('AI 요약'), findsWidgets);
+    expect(find.bySemanticsLabel('원문 열기'), findsOneWidget); // 소식 상세 상단 바
+    router.pop();
+    await settle(tester);
 
     router.go('/home');
     await settle(tester);
@@ -1025,6 +1034,43 @@ void main() {
     expect(MediaQuery.textScalerOf(tester.element(find.textContaining(keepAll('올라왔어요'), findRichText: true))).scale(1), 2);
     await tester.scrollUntilVisible(find.textContaining('편 모두 보기'), 300, scrollable: find.byType(Scrollable).first);
     expect(MediaQuery.textScalerOf(tester.element(find.textContaining('편 모두 보기'))).scale(1), 3.12);
+  });
+
+  testWidgets('화면 바탕: 기본은 흰색, 읽기 설정에서 「종이」를 고르면 앱 전체가 바로 바뀌고 저장된다', (tester) async {
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+    Color scaffoldBg() => Theme.of(tester.element(find.text('홈'))).scaffoldBackgroundColor;
+    expect(scaffoldBg(), const Color(0xFFFFFFFF));
+
+    router.go('/settings/reading');
+    await settle(tester);
+    expect(find.text('화면 바탕'), findsOneWidget);
+    await tester.tap(find.text('종이'));
+    await tester.pumpAndSettle();
+    expect(backdrop.value, Backdrop.paper);
+    expect(scaffoldBg(), RgPalette.paper.bgApp); // 다시 그려 새 색을 읽는다
+    // 라우터가 들고 있는 하위 페이지(읽기 설정)의 바탕도 따라 바뀐다(실기기 QA: 흰 바탕이 남아 카드가 안 보였다)
+    bool pageBg(Color c) => find
+        .ancestor(of: find.text('화면 바탕'), matching: find.byWidgetPredicate((w) => w is ColoredBox && w.color == c))
+        .evaluate()
+        .isNotEmpty;
+    expect(pageBg(RgPalette.paper.bgApp), isTrue);
+    expect(pageBg(RgPalette.white.bgApp), isFalse);
+    expect(tester.takeException(), isNull);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('settings.backdrop'), 'paper');
+
+    // 종이 바탕에서도 화면이 깨지지 않는다
+    for (final path in ['/home', '/explore', '/library', '/settings']) {
+      router.go(path);
+      await settle(tester);
+      expect(tester.takeException(), isNull, reason: path);
+    }
+    backdrop.value = Backdrop.white;
+    await tester.pumpAndSettle();
+    expect(scaffoldBg(), const Color(0xFFFFFFFF));
   });
 
   testWidgets('S1: 글자 크기 4단계가 S02 AI 요약·핵심 내용에도 적용된다', (tester) async {

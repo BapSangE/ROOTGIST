@@ -51,7 +51,7 @@ class RgSegmented<T> extends StatelessWidget {
               child: Container(
                 width: segW,
                 decoration: BoxDecoration(
-                  color: RgColors.surfaceCard,
+                  color: RgColors.surfaceRaised,
                   borderRadius: BorderRadius.circular(RgRadius.pill),
                   boxShadow: ink ? null : RgShadow.segment,
                 ),

@@ -254,7 +254,7 @@ class FeaturedNews extends StatelessWidget {
   Widget build(BuildContext context) {
     final n = news;
     return DecoratedBox(
-      decoration: BoxDecoration(border: divider ? const Border(bottom: BorderSide(color: RgColors.dividerCard)) : null),
+      decoration: BoxDecoration(border: divider ? Border(bottom: BorderSide(color: RgColors.dividerCard)) : null),
       child: Semantics(
         button: true,
         child: RgPressable(
@@ -369,21 +369,20 @@ class _NewsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final meta = newsMeta(news);
     final linkStyle = RgText.meta.copyWith(color: RgColors.textSecondary);
     final release = news.kind == 'release';
-    return RgCard(
+    // 카드 어디를 눌러도 소식 상세로(홈 「이번 주 바뀐 도구」와 같다). 상세가 열리면 새 글 점이 지워진다.
+    // 실기기 QA: 머리만 원문으로 열려 본문을 누르면 반응이 없었고, 원문을 열지 않으면 점이 남았다.
+    // 근거·릴리스 노트 링크와 공유·북마크는 제 동작이 먼저다.
+    return Semantics(
+      button: true,
+      child: RgPressable(
+        onTap: () => context.push('/news/${Uri.encodeComponent(news.id)}'),
+        child: RgCard(
       padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s18),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // 머리(출처·제목)는 누르면 원문으로. 오른쪽 위에 공유·북마크
-        Semantics(
-          link: true,
-          label: '$meta, ${news.titleKo ?? news.titleEn}, 원문 열기',
-          excludeSemantics: true,
-          onTap: _openCard,
-          child: RgPressable(
-            onTap: _openCard,
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s8, children: [
+        // 머리(출처·제목). 오른쪽 위에 공유·북마크
+        Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s8, children: [
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   NewsMetaLine(news: news),
@@ -396,11 +395,9 @@ class _NewsCard extends StatelessWidget {
                 ]),
               ),
               // 누르는 영역 44는 그대로 두고 모양만 카드 모서리 쪽으로(추천 카드와 같게)
-              // 업데이트 카드는 상세 화면이 없어 공유도 여기에
+              // 업데이트 카드는 목록에서 바로 공유도
               Transform.translate(offset: const Offset(RgSpace.s12, -RgSpace.s10), child: newsActions(news, share: true)),
             ]),
-          ),
-        ),
         if (news.summaryKo case final s?) ...[
           const SizedBox(height: RgSpace.s12),
           KeepAllText(s, perSentence: true, style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
@@ -423,13 +420,9 @@ class _NewsCard extends StatelessWidget {
           ),
         ],
       ]),
+        ),
+      ),
     );
-  }
-
-  // 업데이트 카드는 상세 없이 원문으로 간다: 열면 읽은 것으로
-  void _openCard() {
-    markRead(newsKey(news));
-    _open(news.url);
   }
 
   void _open(String url) => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);

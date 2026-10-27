@@ -11,7 +11,7 @@ Future<T?> showRgBottomSheet<T>(BuildContext context, {required WidgetBuilder bu
     context: context,
     useRootNavigator: true, // 탭 화면에서 열어도 떠 있는 탭바 위로 덮는다
     barrierColor: RgColors.overlayDim,
-    backgroundColor: RgColors.surfaceCard,
+    backgroundColor: RgColors.surfaceRaised,
     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(RgRadius.sheet))),
     isScrollControlled: true,
     useSafeArea: true,

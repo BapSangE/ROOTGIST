@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../design/tokens.dart';
 import 'repository.dart';
 import 'settings.dart';
 import 'unread.dart';
@@ -27,6 +28,7 @@ Future<void> initStorage() async {
   if (since == null) await prefs.setString('unread.since', newSince.toIso8601String());
   readItems.value = {...?prefs.getStringList('unread.read')};
   readerDefaultMode.value = ReaderMode.values.asNameMap()[prefs.getString('settings.readerMode')] ?? ReaderMode.together;
+  backdrop.value = Backdrop.values.asNameMap()[prefs.getString('settings.backdrop')] ?? Backdrop.white;
   final scale = prefs.getDouble('settings.readerScale');
   if (readerScales.any((s) => s.$1 == scale)) readerScale.value = scale!;
 
@@ -35,4 +37,5 @@ Future<void> initStorage() async {
   readItems.addListener(() => prefs.setStringList('unread.read', readItems.value.toList()));
   readerDefaultMode.addListener(() => prefs.setString('settings.readerMode', readerDefaultMode.value.name));
   readerScale.addListener(() => prefs.setDouble('settings.readerScale', readerScale.value));
+  backdrop.addListener(() => prefs.setString('settings.backdrop', backdrop.value.name));
 }

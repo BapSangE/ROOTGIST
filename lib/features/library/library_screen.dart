@@ -42,7 +42,7 @@ class LibraryScreen extends StatelessWidget {
                               constraints: const BoxConstraints(minHeight: 34),
                               padding: const EdgeInsets.symmetric(horizontal: RgSpace.s14, vertical: RgSpace.s6),
                               decoration: BoxDecoration(
-                                color: RgColors.surfaceCard,
+                                color: RgColors.surfaceRaised,
                                 borderRadius: BorderRadius.circular(RgRadius.pill),
                                 border: Border.all(color: RgColors.borderDefault),
                               ),
@@ -137,7 +137,7 @@ class LibraryScreen extends StatelessWidget {
       context: context,
       barrierColor: RgColors.overlayDim,
       builder: (d) => AlertDialog(
-        backgroundColor: RgColors.surfaceCard,
+        backgroundColor: RgColors.surfaceRaised,
         content: Text('저장한 항목 $n개를 모두 뺄까요?', style: RgText.bodySummary),
         actions: [
           TextButton(onPressed: () => Navigator.of(d).pop(false), child: const Text('취소')),
@@ -173,7 +173,7 @@ class _OutlineButton extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: RgSpace.minTouch),
           padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s10),
           decoration: BoxDecoration(
-            color: RgColors.surfaceCard,
+            color: RgColors.surfaceRaised,
             borderRadius: BorderRadius.circular(RgRadius.pill),
             border: Border.all(color: RgColors.borderDefault),
           ),

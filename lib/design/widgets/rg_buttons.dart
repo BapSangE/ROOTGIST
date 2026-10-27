@@ -133,7 +133,7 @@ class RgCircleButton extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: switch (variant) {
-                RgCircleVariant.outline => RgColors.surfaceCard,
+                RgCircleVariant.outline => RgColors.surfaceRaised,
                 RgCircleVariant.neutral => RgColors.fillNeutral,
                 RgCircleVariant.filled => RgColors.actionPrimary,
                 RgCircleVariant.plain => null,

@@ -13,7 +13,7 @@ class RgNewDot extends StatelessWidget {
     child: Container(
       width: size,
       height: size,
-      decoration: const BoxDecoration(color: RgColors.newDot, shape: BoxShape.circle),
+      decoration: BoxDecoration(color: RgColors.newDot, shape: BoxShape.circle),
     ),
   );
 }

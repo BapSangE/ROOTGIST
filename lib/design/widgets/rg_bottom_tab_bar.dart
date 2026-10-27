@@ -27,8 +27,8 @@ class RgBottomTabBar extends StatelessWidget {
     return ChromeTextScale(
       child: Container(
         padding: EdgeInsets.only(top: RgSpace.s6, bottom: bottom),
-        decoration: const BoxDecoration(
-          color: RgColors.surfaceCard,
+        decoration: BoxDecoration(
+          color: RgColors.surfaceRaised,
           border: Border(top: BorderSide(color: RgColors.borderDefault)),
         ),
         child: SizedBox(

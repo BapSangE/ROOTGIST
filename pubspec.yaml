@@ -96,9 +96,9 @@ flutter_launcher_icons:
   adaptive_icon_foreground: assets/branding/icon_foreground.png
 
 flutter_native_splash:
-  color: "#F4F4F1"
+  color: "#FFFFFF" # 기본 화면 바탕(흰색). 「종이」를 고른 사람도 스플래시는 흰색(iOS 고정 이미지)
   image: assets/branding/splash.png
   android_12:
-    color: "#F4F4F1"
+    color: "#FFFFFF"
     image: assets/branding/splash_android12.png
   web: false
