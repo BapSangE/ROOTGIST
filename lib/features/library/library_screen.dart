@@ -26,19 +26,28 @@ class LibraryScreen extends StatelessWidget {
               child: SizedBox(
                 height: RgSpace.topBar,
                 child: Padding(
-                  padding: const EdgeInsets.only(left: RgSpace.gutterText, right: RgSpace.s12),
+                  padding: const EdgeInsets.only(left: RgSpace.gutterText, right: RgSpace.gutterCard),
                   child: Row(children: [
-                    Expanded(child: Semantics(header: true, child: Text('보관함', style: RgText.titleDetail))),
+                    Expanded(child: Semantics(header: true, child: Text('보관함', style: RgText.display))),
                     if (list.isNotEmpty)
                       Semantics(
                         button: true,
                         child: RgPressable(
                           onTap: () => _confirmClear(context, list.length),
+                          // 외곽선 알약(보이는 34, 누르는 44)
                           child: Container(
                             height: RgSpace.minTouch,
-                            padding: const EdgeInsets.symmetric(horizontal: RgSpace.s8),
                             alignment: Alignment.center,
-                            child: Text('전체 비우기', style: secondary.copyWith(fontWeight: FontWeight.w500)),
+                            child: Container(
+                              constraints: const BoxConstraints(minHeight: 34),
+                              padding: const EdgeInsets.symmetric(horizontal: RgSpace.s14, vertical: RgSpace.s6),
+                              decoration: BoxDecoration(
+                                color: RgColors.surfaceCard,
+                                borderRadius: BorderRadius.circular(RgRadius.pill),
+                                border: Border.all(color: RgColors.borderDefault),
+                              ),
+                              child: Text('전체 비우기', style: secondary.copyWith(height: 1.3, fontWeight: FontWeight.w500, color: RgColors.textBody)),
+                            ),
                           ),
                         ),
                       ),
@@ -60,8 +69,8 @@ class LibraryScreen extends StatelessWidget {
               )
             else ...[
               Padding(
-                padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s4, RgSpace.gutterText, RgSpace.s24),
-                child: Text('이 기기에 저장한 항목 ${list.length}개', style: secondary),
+                padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s8, RgSpace.gutterText, RgSpace.s20),
+                child: Text('이 기기에 저장한 항목 ${list.length}개', style: RgText.meta.copyWith(fontSize: 15, color: RgColors.textSecondary)),
               ),
               RgCard(
                 child: Column(children: [
@@ -76,13 +85,13 @@ class LibraryScreen extends StatelessWidget {
                         visualSize: 36,
                         onTap: () => _remove(context, b),
                       ),
+                      // 위에 종류·출처 머리말, 아래에 저장일
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('${_kindKo(b.kind)} · ${b.source}', style: RgText.eyebrow.copyWith(color: RgColors.textSecondary)),
+                        const SizedBox(height: RgSpace.s4),
                         KeepAllText(b.title, style: RgText.titleList),
                         const SizedBox(height: RgSpace.s4),
-                        Text(
-                          '${_kindKo(b.kind)} · ${b.source} · ${b.savedAt.month}월 ${b.savedAt.day}일 저장',
-                          style: RgText.meta.copyWith(color: RgColors.textSecondary),
-                        ),
+                        Text('${b.savedAt.month}월 ${b.savedAt.day}일 저장', style: RgText.meta.copyWith(color: RgColors.textSecondary)),
                       ]),
                     ),
                 ]),
@@ -113,15 +122,12 @@ class LibraryScreen extends StatelessWidget {
   // 해제는 즉시 지우고 4초 동안 되돌릴 수 있다.
   void _remove(BuildContext context, Bookmark b) {
     toggleBookmark(b.id, b.title, source: b.source, kind: b.kind);
-    final bottom = MediaQuery.paddingOf(context).bottom;
+    // 검정 알림(테마 snackBarTheme). 탭바가 Scaffold.bottomNavigationBar라 알림은 그 위에 저절로 뜬다.
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(
         content: const Text('보관함에서 뺐어요'),
         duration: const Duration(seconds: 4),
-        behavior: SnackBarBehavior.floating,
-        // 떠 있는 탭바(64) 위로
-        margin: EdgeInsets.fromLTRB(RgSpace.gutterCard, 0, RgSpace.gutterCard, (bottom > 30 ? bottom : 30) + 64 + RgSpace.s8),
         action: SnackBarAction(label: '되돌리기', onPressed: () => restoreBookmark(b)),
       ));
   }

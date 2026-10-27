@@ -14,7 +14,6 @@ import '../../design/typography.dart';
 import '../../design/widgets/rg_buttons.dart';
 import '../../design/widgets/rg_card.dart';
 import '../../design/widgets/rg_pressable.dart';
-import '../../design/widgets/rg_segmented.dart';
 import '../reader/text_size_sheet.dart';
 import 'ai_notice_sheet.dart';
 
@@ -25,10 +24,10 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget group(String label, {bool first = false}) => Padding(
-          padding: EdgeInsets.fromLTRB(RgSpace.gutterText, first ? RgSpace.s20 : RgSpace.s28, RgSpace.gutterText, RgSpace.s8),
+          padding: EdgeInsets.fromLTRB(RgSpace.gutterText, first ? RgSpace.s24 : RgSpace.s28, RgSpace.gutterText, RgSpace.s8),
           child: Semantics(
             header: true,
-            child: Text(label, style: RgText.meta.copyWith(fontWeight: FontWeight.w500, color: RgColors.textSecondary)),
+            child: Text(label, style: RgText.caption.copyWith(fontWeight: FontWeight.w600, color: RgColors.textSecondary)),
           ),
         );
 
@@ -41,7 +40,7 @@ class SettingsScreen extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
               child: Row(children: [
-                Expanded(child: Semantics(header: true, child: Text('설정', style: RgText.titleDetail))),
+                Expanded(child: Semantics(header: true, child: Text('설정', style: RgText.display))),
                 if (kDebugMode)
                   TextButton(onPressed: () => context.push('/gallery'), child: const Text('위젯 갤러리')),
               ]),
@@ -54,6 +53,7 @@ class SettingsScreen extends StatelessWidget {
           ListenableBuilder(
             listenable: Listenable.merge([readerDefaultMode, readerScale]),
             builder: (_, _) => _Row(
+              icon: 'type',
               label: '읽기 설정',
               value: '${readerModeLabel(readerDefaultMode.value)} · ${readerScaleLabel(readerScale.value)}',
               onTap: () => context.go('/settings/reading'),
@@ -68,20 +68,18 @@ class SettingsScreen extends StatelessWidget {
             builder: (context, snap) => ValueListenableBuilder(
               valueListenable: readItems,
               builder: (context, _, _) =>
-                  _Row(label: '공지사항', dot: hasNewNotice(snap.data), onTap: () => context.go('/settings/notices')),
+                  _Row(icon: 'bell', label: '공지사항', dot: hasNewNotice(snap.data), onTap: () => context.go('/settings/notices')),
             ),
           ),
-          _Row(label: 'AI 생성 안내', onTap: () => showAiNoticeSheet(context)),
-          _Row(label: '데이터 출처', onTap: () => context.go('/settings/source')),
+          _Row(icon: 'sparkles', label: 'AI 생성 안내', onTap: () => showAiNoticeSheet(context)),
+          _Row(icon: 'layers', label: '데이터 출처', onTap: () => context.go('/settings/source')),
         ]),
         group('정보'),
         _SettingsCard(children: [
-          _Row(label: '개인정보 처리방침', onTap: () => context.go('/settings/privacy')),
-          _Row(
-            label: '문의하기',
-            onTap: () => _contact(context),
-          ),
-          _Row(label: '앱 버전', value: appVersion, chevron: false),
+          _Row(icon: 'file-text', label: '개인정보 처리방침', onTap: () => context.go('/settings/privacy')),
+          // 주소를 값으로 두면 좁은 칸에서 「gmail.c / om」처럼 갈라져, 원래처럼 셰브론만(누르면 메일 앱)
+          _Row(icon: 'mail', label: '문의하기', onTap: () => _contact(context)),
+          _Row(icon: 'info', label: '앱 버전', value: appVersion, chevron: false),
         ]),
         // M3 fixture 스위치: 8.1 상태를 재현한다. fixture로 띄운 디버그 빌드에만 보인다.
         if (kDebugMode && repository is FixtureRepository) ...[
@@ -102,7 +100,7 @@ class SettingsScreen extends StatelessWidget {
   }
 }
 
-// 설정 카드: 좌우 여백 20, 행 사이 dividerCard(안쪽 폭).
+// 설정 카드: 좌우 여백 16, 행 사이 dividerCard(아이콘 칸 뒤부터).
 class _SettingsCard extends StatelessWidget {
   const _SettingsCard({required this.children});
   final List<Widget> children;
@@ -110,20 +108,22 @@ class _SettingsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return RgCard(
-      padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20),
+      padding: const EdgeInsets.symmetric(horizontal: RgSpace.s16),
       child: Column(children: [
         for (final (i, c) in children.indexed) ...[
           c,
-          if (i < children.length - 1) const Divider(height: 1, thickness: 1, color: RgColors.dividerCard),
+          if (i < children.length - 1) const Divider(height: 1, thickness: 1, color: RgColors.dividerCard, indent: 44),
         ],
       ]),
     );
   }
 }
 
+// 설정 한 줄: 왼쪽 아이콘 칸(32, 모서리 9, fill) + 이름 + 값·새 글 점·셰브론.
 class _Row extends StatelessWidget {
-  const _Row({required this.label, this.value, this.onTap, this.chevron = true, this.dot = false});
+  const _Row({required this.label, required this.icon, this.value, this.onTap, this.chevron = true, this.dot = false});
   final String label;
+  final String icon;
   final String? value;
   final VoidCallback? onTap;
   final bool chevron;
@@ -134,7 +134,15 @@ class _Row extends StatelessWidget {
     final row = ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 56),
       child: Row(spacing: RgSpace.s4, children: [
-        Expanded(child: Text(label, style: RgText.titleList)),
+        Container(
+          width: 32,
+          height: 32,
+          margin: const EdgeInsets.only(right: RgSpace.s8),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(color: RgColors.fillNeutral, borderRadius: BorderRadius.circular(9)),
+          child: RgIcon(icon, size: 17, color: RgColors.textPrimary),
+        ),
+        Expanded(child: Text(label, style: RgText.titleList.copyWith(fontSize: 16, fontWeight: FontWeight.w500))),
         if (dot) const Padding(padding: EdgeInsets.only(right: RgSpace.s4), child: RgNewDot()),
         // 큰 글자에서 값(「함께 · 기본」)이 넘치지 않게 줄을 바꾼다. Expanded: Flexible이면 값이 가운데부터 놓였다
         if (value != null)
@@ -154,15 +162,12 @@ Future<void> _contact(BuildContext context) async {
   if (opened || !context.mounted) return;
   await Clipboard.setData(const ClipboardData(text: contactEmail));
   if (!context.mounted) return;
-  final bottom = MediaQuery.paddingOf(context).bottom;
+  // 탭바 위 검정 알림(S05 해제 알림과 같은 자리·모양, 테마 snackBarTheme)
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(
-      content: const Text('메일 앱을 열 수 없어 주소를 복사했어요 · $contactEmail'),
-      duration: const Duration(seconds: 4),
-      behavior: SnackBarBehavior.floating,
-      // 떠 있는 탭바(64) 위로(S05 해제 스낵바와 같은 자리)
-      margin: EdgeInsets.fromLTRB(RgSpace.gutterCard, 0, RgSpace.gutterCard, (bottom > 30 ? bottom : 30) + 64 + RgSpace.s8),
+    ..showSnackBar(const SnackBar(
+      content: Text('메일 앱을 열 수 없어 주소를 복사했어요 · $contactEmail'),
+      duration: Duration(seconds: 4),
     ));
 }
 
@@ -175,10 +180,10 @@ class ReadingSettingsScreen extends StatelessWidget {
     Widget card(String title, String sub, Widget child) => RgCard(
       padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s18),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Semantics(header: true, child: Text(title, style: RgText.titleList)),
-        const SizedBox(height: RgSpace.s4),
-        KeepAllText(sub, style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
-        const SizedBox(height: RgSpace.s14),
+        Semantics(header: true, child: Text(title, style: RgText.titleList.copyWith(fontWeight: FontWeight.w700))),
+        const SizedBox(height: RgSpace.s2),
+        KeepAllText(sub, style: RgText.meta.copyWith(color: RgColors.textSecondary)),
+        const SizedBox(height: RgSpace.s16),
         child,
       ]),
     );
@@ -201,11 +206,20 @@ class ReadingSettingsScreen extends StatelessWidget {
           '초록 리더를 열 때 처음 보이는 방식이에요',
           ValueListenableBuilder(
             valueListenable: readerDefaultMode,
-            builder: (_, mode, _) => RgSegmented(
-              options: const [(ReaderMode.together, '함께'), (ReaderMode.translation, '번역'), (ReaderMode.original, '원문')],
-              value: mode,
-              onChanged: (m) => readerDefaultMode.value = m,
-            ),
+            builder: (_, mode, _) => Column(children: [
+              for (final (i, (m, desc)) in const [
+                (ReaderMode.together, '번역 아래 원문을 맞대어 보여요'),
+                (ReaderMode.translation, '한국어 번역만 보여요'),
+                (ReaderMode.original, '영어 원문만 보여요'),
+              ].indexed)
+                _RadioRow(
+                  label: readerModeLabel(m),
+                  desc: desc,
+                  selected: m == mode,
+                  divider: i > 0,
+                  onTap: () => readerDefaultMode.value = m,
+                ),
+            ]),
           ),
         ),
         const SizedBox(height: RgSpace.s12),
@@ -213,6 +227,47 @@ class ReadingSettingsScreen extends StatelessWidget {
       ],
     );
   }
+}
+
+// 라디오 한 줄: 동그라미(고르면 검정 7pt 테두리) + 이름 + 설명. 행 전체를 누른다.
+class _RadioRow extends StatelessWidget {
+  const _RadioRow({required this.label, required this.desc, required this.selected, required this.divider, required this.onTap});
+  final String label, desc;
+  final bool selected, divider;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    inMutuallyExclusiveGroup: true,
+    checked: selected,
+    button: true,
+    child: RgPressable(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: RgSpace.s14),
+        decoration: BoxDecoration(border: divider ? const Border(top: BorderSide(color: RgColors.dividerCard)) : null),
+        child: Row(spacing: RgSpace.s12, children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            width: 22,
+            height: 22,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: selected
+                  ? Border.all(color: RgColors.textPrimary, width: 7)
+                  : Border.all(color: RgColors.textTertiary, width: 1.5),
+            ),
+          ),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(label, style: RgText.titleList),
+              KeepAllText(desc, style: RgText.meta.copyWith(color: RgColors.textSecondary)),
+            ]),
+          ),
+        ]),
+      ),
+    ),
+  );
 }
 
 // 데이터 출처 (G7, 시안 없음): 텍스트 화면.

@@ -76,15 +76,17 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
     Padding(
       padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s12, RgSpace.gutterText, 0),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        RgBadge(label: n.sourceLabel, onCard: false),
+        // 출처 배지 + 출처·종류·날짜 한 줄 → 제목 → 원제
+        Row(spacing: RgSpace.s8, children: [
+          SourceBadge(news: n, size: 28),
+          Expanded(child: Text(newsMeta(n), style: RgText.meta.copyWith(color: RgColors.textSecondary))),
+        ]),
         const SizedBox(height: RgSpace.s12),
         HeadingTextScale(child: Semantics(header: true, child: KeepAllText(n.titleKo ?? n.titleEn, style: RgText.titleDetail))),
         if (n.titleKo != null) ...[
           const SizedBox(height: RgSpace.s8),
           Text(n.titleEn, style: RgText.serifSubtitle.copyWith(color: RgColors.textSecondary)),
         ],
-        const SizedBox(height: RgSpace.s8),
-        Text(newsMeta(n), style: RgText.meta.copyWith(color: RgColors.textSecondary)),
       ]),
     ),
     const SizedBox(height: RgSpace.s24),
@@ -106,17 +108,13 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           if (n.summaryKo case final s?) ...[
             Semantics(header: true, child: Text('AI 요약', style: RgText.titleCard)),
-            const SizedBox(height: RgSpace.s8),
+            const SizedBox(height: RgSpace.s10),
             KeepAllText(s, perSentence: true, style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
           ],
           if (n.keyPoints.isNotEmpty) ...[
-            if (n.summaryKo != null)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: RgSpace.s16),
-                child: Divider(height: 1, thickness: 1, color: RgColors.dividerCard),
-              ),
+            if (n.summaryKo != null) const SizedBox(height: RgSpace.s24),
             Semantics(header: true, child: Text('핵심 내용', style: RgText.titleCard)),
-            const SizedBox(height: RgSpace.s10),
+            const SizedBox(height: RgSpace.s12),
             NewsPoints(news: n),
           ],
         ]),
@@ -196,8 +194,8 @@ class _ModelDetailScreenState extends State<ModelDetailScreen> {
         padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s12, RgSpace.gutterText, 0),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(spacing: RgSpace.s8, children: [
-            const RgBadge(label: '모델', onCard: false),
-            Text('트렌딩 ${m.rank}위', style: RgText.caption.copyWith(color: RgColors.textSecondary)),
+            const RgTag(label: '모델', inverted: true),
+            Text('트렌딩 ${m.rank}위', style: RgText.meta.copyWith(color: RgColors.textSecondary)),
           ]),
           const SizedBox(height: RgSpace.s12),
           HeadingTextScale(child: Semantics(header: true, child: Text(m.name, style: RgText.titleDetail))),
@@ -215,11 +213,24 @@ class _ModelDetailScreenState extends State<ModelDetailScreen> {
           Semantics(header: true, child: Text('한눈에', style: RgText.titleCard)),
           const SizedBox(height: RgSpace.s8),
           KeepAllText(modelLine(m), style: body),
-          const SizedBox(height: RgSpace.s6),
-          _Fact('하는 일', m.taskKo),
-          _Fact('크기', m.paramsKo ?? '공개된 정보 없음', muted: m.paramsKo == null),
-          _Fact('라이선스', m.licenseKo ?? '정보 없음', muted: m.licenseKo == null),
-          _Fact('반응', ['좋아요 ${countKo(m.likes ?? 0)}', '다운로드 ${countKo(m.downloads ?? 0)}'].join(' · '), last: true),
+          const SizedBox(height: RgSpace.s16),
+          // 하는 일 · 크기 · 라이선스 3칸(세로 가는 선으로 나눈다)
+          Container(
+            padding: const EdgeInsets.only(top: RgSpace.s14),
+            decoration: const BoxDecoration(border: Border(top: BorderSide(color: RgColors.dividerCard))),
+            child: IntrinsicHeight(
+              child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                _Stat('하는 일', m.taskKo, first: true),
+                _Stat('크기', m.paramsKo ?? '정보 없음', muted: m.paramsKo == null),
+                _Stat('라이선스', m.licenseKo ?? '정보 없음', muted: m.licenseKo == null),
+              ]),
+            ),
+          ),
+          const SizedBox(height: RgSpace.s16),
+          Wrap(spacing: RgSpace.s8, runSpacing: RgSpace.s6, children: [
+            RgTag(icon: 'heart', label: keepAll('좋아요 ${countKo(m.likes ?? 0)}'), height: 28),
+            RgTag(icon: 'download', label: keepAll('다운로드 ${countKo(m.downloads ?? 0)}'), height: 28),
+          ]),
         ]),
       ),
       const SizedBox(height: RgSpace.s12),
@@ -247,14 +258,15 @@ class _ModelDetailScreenState extends State<ModelDetailScreen> {
               ]),
             ),
           if (m.benchmarks.isNotEmpty) ...[
-            const SizedBox(height: RgSpace.s12),
-            Text('제작사 측정 점수', style: RgText.bodySmall.copyWith(fontWeight: FontWeight.w600)),
+            const SizedBox(height: RgSpace.s16),
+            Text('제작사 측정 점수', style: RgText.meta.copyWith(fontWeight: FontWeight.w600)),
+            const SizedBox(height: RgSpace.s4),
             for (final (i, (name, score)) in m.benchmarks.indexed)
               _Fact(name, score, sub: benchmarkKo(name), strong: true, last: i == m.benchmarks.length - 1),
           ],
           if (m.limitation case final l?) ...[
             const SizedBox(height: RgSpace.s16),
-            Text('제작사가 밝힌 한계', style: RgText.bodySmall.copyWith(fontWeight: FontWeight.w600)),
+            Text('제작사가 밝힌 한계', style: RgText.meta.copyWith(fontWeight: FontWeight.w600)),
             const SizedBox(height: RgSpace.s6),
             KeepAllText(l, style: RgText.bodySmall.copyWith(color: RgColors.textBody)),
           ],
@@ -325,10 +337,10 @@ class _TopBar extends StatelessWidget {
 }
 
 class _Fact extends StatelessWidget {
-  const _Fact(this.label, this.value, {this.sub, this.muted = false, this.strong = false, this.last = false});
+  const _Fact(this.label, this.value, {this.sub, this.strong = false, this.last = false});
   final String label, value;
   final String? sub; // 벤치마크 한국어 풀이
-  final bool muted, strong, last;
+  final bool strong, last;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -337,7 +349,7 @@ class _Fact extends StatelessWidget {
     child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s16, children: [
       Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label, style: RgText.bodySmall.copyWith(color: strong ? RgColors.textPrimary : RgColors.textSecondary)),
+          Text(label, style: strong ? RgText.titleList : RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
           // 「코 / 딩 능력」처럼 낱말 중간에서 갈라지지 않게
           if (sub != null) KeepAllText(sub!, style: RgText.meta.copyWith(color: RgColors.textSecondary)),
         ]),
@@ -348,12 +360,29 @@ class _Fact extends StatelessWidget {
           keepAll(value), // 「9.6 / 만」처럼 숫자와 단위가 갈라지지 않게
           semanticsLabel: value,
           textAlign: TextAlign.end,
-          style: strong
-              ? RgText.titleList.copyWith(fontWeight: FontWeight.w700)
-              : RgText.bodySmall.copyWith(color: muted ? RgColors.textSecondary : RgColors.textPrimary),
+          style: strong ? RgText.titleSection.copyWith(fontSize: 20, fontWeight: FontWeight.w800) : RgText.bodySmall,
         ),
       ),
     ]),
+  );
+}
+
+// 한눈에 한 칸: 작은 이름 + 굵은 값. 첫 칸이 아니면 왼쪽에 세로 가는 선.
+class _Stat extends StatelessWidget {
+  const _Stat(this.label, this.value, {this.first = false, this.muted = false});
+  final String label, value;
+  final bool first, muted;
+
+  @override
+  Widget build(BuildContext context) => Expanded(
+    child: Container(
+      padding: EdgeInsets.only(left: first ? 0 : RgSpace.s12, right: RgSpace.s4),
+      decoration: BoxDecoration(border: first ? null : const Border(left: BorderSide(color: RgColors.dividerCard))),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s2, children: [
+        Text(label, style: RgText.caption.copyWith(fontSize: 12.5, color: RgColors.textSecondary)),
+        KeepAllText(value, style: RgText.titleList.copyWith(color: muted ? RgColors.textSecondary : RgColors.textPrimary)),
+      ]),
+    ),
   );
 }
 

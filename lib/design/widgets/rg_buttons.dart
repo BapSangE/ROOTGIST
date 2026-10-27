@@ -6,12 +6,13 @@ import '../tokens.dart';
 import '../typography.dart';
 import 'rg_pressable.dart';
 
-// RgPrimaryButton: 카드 안 48(15/600), 하단 고정 56(16/600 + 주 버튼 그림자).
+// RgPrimaryButton: 카드 안 48(15/600), 하단 버튼 줄 50(16/600). 그림자 없음. icon은 글자 앞(「번역과 함께 초록 읽기」).
 class RgPrimaryButton extends StatelessWidget {
-  const RgPrimaryButton({super.key, required this.label, required this.onTap, this.floating = false});
+  const RgPrimaryButton({super.key, required this.label, required this.onTap, this.floating = false, this.icon});
   final String label;
   final VoidCallback? onTap;
   final bool floating;
+  final String? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -21,23 +22,31 @@ class RgPrimaryButton extends StatelessWidget {
         onTap: onTap,
         child: Container(
           // 고정 높이면 더 큰 텍스트에서 글자가 잘린다. 기본 크기에서는 48/56 그대로.
-          constraints: BoxConstraints(minHeight: floating ? 56 : 48),
+          constraints: BoxConstraints(minHeight: floating ? 50 : 48),
           padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s12),
-          alignment: Alignment.center,
           decoration: BoxDecoration(
             color: RgColors.actionPrimary,
             borderRadius: BorderRadius.circular(RgRadius.pill),
-            boxShadow: floating ? RgShadow.primaryFloating : null,
           ),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: RgText.bodySmall.copyWith(
-              fontSize: floating ? 16 : 15,
-              height: 1.2,
-              fontWeight: FontWeight.w600,
-              color: RgColors.onAction,
+          // 가로는 꽉, 세로는 글자만큼(heightFactor 1). alignment를 쓰면 높이 제한이 없는 하단 버튼 줄
+          // (Scaffold.bottomNavigationBar)에서 화면 높이를 다 차지했다.
+          child: Center(
+            heightFactor: 1,
+            child: Row(mainAxisSize: MainAxisSize.min, spacing: RgSpace.s8, children: [
+            if (icon != null) RgIcon(icon!, size: 20, color: RgColors.onAction),
+            Flexible(
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                style: RgText.bodySmall.copyWith(
+                  fontSize: floating ? 16 : 15,
+                  height: 1.2,
+                  fontWeight: FontWeight.w600,
+                  color: RgColors.onAction,
+                ),
+              ),
             ),
+          ]),
           ),
         ),
       ),
@@ -73,7 +82,7 @@ class RgNeutralButton extends StatelessWidget {
   }
 }
 
-enum RgCircleVariant { outline, neutral, filled, plain }
+enum RgCircleVariant { outline, neutral, filled, plain, glass }
 
 // RgCircleButton: 44×44(추천 카드 북마크 48), 아이콘 20. plain은 목록 행 북마크(배경 없음).
 class RgCircleButton extends StatelessWidget {
@@ -102,7 +111,8 @@ class RgCircleButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fg = iconColor ?? (variant == RgCircleVariant.filled ? RgColors.onAction : RgColors.textPrimary);
+    final fg = iconColor ??
+        (variant == RgCircleVariant.filled || variant == RgCircleVariant.glass ? RgColors.onAction : RgColors.textPrimary);
     return Semantics(
       container: true, // 행 탭 영역 안에 있어도 별도 노드로(행 이동과 북마크를 따로 조작)
       button: true,
@@ -127,6 +137,7 @@ class RgCircleButton extends StatelessWidget {
                 RgCircleVariant.neutral => RgColors.fillNeutral,
                 RgCircleVariant.filled => RgColors.actionPrimary,
                 RgCircleVariant.plain => null,
+                RgCircleVariant.glass => RgColors.glassOnInk,
               },
               border: variant == RgCircleVariant.outline ? Border.all(color: RgColors.borderDefault) : null,
             ),
@@ -175,6 +186,7 @@ class RgBookmarkButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final plain = variant == RgCircleVariant.plain;
+    final glass = variant == RgCircleVariant.glass; // 다크 카드 위: 저장되면 채운 아이콘만 바뀐다
     return RgCircleButton(
       semanticLabel: saved ? '저장됨, 북마크 해제' : '북마크에 저장',
       selected: saved,
@@ -182,7 +194,7 @@ class RgBookmarkButton extends StatelessWidget {
       icon: saved ? 'bookmark-filled' : 'bookmark',
       size: size,
       visualSize: visualSize,
-      variant: plain ? variant : (saved ? RgCircleVariant.filled : variant),
+      variant: plain || glass ? variant : (saved ? RgCircleVariant.filled : variant),
       iconColor: plain ? (saved ? RgColors.textPrimary : RgColors.textTertiary) : null,
     );
   }

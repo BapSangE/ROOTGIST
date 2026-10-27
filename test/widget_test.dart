@@ -149,7 +149,7 @@ void main() {
     addTearDown(tester.view.reset);
     await pumpApp(tester);
 
-    expect(find.text('논문 더 보기'), findsOneWidget); // 홈은 3편만 미리 보여 준다
+    expect(find.textContaining('편 모두 보기'), findsOneWidget); // 홈은 3편만 미리 보여 준다
 
     await tester.tap(find.bySemanticsLabel('북마크에 저장').first);
     await tester.pump();
@@ -211,10 +211,10 @@ void main() {
     router.push('/paper/0000.00001');
     await settle(tester);
     expect(find.text('Efficient Scaling of Inference-Time Compute'), findsOneWidget);
-    expect(find.text('원문 근거 · 초록 4번째 문장'), findsOneWidget);
+    expect(find.text('근거 · 초록 4번째 문장'), findsOneWidget); // 근거 알약
     expect(find.text('게시 조직'), findsNothing);
 
-    await tester.tap(find.text('원문 근거 · 초록 4번째 문장'));
+    await tester.tap(find.text('근거 · 초록 4번째 문장'));
     await tester.pumpAndSettle();
     expect(find.text('핵심 내용 3의 근거'), findsOneWidget);
     expect(find.text('On the example benchmark, the method uses 30% less compute at matched accuracy.'), findsOneWidget);
@@ -290,7 +290,7 @@ void main() {
     final en = find.byWidgetPredicate((w) => w is Text && w.textSpan?.style?.fontFamily == RgText.serif);
     expect(find.text('3'), findsOneWidget); // A03 문장 번호
     expect(find.byType(Divider), findsWidgets);
-    expect(tester.widget<Text>(en.first).textSpan!.style!.fontSize, 14);
+    expect(tester.widget<Text>(en.first).textSpan!.style!.fontSize, 15); // 리디자인: Reader EN 15/24
     // 원문은 번역 아래 왼쪽 세로선 안에
     expect(find.ancestor(of: en.first, matching: find.byWidgetPredicate((w) => w is Container && w.decoration is BoxDecoration && (w.decoration as BoxDecoration).border != null)), findsOneWidget);
   });
@@ -378,12 +378,12 @@ void main() {
     expect(find.text('트렌딩 1위'), findsOneWidget);
     expect(find.text('제작사가 내세운 강점'), findsOneWidget);
     expect(find.text(keepAll('가상의 코딩 에이전트용 모델이에요.')), findsOneWidget);
-    // 「한눈에」 값은 모두 오른쪽 끝에 맞춘다(짧은 값이 가운데부터 시작하지 않게)
-    final rights = [
+    // 「한눈에」 하는 일·크기·라이선스 3칸(리디자인). 칸들은 같은 줄 위에 나란히
+    final tops = [
       for (final v in ['텍스트 생성', '400억 파라미터', 'Apache-2.0'])
-        tester.getTopRight(find.text(keepAll(v))).dx,
+        tester.getTopLeft(find.text(keepAll(v))).dy,
     ];
-    expect(rights.toSet().length, 1, reason: '$rights');
+    expect(tops.toSet().length, 1, reason: '$tops');
     expect(find.text('SWE-bench Verified'), findsOneWidget);
     expect(find.text(keepAll('12.3%')), findsOneWidget);
     router.pop();
@@ -403,7 +403,7 @@ void main() {
     await settle(tester);
     expect(find.text('오늘의 주요 논문'), findsOneWidget);
     // 묶음 제목 문구 ①(피드백 3차), 연구소 소식만 출처 머리말
-    expect(find.text('OpenAI · Anthropic · Google'), findsOneWidget);
+    expect(find.text('OPENAI · ANTHROPIC · GOOGLE'), findsOneWidget); // 영문 대문자 머리말
     expect(find.text('연구소 소식'), findsOneWidget);
     expect(find.text('이번 주 바뀐 도구'), findsOneWidget);
     expect(find.text('요즘 많이 쓰는 모델'), findsOneWidget);
@@ -595,13 +595,15 @@ void main() {
 
     await tester.tap(find.text('탐색'));
     await settle(tester);
-    expect(find.text('수집이 늦어지고 있어요 · 마지막 정상 수집 09:00'), findsOneWidget);
+    // 큰 날짜 숫자 + 요일 옆에 편수·상태(리디자인)
+    expect(find.text(keepAll('수집이 늦어지고 있어요')), findsOneWidget);
+    expect(find.text('마지막 정상 수집 09:00'), findsOneWidget);
     await tester.tap(find.text('2026년 9월')); // 지난달은 접혀 있다
     await tester.pumpAndSettle();
-    expect(find.text('1편 · 기타'), findsOneWidget); // 단독이면 「외」 없음
+    expect(find.text('기타'), findsOneWidget); // 단독이면 「외」 없음
     expect(find.text(keepAll('10월 19일 월요일')), findsNothing); // 오늘 제외
 
-    await tester.tap(find.text(keepAll('10월 18일 일요일')));
+    await tester.tap(find.bySemanticsLabel(RegExp('^10월 18일 일요일')));
     await settle(tester);
     expect(find.bySemanticsLabel('뒤로'), findsOneWidget);
     expect(find.textContaining(keepAll('10월 18일 일요일'), findRichText: true), findsWidgets);
@@ -624,14 +626,15 @@ void main() {
     router.go('/library');
     await tester.pumpAndSettle();
     expect(find.text('이 기기에 저장한 항목 2개'), findsOneWidget);
-    expect(find.text('논문 · arXiv · 10월 19일 저장'), findsOneWidget);
+    expect(find.text('논문 · arXiv'), findsNWidgets(2)); // 종류·출처 머리말
+    expect(find.text('10월 19일 저장'), findsOneWidget);
 
     await tester.tap(find.bySemanticsLabel('저장됨, 북마크 해제').first); // 최신순 첫 행 = 10월 19일
     await tester.pumpAndSettle();
     expect(find.text('이 기기에 저장한 항목 1개'), findsOneWidget);
     await tester.tap(find.text('되돌리기'));
     await tester.pumpAndSettle();
-    expect(find.text('논문 · arXiv · 10월 19일 저장'), findsOneWidget); // 저장일 그대로 복원
+    expect(find.text('10월 19일 저장'), findsOneWidget); // 저장일 그대로 복원
 
     await tester.tap(find.text('전체 비우기'));
     await tester.pumpAndSettle();
@@ -650,8 +653,8 @@ void main() {
 
     router.go('/settings');
     await tester.pumpAndSettle();
-    // 설정 행의 값은 오른쪽 끝(카드 안쪽 354)에 맞춘다. 가운데부터 놓이던 회귀를 막는다
-    expect(tester.getTopRight(find.text(keepAll(appVersion))).dx, moreOrLessEquals(354, epsilon: 1));
+    // 설정 행의 값은 오른쪽 끝(카드 안쪽 390 − 16 − 16 = 358)에 맞춘다. 가운데부터 놓이던 회귀를 막는다
+    expect(tester.getTopRight(find.text(keepAll(appVersion))).dx, moreOrLessEquals(358, epsilon: 1));
     await tester.tap(find.text('읽기 설정')); // 초록 기본 보기·글자 크기는 하위 화면으로(피드백 13)
     await settle(tester);
     await tester.tap(find.text('원문'));
@@ -786,7 +789,7 @@ void main() {
     expect(find.textContaining(keepAll('10월 19일 월요일'), findRichText: true), findsOneWidget); // 헤드라인 날짜는 오늘
     expect(find.text(keepAll(byLine('주말에는 새 논문이 발표되지 않아요. 가장 최근인 10월 18일 일요일 논문을 보여 드려요.'))), findsOneWidget);
     expect(find.text('10월 18일 주요 논문'), findsOneWidget);
-    expect(find.text('논문 더 보기'), findsOneWidget);
+    expect(find.textContaining('편 모두 보기'), findsOneWidget);
 
     // 지연은 대체하지 않고 지금처럼 수집 안내만
     await tester.runAsync(() async {
@@ -795,7 +798,7 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 200));
     });
     await tester.pumpAndSettle();
-    expect(find.text('논문 더 보기'), findsNothing);
+    expect(find.textContaining('편 모두 보기'), findsNothing);
     expect(find.textContaining(keepAll('모으는'), findRichText: true), findsWidgets);
   });
 
@@ -843,7 +846,7 @@ void main() {
     expect(find.text('불러오지 못했어요'), findsOneWidget);
     await switchTo(FixtureMode.normal);
     await tester.pumpAndSettle();
-    expect(find.text('논문 더 보기'), findsOneWidget);
+    expect(find.textContaining('편 모두 보기'), findsOneWidget);
   });
 
   testWidgets('M3: 오프라인에서 보관함 → S02는 제목 블록 + 오류 카드(7.7)', (tester) async {
@@ -1020,8 +1023,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(MediaQuery.textScalerOf(tester.element(find.text('홈'))).scale(1), 1.35);
     expect(MediaQuery.textScalerOf(tester.element(find.textContaining(keepAll('올라왔어요'), findRichText: true))).scale(1), 2);
-    await tester.scrollUntilVisible(find.text('논문 더 보기'), 300, scrollable: find.byType(Scrollable).first);
-    expect(MediaQuery.textScalerOf(tester.element(find.text('논문 더 보기'))).scale(1), 3.12);
+    await tester.scrollUntilVisible(find.textContaining('편 모두 보기'), 300, scrollable: find.byType(Scrollable).first);
+    expect(MediaQuery.textScalerOf(tester.element(find.textContaining('편 모두 보기'))).scale(1), 3.12);
   });
 
   testWidgets('S1: 글자 크기 4단계가 S02 AI 요약·핵심 내용에도 적용된다', (tester) async {
@@ -1072,7 +1075,7 @@ void main() {
       final seg = tester.getSize(find.byType(RgSegmented<double>)).height;
       final chip = tester.getSize(find.byType(RgFilterChip)).height;
       if (scale == 1.0) {
-        expect((seg, chip), (40.0, RgSpace.minTouch)); // 기본 크기는 시안 그대로
+        expect((seg, chip), (46.0, RgSpace.minTouch)); // 기본 크기는 시안 그대로(리디자인 세그먼트 46)
       } else {
         expect(seg, greaterThanOrEqualTo(shown + 2 * RgSpace.s4));
         expect(seg, lessThanOrEqualTo(RgSpace.topBar));

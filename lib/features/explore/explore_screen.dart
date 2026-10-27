@@ -9,7 +9,7 @@ import '../../design/widgets/rg_card.dart';
 import '../../design/widgets/rg_pressable.dart';
 import '../../design/widgets/rg_states.dart';
 import '../../data/unread.dart';
-import '../../design/widgets/rg_new_dot.dart';
+import '../../design/widgets/rg_segmented.dart';
 import '../home/home_screen.dart';
 import 'official_news.dart';
 import 'trending_models.dart';
@@ -80,7 +80,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: Semantics(header: true, child: Text('탐색', style: RgText.titleDetail)),
+                  child: Semantics(header: true, child: Text('탐색', style: RgText.display)),
                 ),
               ),
             ),
@@ -89,11 +89,17 @@ class _ExploreScreenState extends State<ExploreScreen> {
             future: _news,
             builder: (context, snap) => ValueListenableBuilder(
               valueListenable: readItems,
-              builder: (context, _, _) => _Tabs(
-                labels: const ['논문', '공식 소식', '모델'],
-                selected: _tab,
-                dots: {if (hasNewNews(snap.data ?? const [])) 1},
-                onTap: (i) => _pages.animateToPage(i, duration: const Duration(milliseconds: 250), curve: Curves.easeOut),
+              // 알약 세그먼트(레퍼런스 006). 공식 소식 안 「발표 | 업데이트」는 밑줄 탭으로 위계를 나눈다.
+              builder: (context, _, _) => Padding(
+                padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s12, RgSpace.gutterText, RgSpace.s4),
+                child: ChromeTextScale(
+                  child: RgSegmented(
+                    options: const [(0, '논문'), (1, '공식 소식'), (2, '모델')],
+                    value: _tab,
+                    dots: {if (hasNewNews(snap.data ?? const [])) 1},
+                    onChanged: (i) => _pages.animateToPage(i, duration: const Duration(milliseconds: 250), curve: Curves.easeOut),
+                  ),
+                ),
               ),
             ),
           ),
@@ -144,7 +150,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
               ],
               if (months.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s40, RgSpace.gutterText, 0),
+                  padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s36, RgSpace.gutterText, 0),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s4, children: [
                     Semantics(header: true, child: Text('지난 논문', style: RgText.titleSection)),
                     Text('날짜를 누르면 그날의 논문을 볼 수 있어요', style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
@@ -198,45 +204,59 @@ class _MonthHeader extends StatelessWidget {
   }
 }
 
+// 지난 날짜 한 줄: 왼쪽에 큰 날짜 숫자 + 요일, 오른쪽에 편수·주제(또는 지연·없음).
 class _DayRow extends StatelessWidget {
   const _DayRow({required this.day, required this.last});
   final Digest day;
   final bool last;
 
+  static const _weekdays = ['월요일', '화요일', '수요일', '목요일', '금요일', '토요일', '일요일'];
+
   @override
   Widget build(BuildContext context) {
     final published = day.status == 'published';
-    final sub = switch (day.status) {
-      'published' => '${day.paperCount}편 · ${topicLabels[day.primaryTopic] ?? '기타'}${day.paperCount > 1 ? ' 외' : ''}',
-      'delayed' => '수집이 늦어지고 있어요${day.lastSuccessAt == null ? '' : ' · 마지막 정상 수집 ${kstTime(day.lastSuccessAt!)}'}',
-      _ => '이날은 올라온 논문이 없어요',
+    final empty = day.status == 'empty';
+    final (title, sub) = switch (day.status) {
+      'published' => ('${day.paperCount}편', '${topicLabels[day.primaryTopic] ?? '기타'}${day.paperCount > 1 ? ' 외' : ''}'),
+      'delayed' => ('수집이 늦어지고 있어요', day.lastSuccessAt == null ? null : '마지막 정상 수집 ${kstTime(day.lastSuccessAt!)}'),
+      _ => ('올라온 논문이 없어요', null),
     };
-    return RgListRow(
-      padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
-      crossAxisAlignment: CrossAxisAlignment.center,
-      showDivider: !last,
-      onTap: published ? () => context.go('/explore/${day.dateKey}') : null,
-      trailing: switch (day.status) {
-        'published' => const Padding(
-          padding: EdgeInsets.only(left: RgSpace.s4), // 시안 간격 12 = 행 기본 8 + 4
-          child: RgIcon('chevron-right', size: 20, color: RgColors.textTertiary),
-        ),
-        'delayed' => const Padding(
-          padding: EdgeInsets.only(left: RgSpace.s4),
-          child: RgBadge(label: '지연'),
-        ),
-        _ => null,
-      },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          KeepAllText(
-            koreanDate(day.date), // 큰 글자에서 「토 / 요일」로 갈라지지 않게
-            style: day.status == 'empty' ? RgText.titleList.copyWith(color: RgColors.textSecondary) : RgText.titleList,
+    final ink = empty ? RgColors.textSecondary : RgColors.textPrimary;
+    return Semantics(
+      label: koreanDate(day.date),
+      child: RgListRow(
+        padding: const EdgeInsets.fromLTRB(20, 14, 16, 14),
+        crossAxisAlignment: CrossAxisAlignment.center,
+        showDivider: !last,
+        onTap: published ? () => context.go('/explore/${day.dateKey}') : null,
+        trailing: switch (day.status) {
+          'published' => const Padding(
+            padding: EdgeInsets.only(left: RgSpace.s4), // 시안 간격 12 = 행 기본 8 + 4
+            child: RgIcon('chevron-right', size: 20, color: RgColors.textTertiary),
           ),
-          const SizedBox(height: RgSpace.s2),
-          Text(sub, style: RgText.meta.copyWith(color: RgColors.textSecondary)),
-        ],
+          'delayed' => const Padding(padding: EdgeInsets.only(left: RgSpace.s4), child: RgTag(label: '지연')),
+          _ => null,
+        },
+        child: Row(spacing: RgSpace.s16, children: [
+          ExcludeSemantics(
+            child: SizedBox(
+              width: 46,
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('${day.date.day}', style: RgText.titleDetail.copyWith(fontSize: 24, height: 1.1, fontWeight: FontWeight.w800, color: ink)),
+                Text(_weekdays[day.date.weekday - 1], style: RgText.caption.copyWith(fontSize: 12, color: RgColors.textSecondary)),
+              ]),
+            ),
+          ),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              KeepAllText(title, style: RgText.titleList.copyWith(color: ink)),
+              if (sub != null) ...[
+                const SizedBox(height: RgSpace.s2),
+                Text(sub, style: RgText.meta.copyWith(color: RgColors.textSecondary)),
+              ],
+            ]),
+          ),
+        ]),
       ),
     );
   }
@@ -251,54 +271,4 @@ List<(String, List<Digest>)> groupByMonth(List<Digest> days) {
     out.last.$2.add(d);
   }
   return out;
-}
-
-// 출처별 가로 탭(P9 시안): 글자 + 선택된 칸 아래 2pt 선, 전체 아래 구분선. 칸이 늘면 가로로 넘긴다.
-class _Tabs extends StatelessWidget {
-  const _Tabs({required this.labels, required this.selected, required this.onTap, this.dots = const {}});
-  final List<String> labels;
-  final int selected;
-  final Set<int> dots; // 새 글 점
-  final ValueChanged<int> onTap;
-
-  // 하단 탭바처럼 화면 틀이라 글자 배율은 1.35배에서 멈춘다(ChromeTextScale)
-  @override
-  Widget build(BuildContext context) {
-    return ChromeTextScale(child: _row());
-  }
-
-  Widget _row() {
-    return Container(
-      margin: const EdgeInsets.only(top: RgSpace.s4),
-      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: RgColors.borderDefault))),
-      padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
-      child: Row(spacing: RgSpace.s20, children: [
-        for (final (i, label) in labels.indexed)
-          Semantics(
-            button: true,
-            selected: i == selected,
-            child: RgPressable(
-              onTap: () => onTap(i),
-              child: Container(
-                constraints: const BoxConstraints(minHeight: RgSpace.minTouch),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  border: Border(bottom: BorderSide(color: i == selected ? RgColors.textPrimary : Colors.transparent, width: 2)),
-                ),
-                child: Row(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, spacing: 3, children: [
-                  Text(
-                    label,
-                    style: RgText.titleList.copyWith(
-                      fontWeight: i == selected ? FontWeight.w700 : FontWeight.w500,
-                      color: i == selected ? RgColors.textPrimary : RgColors.textSecondary,
-                    ),
-                  ),
-                  if (dots.contains(i)) const RgNewDot(),
-                ]),
-              ),
-            ),
-          ),
-      ]),
-    );
-  }
 }

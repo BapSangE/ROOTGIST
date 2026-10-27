@@ -91,8 +91,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 _headline(digest, fallback),
                 DigestPapers(digest: digest, fallback: fallback, limit: widget.date == null ? 3 : null, pastDay: widget.date != null),
                 if (widget.date == null) ...[
-                  if ((fallback ?? digest)?.papers.isNotEmpty ?? false)
-                    MoreLink(label: '논문 더 보기', onTap: () => openExplore(context, const ExploreJump(0))),
+                  if ((fallback ?? digest)?.papers case final ps? when ps.isNotEmpty)
+                    MoreLink(label: '논문 ${ps.length}편 모두 보기', pill: true, onTap: () => openExplore(context, const ExploreJump(0))),
                   FutureBuilder(future: _extras, builder: (context, s) => _extrasSection(context, s.data)),
                 ],
               ],
@@ -105,7 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _topBar(BuildContext context) => ChromeTextScale(
     child: SizedBox(
-      height: RgSpace.topBar,
+      height: widget.date == null ? 44 : RgSpace.topBar,
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: widget.date == null ? RgSpace.gutterText : RgSpace.gutterCard),
         // 뒤로 화살표는 원 없이 16pt 왼쪽으로 당겨져 있어(RgBackButton), 워드마크도 그만큼 당긴다
@@ -137,24 +137,17 @@ class _HomeScreenState extends State<HomeScreen> {
     final weekend = status == 'empty' && (date.weekday == DateTime.sunday || date.weekday == DateTime.monday);
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Padding(
-        padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s4, RgSpace.gutterText, 0),
-        child: HeadingTextScale(
-          child: Semantics(
-            header: true,
-            child: Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: '${keepAll(koreanDate(date))}\n', // 큰 글자에서 「25 / 일」로 갈라지지 않게
-                    style: const TextStyle(color: RgColors.textTertiary),
-                  ),
-                  TextSpan(text: keepAll(headline)),
-                ],
-              ),
-              style: RgText.displayHome,
-              semanticsLabel: '${koreanDate(date)} $headline', // 화면 읽기에는 숨은 문자 없이
-            ),
-          ),
+        padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s8, RgSpace.gutterText, 0),
+        // 날짜는 보조 글자 한 줄, 아래에 큰 표제(레퍼런스 013·006)
+        child: Semantics(
+          header: true,
+          label: '${koreanDate(date)} $headline', // 화면 읽기에는 숨은 문자 없이
+          excludeSemantics: true,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s6, children: [
+            // 큰 글자에서 「25 / 일」로 갈라지지 않게
+            KeepAllText(koreanDate(date), style: RgText.meta.copyWith(fontSize: 15, fontWeight: FontWeight.w500, color: RgColors.textSecondary)),
+            HeadingTextScale(child: KeepAllText(headline, style: RgText.displayHome)),
+          ]),
         ),
       ),
       if (fallback != null) ...[
@@ -206,7 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
         MoreLink(label: '업데이트 더 보기', onTap: () => openExplore(context, const ExploreJump(1, updates: true))),
       ],
       if (top.isNotEmpty) ...[
-        const SectionTitle('요즘 많이 쓰는 모델'),
+        const SectionTitle('요즘 많이 쓰는 모델', trailing: 'Hugging Face 트렌딩'),
         RgCard(child: Column(children: [for (final (i, m) in top.indexed) ModelRow(model: m, last: i == top.length - 1)])),
         MoreLink(label: '모델 더 보기', onTap: () => openExplore(context, const ExploreJump(2))),
       ],
@@ -221,24 +214,30 @@ void openExplore(BuildContext context, ExploreJump jump) {
 
 // 묶음 제목(홈 하이라이트, 탐색 논문 칸)
 // eyebrow: 제목 위 작은 머리말(출처 범위, 피드백 3차 C안). 예 「OpenAI · Anthropic · Google」
+// trailing: 오른쪽 끝 보조 글자(「Hugging Face 트렌딩」)
 class SectionTitle extends StatelessWidget {
-  const SectionTitle(this.text, {super.key, this.count, this.eyebrow});
+  const SectionTitle(this.text, {super.key, this.count, this.eyebrow, this.trailing});
   final String text;
   final String? count;
-  final String? eyebrow;
+  final String? eyebrow; // 영문 대문자 머리말(RgText.caps)
+  final String? trailing;
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s28, RgSpace.gutterText, RgSpace.s12),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s2, children: [
-      if (eyebrow != null) Text(eyebrow!, style: RgText.caption.copyWith(color: RgColors.textSecondary)),
+    padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s32, RgSpace.gutterText, RgSpace.s12),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s4, children: [
+      if (eyebrow != null)
+        Text(eyebrow!.toUpperCase(), semanticsLabel: eyebrow, style: RgText.caps.copyWith(color: RgColors.textSecondary)),
       Row(
         crossAxisAlignment: CrossAxisAlignment.baseline,
         textBaseline: TextBaseline.alphabetic,
-        spacing: RgSpace.s8,
+        spacing: RgSpace.s6,
         children: [
           Flexible(child: Semantics(header: true, child: Text(text, style: RgText.titleSection))),
-          if (count != null) Text(count!, style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
+          if (count != null) Text(count!, style: RgText.bodySmall.copyWith(fontWeight: FontWeight.w500, color: RgColors.textSecondary)),
+          // 큰 글자에서는 남는 폭 안에서 줄을 바꾼다(접근성 최대 글자에서 한 줄로 두면 넘쳤다)
+          if (trailing != null)
+            Expanded(child: Text(trailing!, textAlign: TextAlign.end, style: RgText.meta.copyWith(color: RgColors.textSecondary))),
         ],
       ),
     ]),
@@ -246,10 +245,12 @@ class SectionTitle extends StatelessWidget {
 }
 
 // 카드 밑 「… 더 보기 ›」(터치 44)
+// pill: 회색 알약(홈 「논문 N편 모두 보기」, 레퍼런스 013). 아니면 글자 링크.
 class MoreLink extends StatelessWidget {
-  const MoreLink({super.key, required this.label, required this.onTap});
+  const MoreLink({super.key, required this.label, required this.onTap, this.pill = false});
   final String label;
   final VoidCallback onTap;
+  final bool pill;
 
   @override
   Widget build(BuildContext context) => Align(
@@ -262,10 +263,20 @@ class MoreLink extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: RgSpace.minTouch),
           padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
           alignment: Alignment.centerRight,
-          child: Row(mainAxisSize: MainAxisSize.min, spacing: RgSpace.s2, children: [
-            Flexible(child: Text(label, style: RgText.bodySmall.copyWith(color: RgColors.textSecondary, fontWeight: FontWeight.w500))),
-            const RgIcon('chevron-right', size: 16, color: RgColors.textSecondary),
-          ]),
+          child: pill
+              ? Container(
+                  constraints: const BoxConstraints(minHeight: 34),
+                  padding: const EdgeInsets.fromLTRB(RgSpace.s14, RgSpace.s6, RgSpace.s10, RgSpace.s6),
+                  decoration: BoxDecoration(color: RgColors.fillNeutral, borderRadius: BorderRadius.circular(RgRadius.pill)),
+                  child: Row(mainAxisSize: MainAxisSize.min, spacing: RgSpace.s4, children: [
+                    Flexible(child: Text(label, style: RgText.meta.copyWith(height: 1.2, fontWeight: FontWeight.w600))),
+                    const RgIcon('chevron-right', size: 16, color: RgColors.textPrimary),
+                  ]),
+                )
+              : Row(mainAxisSize: MainAxisSize.min, spacing: RgSpace.s2, children: [
+                  Flexible(child: Text(label, style: RgText.meta.copyWith(color: RgColors.textSecondary, fontWeight: FontWeight.w500))),
+                  const RgIcon('chevron-right', size: 16, color: RgColors.textSecondary),
+                ]),
         ),
       ),
     ),
@@ -321,7 +332,7 @@ class _DigestPapersState extends State<DigestPapers> {
           ),
         ],
         if (view.featured case final p?) ...[
-          SizedBox(height: chips.isEmpty ? RgSpace.s20 : RgSpace.s16),
+          SizedBox(height: chips.isEmpty ? RgSpace.s24 : RgSpace.s16),
           _FeaturedCard(
             paper: p,
             label: day == null ? '오늘의 주요 논문' : '${day.date.month}월 ${day.date.day}일 주요 논문',
@@ -331,20 +342,24 @@ class _DigestPapersState extends State<DigestPapers> {
           if (limit == null)
             SectionTitle(widget.title ?? (day == null ? '새로 올라온 논문' : '그날 올라온 논문'), count: '${list.length}편')
           else
-            const SizedBox(height: RgSpace.s12),
-          RgCard(
-            child: Column(
+            const SizedBox(height: RgSpace.s8),
+          // 홈은 카드 없이 바탕 위 행 + 가는 선(레퍼런스 013), 탐색은 카드 안
+          (limit == null ? (Widget c) => RgCard(child: c) : (Widget c) => c)(
+            Column(
               children: [
                 for (final (i, p) in list.indexed)
                   RgListRow(
                     showDivider: i < list.length - 1,
+                    dividerInset: limit == null ? 0 : RgSpace.gutterText,
+                    // 카드 없는 행은 북마크 원이 화면 끝에 붙지 않게 오른쪽을 더 띄운다(보이는 원 오른쪽 16)
+                    padding: limit == null ? const EdgeInsets.fromLTRB(20, 18, 8, 18) : const EdgeInsets.fromLTRB(20, 18, 12, 18),
                     onTap: () => context.push('/paper/${p.id}'),
                     trailing: ItemActions(id: p.id, title: p.title, url: paperUrl(p.id)),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (_topic == null && p.topicLabel != null) ...[
-                          Text(p.topicLabel!, style: RgText.caption.copyWith(color: RgColors.textSecondary)),
+                          Text(p.topicLabel!, style: RgText.eyebrow.copyWith(color: RgColors.textSecondary)),
                           const SizedBox(height: RgSpace.s4),
                         ],
                         KeepAllText(p.title, style: RgText.titleList),
@@ -409,13 +424,13 @@ class _FeaturedCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bullets = paper.keyPoints.take(2); // G11
-    // iOS QA P5: 「자세히 읽기」 버튼 없이 카드 전체가 S02로(목록 행과 같은 방식). 공유·북마크는 오른쪽 위에 따로.
+    // iOS QA P5: 「자세히 읽기」 버튼 없이 카드 전체가 S02로(목록 행과 같은 방식). 북마크는 오른쪽 위에 따로.
+    // 다크 카드(레퍼런스 007·016): 그날 가장 중요한 논문 하나만 검정 면으로 띄운다.
     return Semantics(
       button: true,
       child: RgPressable(
         onTap: () => context.push('/paper/${paper.id}'),
-        child: RgCard(
-          padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s18),
+        child: RgDarkCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -424,35 +439,41 @@ class _FeaturedCard extends StatelessWidget {
                 spacing: RgSpace.s8,
                 children: [
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // 큰 글자에서 한 줄에 안 들어가면 다음 줄로
-                        Wrap(
-                          spacing: RgSpace.s8,
-                          runSpacing: RgSpace.s4,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            if (paper.topicLabel != null) RgBadge(label: paper.topicLabel!),
-                            Text(label, style: RgText.caption.copyWith(color: RgColors.textSecondary)),
-                          ],
-                        ),
-                        const SizedBox(height: RgSpace.s12),
-                        HeadingTextScale(child: KeepAllText(paper.title, style: RgText.titleFeatured)),
-                        const SizedBox(height: RgSpace.s6),
-                        KeepAllText('${paper.authors} · ${paper.date}', style: RgText.meta.copyWith(color: RgColors.textSecondary)),
-                      ],
+                    // 큰 글자에서 한 줄에 안 들어가면 다음 줄로
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: RgSpace.s6),
+                      child: Wrap(
+                        spacing: RgSpace.s8,
+                        runSpacing: RgSpace.s4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          if (paper.topicLabel != null) RgTag(label: paper.topicLabel!, onInk: true),
+                          Text(label, style: RgText.caption.copyWith(color: RgColors.onInkSecondary)),
+                        ],
+                      ),
                     ),
                   ),
                   // 누르는 영역 44는 그대로 두고 모양만 카드 모서리 쪽으로
                   Transform.translate(
-                    offset: const Offset(RgSpace.s12, -RgSpace.s10),
-                    child: ItemActions(id: paper.id, title: paper.title, url: paperUrl(paper.id)),
+                    offset: const Offset(RgSpace.s10, -RgSpace.s8),
+                    child: ValueListenableBuilder(
+                      valueListenable: bookmarks,
+                      builder: (_, saved, _) => RgBookmarkButton(
+                        saved: saved.containsKey(paper.id),
+                        variant: RgCircleVariant.glass,
+                        visualSize: 36,
+                        onTap: () => toggleBookmark(paper.id, paper.title),
+                      ),
+                    ),
                   ),
                 ],
               ),
+              const SizedBox(height: RgSpace.s8),
+              HeadingTextScale(child: KeepAllText(paper.title, style: RgText.titleFeatured.copyWith(color: RgColors.onAction))),
+              const SizedBox(height: RgSpace.s8),
+              KeepAllText('${paper.authors} · ${paper.date}', style: RgText.meta.copyWith(color: RgColors.onInkSecondary)),
               if (bullets.isNotEmpty) ...[
-                const SizedBox(height: RgSpace.s14),
+                const SizedBox(height: RgSpace.s16),
                 Column(
                   spacing: RgSpace.s6,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -465,9 +486,9 @@ class _FeaturedCard extends StatelessWidget {
                           Container(
                             width: 4,
                             height: 4,
-                            // 첫 줄(행간 23 × 글자 배율)의 가운데. 고정 10이면 큰 글자에서 점이 위로 뜬다(에뮬레이터 QA)
-                            margin: EdgeInsets.only(top: (MediaQuery.textScalerOf(context).scale(23) - 4) / 2),
-                            decoration: const BoxDecoration(color: RgColors.textBody, shape: BoxShape.circle),
+                            // 첫 줄(행간 22 × 글자 배율)의 가운데. 고정 10이면 큰 글자에서 점이 위로 뜬다(에뮬레이터 QA)
+                            margin: EdgeInsets.only(top: (MediaQuery.textScalerOf(context).scale(22) - 4) / 2),
+                            decoration: const BoxDecoration(color: RgColors.onInkSecondary, shape: BoxShape.circle),
                           ),
                           Expanded(
                             // 실제 핵심 내용은 3~5줄짜리 문장이라 카드가 길어진다(2026-10-22 실데이터). 항목당 2줄, 전문은 S02.
@@ -475,7 +496,7 @@ class _FeaturedCard extends StatelessWidget {
                               b,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              style: RgText.bodySummary.copyWith(color: RgColors.textBody),
+                              style: RgText.bodySmall.copyWith(color: RgColors.borderDefault),
                             ),
                           ),
                         ],

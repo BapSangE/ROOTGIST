@@ -19,4 +19,14 @@ final rgTheme = ThemeData(
   splashColor: Colors.transparent,
   highlightColor: Colors.transparent,
   dividerColor: RgColors.dividerCard,
+  // 되돌리기·안내 알림: 검정 면, 모서리 16, 탭바 위(Scaffold.bottomNavigationBar 위로 저절로 뜬다)
+  snackBarTheme: SnackBarThemeData(
+    backgroundColor: RgColors.actionPrimary,
+    contentTextStyle: RgText.bodySmall.copyWith(color: RgColors.onAction, fontWeight: FontWeight.w500),
+    actionTextColor: RgColors.onAction,
+    behavior: SnackBarBehavior.floating,
+    insetPadding: const EdgeInsets.fromLTRB(RgSpace.gutterCard, 0, RgSpace.gutterCard, RgSpace.s12),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(RgRadius.box)),
+    elevation: 0,
+  ),
 );

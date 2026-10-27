@@ -84,11 +84,14 @@ class _ReaderScreenState extends State<ReaderScreen> {
   Widget build(BuildContext context) {
     final padding = MediaQuery.paddingOf(context);
     final mq = MediaQuery.of(context);
+    // 하단 조절 바(레퍼런스 009): 떠 있는 검정 세그먼트(함께·번역·원문) + 「가」. 탭바는 없다(글에 집중).
+    final barBottom = padding.bottom > RgSpace.floatingBottom ? padding.bottom : RgSpace.floatingBottom;
     return Scaffold(
       backgroundColor: RgColors.bgReading,
-      body: Column(
+      body: Stack(children: [
+        Column(
         children: [
-          // 상단 바는 스크롤 밖에 두어 고정한다.
+          // 상단 바는 스크롤 밖에 두어 고정한다. 가운데에 「초록 · N문장」
           Container(
             color: RgColors.bgReading,
             padding: EdgeInsets.only(top: padding.top),
@@ -97,26 +100,25 @@ class _ReaderScreenState extends State<ReaderScreen> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
                 child: Row(
-                  spacing: RgSpace.s8,
                   children: [
                     RgBackButton(onTap: () => context.pop()),
                     Expanded(
-                      child: RgSegmented(
-                        options: const [
-                          (ReaderMode.together, '함께'),
-                          (ReaderMode.translation, '번역'),
-                          (ReaderMode.original, '원문'),
-                        ],
-                        value: _mode,
-                        onChanged: (m) => _keepPosition(() => setState(() => _mode = m)),
+                      child: ListenableBuilder(
+                        listenable: _req,
+                        builder: (context, _) => FutureBuilder(
+                          future: _req.future,
+                          builder: (context, snap) => Text(
+                            [
+                              '초록',
+                              if (snap.data case final p?) '${p.sentences.where((s) => s.kind == 'text').length}문장',
+                            ].join(' · '),
+                            textAlign: TextAlign.center,
+                            style: RgText.meta.copyWith(color: RgColors.textSecondary),
+                          ),
+                        ),
                       ),
                     ),
-                    RgCircleButton(
-                      semanticLabel: '글자 크기',
-                      text: '가',
-                      variant: RgCircleVariant.neutral,
-                      onTap: () => showTextSizeSheet(context),
-                    ),
+                    const SizedBox(width: RgSpace.minTouch - RgSpace.s16), // 뒤로 버튼(당겨진 폭)과 균형
                   ],
                 ),
               ),
@@ -164,19 +166,20 @@ class _ReaderScreenState extends State<ReaderScreen> {
                   }
                   return SingleChildScrollView(
                     controller: _scroll,
+                    // 아래 조절 바(52) 밑으로 마지막 문장이 가리지 않게
                     padding: EdgeInsets.fromLTRB(
                       RgSpace.gutterReader,
-                      RgSpace.s20,
+                      RgSpace.s8,
                       RgSpace.gutterReader,
-                      40 + padding.bottom,
+                      barBottom + 52 + RgSpace.s40,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('초록 · 원문과 번역', style: RgText.caption.copyWith(color: RgColors.textSecondary)),
-                        const SizedBox(height: RgSpace.s6),
                         HeadingTextScale(child: Semantics(header: true, child: KeepAllText(p.title, style: RgText.titleReader))),
-                        const SizedBox(height: RgSpace.s28),
+                        const SizedBox(height: RgSpace.s6),
+                        Text('원문과 번역을 문장마다 맞대어 읽어요', style: RgText.meta.copyWith(color: RgColors.textSecondary)),
+                        const SizedBox(height: RgSpace.s24),
                         // 글자 크기 단계는 본문에만, 시스템 글자 크기와 곱해서 적용한다.
                         MediaQuery(
                           data: mq.copyWith(textScaler: TextScaler.linear(mq.textScaler.scale(1) * readerScale.value)),
@@ -190,7 +193,56 @@ class _ReaderScreenState extends State<ReaderScreen> {
             ),
           ),
         ],
-      ),
+        ),
+        // 바 아래로 사라지는 글이 버튼과 겹쳐 보이지 않게 바탕색 페이드
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: barBottom + 52 + RgSpace.s40,
+          child: const IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0x00FAFAF7), RgColors.bgReading],
+                  stops: [0, 0.55],
+                ),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          left: RgSpace.gutterText,
+          right: RgSpace.gutterText,
+          bottom: barBottom,
+          child: ChromeTextScale(
+            child: Row(spacing: RgSpace.s8, children: [
+              Expanded(
+                child: RgSegmented(
+                  ink: true,
+                  height: 52,
+                  options: const [
+                    (ReaderMode.together, '함께'),
+                    (ReaderMode.translation, '번역'),
+                    (ReaderMode.original, '원문'),
+                  ],
+                  value: _mode,
+                  onChanged: (m) => _keepPosition(() => setState(() => _mode = m)),
+                ),
+              ),
+              RgCircleButton(
+                semanticLabel: '글자 크기',
+                text: '가',
+                size: 52,
+                variant: RgCircleVariant.filled,
+                onTap: () => showTextSizeSheet(context),
+              ),
+            ]),
+          ),
+        ),
+      ]),
     );
   }
 }
@@ -254,7 +306,8 @@ class _Pair extends StatelessWidget {
     final enStyle = mode == ReaderMode.together
         ? RgText.serifTogether.copyWith(color: RgColors.textBody)
         : RgText.serifOnly;
-    final enText = Text.rich(_highlighted(latexDisplay(sentence.text), highlights, enStyle, (s) => s));
+    // 「함께」에서 원문 쪽 용어는 옅은 회색(노란색은 번역문의 용어에만)
+    final enText = Text.rich(_highlighted(latexDisplay(sentence.text), highlights, enStyle, (s) => s, original: showKo));
     final body = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: RgSpace.s8,
@@ -292,7 +345,7 @@ class _Pair extends StatelessWidget {
   }
 
   // 한국어는 하이라이트 사이 조각마다 keepAll을 적용한다(위치는 원래 문자열 기준이라 먼저 나눈 뒤 변환).
-  TextSpan _highlighted(String text, List<Highlight> hs, TextStyle style, String Function(String) wrap) {
+  TextSpan _highlighted(String text, List<Highlight> hs, TextStyle style, String Function(String) wrap, {bool original = false}) {
     final spans = <InlineSpan>[];
     var at = 0;
     for (final (start, t, label) in hs) {
@@ -311,7 +364,7 @@ class _Pair extends StatelessWidget {
             textBaseline: TextBaseline.alphabetic,
             children: [
               // 한 줄보다 긴 용어(큰 글씨·좁은 화면)는 하이라이트 안에서 줄을 바꿀 수 있어야 한다
-              Flexible(child: _Term(term: t, label: label, style: style)),
+              Flexible(child: _Term(term: t, label: label, style: style, original: original)),
               if (suffix.isNotEmpty) Text(suffix, style: style, textScaler: TextScaler.noScaling),
             ],
           ),
@@ -324,13 +377,14 @@ class _Pair extends StatelessWidget {
   }
 }
 
-// 용어 하이라이트: highlight 배경, 모서리 4, 여백 3/1. 누름·시트 열림 동안 highlightActive.
+// 용어 하이라이트: 노란 highlight 배경(레퍼런스 011), 모서리 4, 여백 3/1. 누름·시트 열림 동안 highlightActive.
 // ponytail: WidgetSpan이라 여러 단어 용어가 줄 끝에서 통째로 다음 줄로 넘어간다. 시안처럼 쪼개려면 TextSpan 배경 + 직접 그리기.
 class _Term extends StatefulWidget {
-  const _Term({required this.term, required this.label, required this.style});
+  const _Term({required this.term, required this.label, required this.style, this.original = false});
   final GlossaryTerm term;
   final String label; // 화면에 보이는 표기(영문 원어 또는 한국어 대응어)
   final TextStyle style;
+  final bool original; // 번역 아래 대조용 원문(옅은 회색)
 
   @override
   State<_Term> createState() => _TermState();
@@ -358,7 +412,9 @@ class _TermState extends State<_Term> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
           decoration: BoxDecoration(
-            color: _active ? RgColors.highlightActive : RgColors.highlight,
+            color: _active
+                ? (widget.original ? RgColors.dividerCard : RgColors.highlightActive)
+                : (widget.original ? RgColors.highlightOriginal : RgColors.highlight),
             borderRadius: BorderRadius.circular(RgRadius.term),
           ),
           // 문장 Text.rich가 WidgetSpan 자리를 이미 글자 배율만큼 키우므로 여기서 또 키우지 않는다.

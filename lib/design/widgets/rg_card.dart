@@ -18,7 +18,6 @@ class RgCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: RgColors.surfaceCard,
           borderRadius: BorderRadius.circular(RgRadius.card),
-          boxShadow: RgShadow.card,
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(RgRadius.card),
@@ -39,6 +38,7 @@ class RgListRow extends StatelessWidget {
     this.showDivider = true,
     this.padding = const EdgeInsets.fromLTRB(20, 18, 8, 18),
     this.crossAxisAlignment = CrossAxisAlignment.start,
+    this.dividerInset = 0,
   });
   final Widget child;
   final Widget? trailing;
@@ -46,6 +46,7 @@ class RgListRow extends StatelessWidget {
   final bool showDivider;
   final EdgeInsets padding; // S04 날짜 행은 16/16/16/20
   final CrossAxisAlignment crossAxisAlignment; // S01·S05 북마크는 위 정렬, S04 날짜 행은 center
+  final double dividerInset; // 바탕 위 목록(홈 논문)은 20: 구분선이 글자 폭에만 걸친다
 
   @override
   Widget build(BuildContext context) {
@@ -73,8 +74,60 @@ class RgListRow extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         row,
-        const Divider(height: 1, thickness: 1, color: RgColors.dividerCard),
+        Divider(height: 1, thickness: 1, color: RgColors.dividerCard, indent: dividerInset, endIndent: dividerInset),
       ],
+    );
+  }
+}
+
+// 다크 카드(레퍼런스 007·016): 화면에서 가장 중요한 것 하나만 검정 면으로. 오늘의 주요 논문, 트렌딩 1위.
+class RgDarkCard extends StatelessWidget {
+  const RgDarkCard({super.key, required this.child, this.padding = const EdgeInsets.all(RgSpace.s22)});
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
+    child: Container(
+      padding: padding,
+      decoration: BoxDecoration(color: RgColors.actionPrimary, borderRadius: BorderRadius.circular(RgRadius.cardDark)),
+      child: child,
+    ),
+  );
+}
+
+// 태그: 높이 24, fill 알약, 아이콘 + 글자(주제·라이선스·반응·버전·「지연」). onInk면 다크 카드 위(흰 12%).
+class RgTag extends StatelessWidget {
+  const RgTag({super.key, required this.label, this.icon, this.onInk = false, this.inverted = false, this.height = 24});
+  final String label;
+  final String? icon;
+  final bool onInk;
+  final bool inverted; // 검정 면 흰 글자(상세 화면 머리의 주제)
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = onInk || inverted ? RgColors.onAction : RgColors.textBody;
+    return Container(
+      constraints: BoxConstraints(minHeight: height), // 고정 높이면 큰 글자에서 잘린다
+      padding: const EdgeInsets.symmetric(horizontal: RgSpace.s10, vertical: RgSpace.s4),
+      decoration: BoxDecoration(
+        color: inverted ? RgColors.actionPrimary : (onInk ? RgColors.tagOnInk : RgColors.fillNeutral),
+        borderRadius: BorderRadius.circular(RgRadius.pill),
+      ),
+      // 아이콘도 글자 안에 넣는다: Row + Flexible이면 목록 행 오른쪽처럼 폭 제한이 없는 자리에서 배치가 깨진다
+      child: Text.rich(
+        TextSpan(children: [
+          if (icon != null)
+            WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
+              child: Padding(padding: const EdgeInsets.only(right: 5), child: RgIcon(icon!, size: 14, color: fg)),
+            ),
+          TextSpan(text: label),
+        ]),
+        style: RgText.caption.copyWith(fontSize: 12.5, height: 1.25, fontWeight: FontWeight.w500, color: fg),
+      ),
     );
   }
 }
@@ -100,4 +153,26 @@ class RgBadge extends StatelessWidget {
       ),
     );
   }
+}
+
+// 출처 머리글자 배지처럼 쓰는 34×34 네모(모서리 10, fill).
+class RgSquareBadge extends StatelessWidget {
+  const RgSquareBadge({super.key, required this.text, this.size = 34});
+  final String text;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => ExcludeSemantics(
+    child: Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(color: RgColors.fillNeutral, borderRadius: BorderRadius.circular(RgRadius.badge)),
+      child: Text(
+        text,
+        textScaler: TextScaler.noScaling, // 상자 크기가 고정이라 글자도 고정
+        style: RgText.caption.copyWith(fontSize: size < 32 ? 11 : 12, fontWeight: FontWeight.w700, color: RgColors.textBody),
+      ),
+    ),
+  );
 }

@@ -9,7 +9,7 @@ import '../../design/typography.dart';
 import '../../design/widgets/rg_buttons.dart';
 import '../../design/widgets/rg_card.dart';
 import '../../design/widgets/rg_pressable.dart';
-import '../../design/widgets/rg_segmented.dart';
+import '../../design/widgets/rg_underline_tabs.dart';
 import '../../design/widgets/rg_states.dart';
 import '../../data/unread.dart';
 import '../../design/widgets/rg_new_dot.dart';
@@ -62,17 +62,15 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
         builder: (context, snap) => ListView(
           padding: const EdgeInsets.only(bottom: RgSpace.bottomScrollInset),
           children: [
-            const SizedBox(height: RgSpace.s16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
-              child: RgSegmented(
-                options: const [(false, '발표'), (true, '업데이트')],
-                value: _updates,
-                onChanged: (v) => setState(() {
-                  _updates = v;
-                  _source = null;
-                }),
-              ),
+            const SizedBox(height: RgSpace.s12),
+            // 밑줄 탭: 위 알약 세그먼트(논문·공식 소식·모델)와 위계를 나눈다
+            RgUnderlineTabs(
+              labels: const ['발표', '업데이트'],
+              selected: _updates ? 1 : 0,
+              onTap: (i) => setState(() {
+                _updates = i == 1;
+                _source = null;
+              }),
             ),
             ...switch (snap) {
               AsyncSnapshot(hasError: true) => [
@@ -104,7 +102,7 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
     final sources = {for (final n in kind) n.source: n.sourceLabel}.entries.toList()..sort((a, b) => a.value.compareTo(b.value));
     final shown = [for (final n in kind) if (_source == null || n.source == _source) n];
     return [
-      const SizedBox(height: RgSpace.s12),
+      const SizedBox(height: RgSpace.s14),
       SizedBox(
         height: RgFilterChip.touchHeight(context),
         child: ListView(
@@ -164,6 +162,10 @@ class NewsRow extends StatelessWidget {
             NewsMetaLine(news: n),
             const SizedBox(height: RgSpace.s4),
             KeepAllText(n.titleKo ?? n.titleEn, style: RgText.titleList),
+            if (n.thin) ...[
+              const SizedBox(height: RgSpace.s8),
+              const RgTag(label: '원문 소개문만'),
+            ],
           ]),
         ),
       ]),
@@ -189,14 +191,19 @@ class RelatedRow extends StatelessWidget {
         padding: EdgeInsets.only(top: 2, right: RgSpace.s12),
         child: RgIcon('chevron-right', size: 18, color: RgColors.textTertiary),
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(newsMeta(n), style: RgText.caption.copyWith(color: RgColors.textSecondary)),
-        const SizedBox(height: RgSpace.s4),
-        KeepAllText(n.titleKo ?? n.titleEn, style: RgText.titleList),
-        if (hint != null) ...[
-          const SizedBox(height: RgSpace.s4),
-          KeepAllText(hint, style: RgText.bodySmall.copyWith(color: RgColors.textBody)),
-        ],
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s12, children: [
+        SourceBadge(news: n),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(newsMeta(n), style: RgText.meta.copyWith(color: RgColors.textSecondary)),
+            const SizedBox(height: RgSpace.s2),
+            KeepAllText(n.titleKo ?? n.titleEn, style: RgText.titleList),
+            if (hint != null) ...[
+              const SizedBox(height: RgSpace.s4),
+              KeepAllText(hint, style: RgText.bodySmall.copyWith(color: RgColors.textBody)),
+            ],
+          ]),
+        ),
       ]),
     );
   }
@@ -216,10 +223,11 @@ String? relatedHint(OfficialNews related, OfficialNews about) {
   return null;
 }
 
-// 출처 머리글자 배지 32×32(모서리 8, fillNeutral). 로고 대신 글자(상표·이미지 권리 부담 없이 출처를 구분).
+// 출처 머리글자 배지 34×34(모서리 10, fill). 로고 대신 글자(상표·이미지 권리 부담 없이 출처를 구분).
 class SourceBadge extends StatelessWidget {
-  const SourceBadge({super.key, required this.news});
+  const SourceBadge({super.key, required this.news, this.size = 34});
   final OfficialNews news;
+  final double size;
 
   static const _initials = {
     'openai': 'OA',
@@ -233,19 +241,7 @@ class SourceBadge extends StatelessWidget {
   };
 
   @override
-  Widget build(BuildContext context) => ExcludeSemantics(
-    child: Container(
-      width: 32,
-      height: 32,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(color: RgColors.fillNeutral, borderRadius: BorderRadius.circular(8)),
-      child: Text(
-        _initials[news.source] ?? news.sourceLabel.substring(0, 2),
-        textScaler: TextScaler.noScaling, // 상자 크기가 고정이라 글자도 고정
-        style: RgText.caption.copyWith(fontWeight: FontWeight.w600, color: RgColors.textBody),
-      ),
-    ),
-  );
+  Widget build(BuildContext context) => RgSquareBadge(text: _initials[news.source] ?? news.sourceLabel.substring(0, 2), size: size);
 }
 
 // 홈 「연구소 소식」 맨 위 대표 글(피드백 3차 C안): 출처 줄 → 제목(카드 제목 크기) → 요약 두 줄까지. 오른쪽 위 북마크.
@@ -305,6 +301,7 @@ class UpdateRow extends StatelessWidget {
       // 태그는 trailing이 아니라 같은 줄의 Flexible: 큰 글자에서 「v2.1.310 · 7건」이 길어지면 줄을 바꿔 들어간다
       // 이름 3 : 태그 2. 태그는 제 칸 안에서 오른쪽 끝에(Flexible만 쓰면 칸 가운데부터 놓였다)
       child: Row(spacing: RgSpace.s8, children: [
+        Padding(padding: const EdgeInsets.only(right: RgSpace.s4), child: SourceBadge(news: n)),
         Expanded(
           flex: 3,
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -320,11 +317,7 @@ class UpdateRow extends StatelessWidget {
           flex: 2,
           child: Align(
             alignment: Alignment.centerRight,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: RgSpace.s8, vertical: RgSpace.s4),
-              decoration: BoxDecoration(color: RgColors.fillNeutral, borderRadius: BorderRadius.circular(RgRadius.pill)),
-              child: KeepAllText(releaseTag(n), style: RgText.caption.copyWith(color: RgColors.textBody), textAlign: TextAlign.center),
-            ),
+            child: RgTag(label: keepAll(releaseTag(n))),
           ),
         ),
       ]),
@@ -454,12 +447,11 @@ class NewsPoints extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final linkStyle = RgText.meta.copyWith(color: RgColors.textSecondary);
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s10, children: [
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s14, children: [
       for (final (i, p) in news.keyPoints.indexed)
         // 번호는 본문과 같은 15pt, 간격 8(S02 핵심 내용과 같다)
         Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s8, children: [
-          Text('${i + 1}', style: RgText.bodySummary.copyWith(fontWeight: FontWeight.w600, color: RgColors.textSecondary)),
+          Text('${i + 1}', style: RgText.bodySummary.copyWith(fontWeight: FontWeight.w700)),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               KeepAllText(p.text, style: RgText.bodySummary),
@@ -471,13 +463,7 @@ class NewsPoints extends StatelessWidget {
                   onTap: () => _open(news.evidenceUrl(p)),
                   child: RgPressable(
                     onTap: () => _open(news.evidenceUrl(p)),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(minHeight: 36),
-                      child: Row(mainAxisSize: MainAxisSize.min, spacing: RgSpace.s2, children: [
-                        Flexible(child: Text('근거 · ${_evidence(p)}', style: linkStyle)),
-                        const RgIcon('chevron-right', size: 14, color: RgColors.textSecondary),
-                      ]),
-                    ),
+                    child: EvidencePill(label: '근거 · ${_evidence(p)}'),
                   ),
                 ),
             ]),
@@ -490,4 +476,25 @@ class NewsPoints extends StatelessWidget {
   String _evidence(NewsPoint p) => news.source == 'openai' ? '원문 소개문' : '원문 ${p.para}번째 문단';
 
   void _open(String url) => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+}
+
+// 근거 알약(핵심 내용 아래): 인용 아이콘 + 「근거 · 초록 2번째 문장」. 보이는 높이 30, 누르는 높이 44.
+class EvidencePill extends StatelessWidget {
+  const EvidencePill({super.key, required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    constraints: const BoxConstraints(minHeight: RgSpace.minTouch),
+    alignment: Alignment.centerLeft,
+    child: Container(
+      constraints: const BoxConstraints(minHeight: 30),
+      padding: const EdgeInsets.symmetric(horizontal: RgSpace.s10, vertical: RgSpace.s6),
+      decoration: BoxDecoration(color: RgColors.fillNeutral, borderRadius: BorderRadius.circular(RgRadius.pill)),
+      child: Row(mainAxisSize: MainAxisSize.min, spacing: RgSpace.s4, children: [
+        const RgIcon('quote', size: 14, color: RgColors.textBody),
+        Flexible(child: Text(label, style: RgText.caption.copyWith(height: 1.25, fontWeight: FontWeight.w500, color: RgColors.textBody))),
+      ]),
+    ),
+  );
 }

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../tokens.dart';
 import 'rg_pressable.dart';
 
-// RgBottomSheet: 상단 모서리 28, 여백 위10/좌우24/아래40, 손잡이 36×5, 최대 높이 85%.
+// RgBottomSheet: 상단 모서리 30, 여백 위10/좌우24/아래40, 손잡이 38×5, 최대 높이 85%. 시트는 탭바도 덮는다.
 // 바깥 탭·뒤로가기·아래 스와이프로 닫힘(showModalBottomSheet 기본 동작). 「닫기」 버튼은 두지 않는다(피드백).
 // 화면 읽기 사용자는 밀어 내리기를 하기 어려워, 손잡이를 「닫기」 버튼으로 읽히게 하고 누르면 닫는다.
 Future<T?> showRgBottomSheet<T>(BuildContext context, {required WidgetBuilder builder}) {
@@ -35,7 +35,7 @@ Future<T?> showRgBottomSheet<T>(BuildContext context, {required WidgetBuilder bu
                 height: 24,
                 child: Center(
                   child: Container(
-                    width: 36,
+                    width: 38,
                     height: 5,
                     decoration: BoxDecoration(color: RgColors.grabber, borderRadius: BorderRadius.circular(3)),
                   ),

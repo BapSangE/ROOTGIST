@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1254 1254" role="img" aria-labelledby="title desc">
+  <title id="title">ROOTGIST</title>
+  <desc id="desc">An open book and leaf symbol in charcoal with a vermilion folded corner.</desc>
+  <rect id="background" width="1254" height="1254" fill="#F4F4F1"/>
+  <g id="rootgist-symbol">
+    <path id="left-page" fill="#0E0E0D" d="M300 317 C372 300 524 365 578 435 C611 480 619 530 619 582 L619 799 C619 863 620 905 627 938 C603 850 550 831 405 776 C331 746 300 682 300 589 Z"/>
+    <path id="right-page" fill="#0E0E0D" d="M627 938 C638 875 635 750 636 663 C635 628 637 608 644 593 C680 532 796 513 814 492 C833 471 824 393 857 379 C882 366 927 397 954 426 L954 607 C954 704 928 751 877 783 C825 816 666 849 627 938 Z"/>
+    <path id="fold" fill="#E0533A" d="M644 593 C663 548 691 517 734 477 L840 388 Q848 381 857 379 C824 393 833 471 814 492 C796 513 680 532 644 593 Z"/>
+  </g>
+</svg>

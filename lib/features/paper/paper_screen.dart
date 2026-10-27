@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
@@ -13,6 +11,7 @@ import '../../design/widgets/rg_buttons.dart';
 import '../../design/widgets/rg_card.dart';
 import '../../design/widgets/rg_pressable.dart';
 import '../../design/widgets/rg_states.dart';
+import '../explore/official_news.dart' show EvidencePill;
 import '../reader/text_size_sheet.dart';
 import '../settings/ai_notice_sheet.dart';
 import 'evidence_sheet.dart';
@@ -38,16 +37,17 @@ class _PaperScreenState extends State<PaperScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bottom = math.max(RgSpace.floatingBottom, MediaQuery.paddingOf(context).bottom);
-    return Scaffold(
-      body: ListenableBuilder(
+    return ListenableBuilder(
         listenable: _req,
         builder: (context, _) => FutureBuilder(
           future: _req.future,
           builder: (context, snap) {
             final p = snap.data;
             final savedTitle = bookmarks.value[widget.paperId]?.title; // 7.7 오프라인에서 보관함으로 들어온 경우
-            return Stack(
+            // 하단 버튼 줄(A안): 탭바 바로 위에 붙고 탭바와는 가는 선 하나로 나뉜다. 주 버튼은 해설이 있을 때만.
+            return Scaffold(
+              bottomNavigationBar: p == null ? null : _Dock(paper: p),
+              body: Stack(
               children: [
                 Positioned.fill(
                   child: ListView(
@@ -77,22 +77,11 @@ class _PaperScreenState extends State<PaperScreen> {
                   height: MediaQuery.paddingOf(context).top,
                   child: const ColoredBox(color: RgColors.bgApp),
                 ),
-                if (p != null && p.ready)
-                  Positioned(
-                    left: RgSpace.gutterCard,
-                    right: RgSpace.gutterCard,
-                    bottom: bottom,
-                    child: RgPrimaryButton(
-                      label: '번역과 함께 초록 읽기',
-                      floating: true,
-                      onTap: () => context.push('/paper/${p.id}/reader'),
-                    ),
-                  ),
               ],
+              ),
             );
           },
         ),
-      ),
     );
   }
 
@@ -104,17 +93,22 @@ class _PaperScreenState extends State<PaperScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (p.topicLabel != null) ...[
-              RgBadge(label: p.topicLabel!, onCard: false),
-              const SizedBox(height: RgSpace.s14),
-            ],
+            Wrap(spacing: RgSpace.s8, runSpacing: RgSpace.s4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+              if (p.topicLabel != null) RgTag(label: p.topicLabel!, inverted: true),
+              Text('arXiv ${p.id}', style: secondary),
+            ]),
+            const SizedBox(height: RgSpace.s16),
             HeadingTextScale(child: Semantics(header: true, child: KeepAllText(p.title, style: RgText.titleDetail))),
             if (p.ready && p.titleKo != null) ...[
               const SizedBox(height: RgSpace.s8),
-              Text(p.titleEn, style: RgText.serifSubtitle.copyWith(color: RgColors.textBody)),
+              Text(p.titleEn, style: RgText.serifSubtitle.copyWith(color: RgColors.textSecondary)),
             ],
-            const SizedBox(height: RgSpace.s10),
-            KeepAllText('${p.authorLine} · ${p.date} 발행', style: secondary),
+            const SizedBox(height: RgSpace.s16),
+            // 메타 알약(레퍼런스 018): 저자 · 발행일
+            Wrap(spacing: RgSpace.s6, runSpacing: RgSpace.s6, children: [
+              _MetaPill(icon: 'users', label: p.authorLine),
+              _MetaPill(icon: 'calendar', label: '${p.date} 발행'),
+            ]),
           ],
         ),
       ),
@@ -141,8 +135,11 @@ class _PaperScreenState extends State<PaperScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Semantics(header: true, child: Text('AI 요약', style: RgText.titleCard)),
-                const SizedBox(height: RgSpace.s8),
+                Row(children: [
+                  Expanded(child: Semantics(header: true, child: Text('AI 요약', style: RgText.titleCard))),
+                  Text('초록 기반', style: RgText.meta.copyWith(color: RgColors.textSecondary)),
+                ]),
+                const SizedBox(height: RgSpace.s12),
                 // G4: 전문은 그대로 보이되, 실제 요약은 15줄 안팎 한 덩어리라 문장마다 문단을 나눈다.
                 Column(
                   spacing: RgSpace.s8,
@@ -154,13 +151,13 @@ class _PaperScreenState extends State<PaperScreen> {
                 ),
                 if (p.keyPoints.isNotEmpty) ...[
                   const Padding(
-                    padding: EdgeInsets.symmetric(vertical: RgSpace.s16),
+                    padding: EdgeInsets.symmetric(vertical: RgSpace.s20),
                     child: Divider(height: 1, thickness: 1, color: RgColors.dividerCard),
                   ),
                   Semantics(header: true, child: Text('핵심 내용', style: RgText.titleCard)),
-                  const SizedBox(height: RgSpace.s10),
+                  const SizedBox(height: RgSpace.s12),
                   Column(
-                    spacing: RgSpace.s14,
+                    spacing: RgSpace.s12,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       for (final (i, k) in p.keyPoints.take(3).indexed) _KeyPointItem(paper: p, index: i + 1, point: k),
@@ -287,21 +284,9 @@ class _TopBar extends StatelessWidget {
             children: [
               RgBackButton(onTap: () => context.pop()),
               const Spacer(),
-              if (p != null) ...[
-                // AI 카드 글자 크기(S03과 같은 4단계). 카드가 있을 때만(iOS QA)
-                if (p.ready)
-                  RgCircleButton(semanticLabel: '글자 크기', text: '가', onTap: () => showTextSizeSheet(context)),
-                RgCircleButton(
-                  semanticLabel: '공유',
-                  icon: 'share',
-                  onTap: () => SharePlus.instance.share(ShareParams(text: '${p.title}\n${p.hfUrl}')),
-                ),
-                ValueListenableBuilder(
-                  valueListenable: bookmarks,
-                  builder: (_, saved, _) =>
-                      RgBookmarkButton(saved: saved.containsKey(p.id), onTap: () => toggleBookmark(p.id, p.title)),
-                ),
-              ],
+              // AI 카드 글자 크기(S03과 같은 4단계). 카드가 있을 때만(iOS QA). 공유·북마크는 하단 버튼 줄로 옮겼다.
+              if (p != null && p.ready)
+                RgCircleButton(semanticLabel: '글자 크기', text: '가', onTap: () => showTextSizeSheet(context)),
             ],
           ),
         ),
@@ -319,17 +304,13 @@ class _KeyPointItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final n = sentenceNumber(point.evidenceIds.first);
-    final linkStyle = RgText.meta.copyWith(color: RgColors.textSecondary);
     void open() => showEvidenceSheet(context, paper: paper, pointIndex: index, sentenceId: point.evidenceIds.first);
     // 번호는 본문과 같은 15pt·같은 행간, 간격 8(피드백: 번호가 작고 내용과 너무 떨어져 보였다)
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: RgSpace.s8,
       children: [
-        Text(
-          '$index',
-          style: RgText.bodySummary.copyWith(fontWeight: FontWeight.w600, color: RgColors.textSecondary),
-        ),
+        Text('$index', style: RgText.bodySummary.copyWith(fontWeight: FontWeight.w700)),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -340,20 +321,7 @@ class _KeyPointItem extends StatelessWidget {
                 label: '원문 근거, 초록 $n번째 문장',
                 excludeSemantics: true,
                 onTap: open, // excludeSemantics가 하위의 탭 동작까지 지우므로 직접 넘긴다
-                child: RgPressable(
-                  onTap: open,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 36),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      spacing: RgSpace.s2,
-                      children: [
-                        Flexible(child: Text('원문 근거 · 초록 $n번째 문장', style: linkStyle)),
-                        const RgIcon('chevron-right', size: 14, color: RgColors.textSecondary),
-                      ],
-                    ),
-                  ),
-                ),
+                child: RgPressable(onTap: open, child: EvidencePill(label: '근거 · 초록 $n번째 문장')),
               ),
             ],
           ),
@@ -412,3 +380,66 @@ class _InfoRow extends StatelessWidget {
 // 요약을 문장 단위 문단으로. 한글·닫는 괄호 뒤 마침표 다음 공백에서만 나눠 「3.0배」 같은 수치는 건드리지 않는다.
 List<String> summaryParagraphs(String s) =>
     s.trim().split(RegExp(r'(?<=[가-힣)\]][.!?])\s+')).where((p) => p.isNotEmpty).toList();
+
+// 머리의 메타 알약: 흰 면 + 가는 외곽선, 아이콘 + 글자(저자·발행일).
+class _MetaPill extends StatelessWidget {
+  const _MetaPill({required this.icon, required this.label});
+  final String icon, label;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    constraints: const BoxConstraints(minHeight: 30),
+    padding: const EdgeInsets.symmetric(horizontal: RgSpace.s10, vertical: RgSpace.s4),
+    decoration: BoxDecoration(
+      color: RgColors.surfaceCard,
+      borderRadius: BorderRadius.circular(RgRadius.pill),
+      border: Border.all(color: RgColors.borderDefault),
+    ),
+    child: Row(mainAxisSize: MainAxisSize.min, spacing: 5, children: [
+      RgIcon(icon, size: 14, color: RgColors.textBody),
+      Flexible(child: KeepAllText(label, style: RgText.caption.copyWith(height: 1.3, fontWeight: FontWeight.w500, color: RgColors.textBody))),
+    ]),
+  );
+}
+
+// 하단 버튼 줄(A안): 「번역과 함께 초록 읽기」 + 공유 + 북마크. 흰 면, 위 가는 선, 안쪽 위아래 10·좌우 16.
+class _Dock extends StatelessWidget {
+  const _Dock({required this.paper});
+  final PaperDetail paper;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = paper;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard, vertical: RgSpace.s10),
+      decoration: const BoxDecoration(
+        color: RgColors.surfaceCard,
+        border: Border(top: BorderSide(color: RgColors.borderDefault)),
+      ),
+      child: Row(spacing: RgSpace.s8, children: [
+        if (p.ready)
+          Expanded(
+            child: RgPrimaryButton(
+              label: '번역과 함께 초록 읽기',
+              icon: 'book',
+              floating: true,
+              onTap: () => context.push('/paper/${p.id}/reader'),
+            ),
+          )
+        else
+          const Spacer(),
+        RgCircleButton(
+          semanticLabel: '공유',
+          icon: 'share',
+          size: 50,
+          onTap: () => SharePlus.instance.share(ShareParams(text: '${p.title}\n${p.hfUrl}')),
+        ),
+        ValueListenableBuilder(
+          valueListenable: bookmarks,
+          builder: (_, saved, _) =>
+              RgBookmarkButton(saved: saved.containsKey(p.id), size: 50, onTap: () => toggleBookmark(p.id, p.title)),
+        ),
+      ]),
+    );
+  }
+}

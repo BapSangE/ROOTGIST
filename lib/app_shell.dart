@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -65,20 +63,20 @@ final router = GoRouter(
         ]),
       ],
     ),
-    // 공식 소식·모델 상세도 논문 상세처럼 쉘 위로 푸시한다. 탐색 탭 안에 두면 홈·보관함에서 열었을 때
+    // 공식 소식·모델 상세도 논문 상세처럼 쉘 위로 푸시한다. 탭바는 _detailPage가 따로 단다(들어온 탭 그대로). 탐색 탭 안에 두면 홈·보관함에서 열었을 때
     // 탭이 탐색으로 바뀌고 뒤로 가기가 탐색으로 갔다(실기기 QA). id는 encodeComponent(모델 id에 / 가 있다).
     GoRoute(
       path: '/news/:id',
-      pageBuilder: (_, state) => _page(state, NewsDetailScreen(id: Uri.decodeComponent(state.pathParameters['id']!))),
+      pageBuilder: (_, state) => _detailPage(state, NewsDetailScreen(id: Uri.decodeComponent(state.pathParameters['id']!))),
     ),
     GoRoute(
       path: '/model/:id',
-      pageBuilder: (_, state) => _page(state, ModelDetailScreen(id: Uri.decodeComponent(state.pathParameters['id']!))),
+      pageBuilder: (_, state) => _detailPage(state, ModelDetailScreen(id: Uri.decodeComponent(state.pathParameters['id']!))),
     ),
-    // S02·S03은 탭바 없이 쉘 위로 푸시된다(7.0).
+    // S02는 쉘 위로 푸시되지만 탭바는 남는다(리디자인). S03 리더는 글에 집중하도록 탭바 없이.
     GoRoute(
       path: '/paper/:id',
-      pageBuilder: (_, state) => _page(state, PaperScreen(paperId: state.pathParameters['id']!)),
+      pageBuilder: (_, state) => _detailPage(state, PaperScreen(paperId: state.pathParameters['id']!)),
       routes: [
         // ?s=문장ID: C01에서 들어오면 그 문장 쌍으로 스크롤
         GoRoute(
@@ -97,14 +95,17 @@ final router = GoRouter(
   ],
 );
 
-// 탭바는 본문 위에 떠 있다(HANDOFF 9.3). 하단 띄움 = max(30, SafeArea 하단).
+// 지금 쉘. 쉘 위로 푸시된 상세 화면이 같은 탭바를 그리고 탭을 바꿀 때 쓴다.
+final currentShell = ValueNotifier<StatefulNavigationShell?>(null);
+
+// 탭바는 바닥에 붙는다(Ink & Paper). 본문은 탭바 위에서 끝나고, 알림(SnackBar)도 그 위에 뜬다.
 class AppShell extends StatelessWidget {
   const AppShell({super.key, required this.shell});
   final StatefulNavigationShell shell;
 
   @override
   Widget build(BuildContext context) {
-    final bottom = math.max(RgSpace.floatingBottom, MediaQuery.paddingOf(context).bottom);
+    currentShell.value = shell;
     return Scaffold(
       body: Stack(
         children: [
@@ -117,18 +118,39 @@ class AppShell extends StatelessWidget {
             height: MediaQuery.paddingOf(context).top,
             child: const ColoredBox(color: RgColors.bgApp),
           ),
-          Positioned(
-            left: RgSpace.gutterCard,
-            right: RgSpace.gutterCard,
-            bottom: bottom,
-            // 새 글 점은 탭바에 달지 않는다(피드백: 「해야 할 일」처럼 보인다). 설정 탭 안 공지사항 행에만.
-            child: RgBottomTabBar(
-              tabs: _tabs,
-              currentIndex: shell.currentIndex,
-              onTap: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
-            ),
-          ),
         ],
+      ),
+      // 새 글 점은 탭바에 달지 않는다(피드백: 「해야 할 일」처럼 보인다). 설정 탭 안 공지사항 행에만.
+      bottomNavigationBar: RgBottomTabBar(
+        tabs: _tabs,
+        currentIndex: shell.currentIndex,
+        onTap: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
+      ),
+    );
+  }
+}
+
+// 쉘 위로 푸시된 상세(논문·소식·모델)에도 같은 탭바를 단다. 들어온 탭이 계속 선택돼 있다.
+// 탭을 누르면 상세를 모두 닫고 그 탭으로 간다. 지금 탭을 누르면 그 탭의 첫 화면으로(iOS 관례).
+Page<void> _detailPage(GoRouterState state, Widget child) => _page(state, _WithTabBar(child: child));
+
+class _WithTabBar extends StatelessWidget {
+  const _WithTabBar({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final shell = currentShell.value;
+    if (shell == null) return child; // 딥링크로 바로 열려 쉘이 아직 없을 때
+    return Scaffold(
+      body: child,
+      bottomNavigationBar: RgBottomTabBar(
+        tabs: _tabs,
+        currentIndex: shell.currentIndex,
+        onTap: (i) {
+          Navigator.of(context, rootNavigator: true).popUntil((r) => r.isFirst);
+          shell.goBranch(i, initialLocation: i == shell.currentIndex);
+        },
       ),
     );
   }

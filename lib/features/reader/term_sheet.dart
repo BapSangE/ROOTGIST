@@ -13,7 +13,7 @@ Future<void> showTermSheet(BuildContext context, GlossaryTerm t) {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: RgSpace.s4), // 손잡이(누르는 높이 24) 아래
-        Text('용어', style: RgText.caption.copyWith(color: RgColors.textSecondary)),
+        Text('용어', style: RgText.meta.copyWith(color: RgColors.textSecondary)),
         const SizedBox(height: RgSpace.s6),
         HeadingTextScale(child: Semantics(header: true, child: Text(t.term, style: RgText.serifTerm))),
         // 약어면 정식 명칭 한 줄(예: SLAM → Simultaneous Localization and Mapping)
@@ -30,7 +30,7 @@ Future<void> showTermSheet(BuildContext context, GlossaryTerm t) {
           padding: EdgeInsets.symmetric(vertical: RgSpace.s18),
           child: Divider(height: 1, thickness: 1, color: RgColors.dividerCard),
         ),
-        Text('이 논문에서의 뜻', style: RgText.caption.copyWith(color: RgColors.textSecondary)),
+        Text('이 논문에서의 뜻', style: RgText.meta.copyWith(fontWeight: FontWeight.w600, color: RgColors.textSecondary)),
         const SizedBox(height: RgSpace.s6),
         KeepAllText(t.definition, style: RgText.bodyDefinition),
       ],
