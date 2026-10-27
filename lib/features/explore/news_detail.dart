@@ -91,7 +91,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
           if (n.summaryKo case final s?) ...[
             Semantics(header: true, child: Text('AI 요약', style: RgText.titleCard)),
             const SizedBox(height: RgSpace.s8),
-            KeepAllText(s, style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
+            KeepAllText(s, perSentence: true, style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
           ],
           if (n.keyPoints.isNotEmpty) ...[
             if (n.summaryKo != null)
@@ -206,7 +206,7 @@ class _ModelDetailScreenState extends State<ModelDetailScreen> {
           if (m.strengths.isEmpty && m.benchmarks.isEmpty)
             KeepAllText(
               m.arxiv != null ? '제작사가 모델 카드에 강점이나 평가 결과를 밝히지 않았어요. 연결된 논문에서 확인해 보세요.' : '제작사가 모델 카드에 강점이나 평가 결과를 밝히지 않았어요.',
-              style: body.copyWith(color: RgColors.textSecondary),
+              perSentence: true, style: body.copyWith(color: RgColors.textSecondary),
             ),
           for (final s in m.strengths)
             Padding(
@@ -284,7 +284,7 @@ class _TopBar extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
         child: Row(spacing: RgSpace.s8, children: [
-          RgCircleButton(semanticLabel: '뒤로', icon: 'chevron-left', onTap: () => context.pop()),
+          RgBackButton(onTap: () => context.pop()),
           const Spacer(),
           if (url case final u?)
             RgCircleButton(
@@ -341,7 +341,7 @@ class _Note extends StatelessWidget {
     padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
     child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s6, children: [
       const Padding(padding: EdgeInsets.only(top: 2), child: RgIcon('info', size: 14, color: RgColors.textSecondary)),
-      Expanded(child: KeepAllText(text, style: RgText.caption.copyWith(color: RgColors.textSecondary))),
+      Expanded(child: KeepAllText(text, perSentence: true, style: RgText.caption.copyWith(color: RgColors.textSecondary))),
     ]),
   );
 }

@@ -9,14 +9,14 @@ abstract class RgText {
   static const serif = 'SourceSerif4';
 
   static TextStyle _s(double size, double lh, FontWeight w, double ls, {bool isSerif = false}) => TextStyle(
-        fontFamily: isSerif ? serif : sans,
-        fontFamilyFallback: isSerif ? const ['Georgia'] : sansFallback,
-        fontSize: size,
-        height: lh / size,
-        fontWeight: w,
-        letterSpacing: ls,
-        color: RgColors.textPrimary,
-      );
+    fontFamily: isSerif ? serif : sans,
+    fontFamilyFallback: isSerif ? const ['Georgia'] : sansFallback,
+    fontSize: size,
+    height: lh / size,
+    fontWeight: w,
+    letterSpacing: ls,
+    color: RgColors.textPrimary,
+  );
 
   static final displayHome = _s(30, 39, FontWeight.w700, -0.4);
   static final titleDetail = _s(26, 35, FontWeight.w700, -0.3);
@@ -42,17 +42,38 @@ abstract class RgText {
 // HANDOFF 9.3: Flutter에 keep-all이 없어 어절 안 글자 사이에 word joiner(U+2060)를 넣는다.
 String keepAll(String s) => s.split(' ').map((w) => w.runes.map(String.fromCharCode).join('⁠')).join(' ');
 
+// 문장마다 줄을 바꾼다(피드백: 「정리했어요. 글 전체를 …」처럼 문장이 이어 붙어 한 덩어리로 보였다).
+// 한글·닫는 괄호 뒤 마침표 다음 공백에서만 나눠 「3.0배」 같은 수치는 건드리지 않는다.
+String byLine(String s) => s.trim().split(RegExp(r'(?<=[가-힣)\]」][.!?])\s+')).join('\n');
+
 // keepAll로 그리되 화면 읽기(TalkBack·VoiceOver)에는 숨은 문자 없는 원래 문장을 넘긴다.
+// perSentence: 안내 문구·요약·공지 본문처럼 여러 문장인 글은 문장마다 줄을 바꾼다.
 class KeepAllText extends StatelessWidget {
-  const KeepAllText(this.text, {super.key, this.style, this.maxLines, this.overflow});
+  const KeepAllText(
+    this.text, {
+    super.key,
+    this.style,
+    this.maxLines,
+    this.overflow,
+    this.perSentence = false,
+    this.textAlign,
+  });
   final String text;
   final TextStyle? style;
   final int? maxLines;
   final TextOverflow? overflow;
+  final bool perSentence;
+  final TextAlign? textAlign;
 
   @override
-  Widget build(BuildContext context) =>
-      Text(keepAll(text), style: style, maxLines: maxLines, overflow: overflow, semanticsLabel: text);
+  Widget build(BuildContext context) => Text(
+    keepAll(perSentence ? byLine(text) : text),
+    style: style,
+    maxLines: maxLines,
+    overflow: overflow,
+    textAlign: textAlign,
+    semanticsLabel: text,
+  );
 }
 
 // 높이가 고정된 화면 틀(상단 바 52, 하단 탭바 64)은 일반 최대 글자 크기(XXXL, 1.35배)에서 배율을 멈춘다.

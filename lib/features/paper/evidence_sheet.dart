@@ -5,7 +5,6 @@ import '../../data/models.dart';
 import '../../design/tokens.dart';
 import '../../design/typography.dart';
 import '../../design/widgets/rg_bottom_sheet.dart';
-import '../../design/widgets/rg_buttons.dart';
 import '../../design/widgets/rg_pressable.dart';
 
 // C01 원문 근거 시트 (HANDOFF 7.3). 문장 ID는 노출하지 않는다.
@@ -21,7 +20,7 @@ Future<void> showEvidenceSheet(
     builder: (sheet) => Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SizedBox(height: 22),
+        const SizedBox(height: RgSpace.s4), // 손잡이(누르는 높이 24) 아래
         Text('핵심 내용 $pointIndex의 근거', style: RgText.caption.copyWith(color: RgColors.textSecondary)),
         const SizedBox(height: RgSpace.s4),
         Semantics(
@@ -65,8 +64,6 @@ Future<void> showEvidenceSheet(
             ),
           ),
         ),
-        const SizedBox(height: RgSpace.s8),
-        RgNeutralButton(label: '닫기', onTap: () => Navigator.of(sheet).pop()),
       ],
     ),
   );

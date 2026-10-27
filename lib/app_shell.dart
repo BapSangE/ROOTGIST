@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import 'data/unread.dart';
 import 'design/tokens.dart';
 import 'design/widgets/rg_bottom_tab_bar.dart';
 import 'debug/widget_gallery.dart';
@@ -21,7 +20,7 @@ const _tabs = [
   RgTab('홈', 'house'),
   RgTab('탐색', 'compass'),
   RgTab('보관함', 'bookmark'),
-  RgTab('설정', 'sliders-vertical'),
+  RgTab('설정', 'settings'),
 ];
 
 // 뒤로 가는 하위 화면은 MaterialPage를 직접 만든다. go_router 기본 페이지가 전환 없는 NoTransitionPage로
@@ -57,6 +56,7 @@ final router = GoRouter(
             path: '/settings',
             builder: (_, _) => const SettingsScreen(),
             routes: [
+              GoRoute(path: 'reading', pageBuilder: (_, state) => _page(state, const ReadingSettingsScreen())),
               GoRoute(path: 'source', pageBuilder: (_, state) => _page(state, const DataSourceScreen())),
               GoRoute(path: 'privacy', pageBuilder: (_, state) => _page(state, const PrivacyScreen())),
               GoRoute(path: 'notices', pageBuilder: (_, state) => _page(state, const NoticesScreen())),
@@ -121,18 +121,11 @@ class AppShell extends StatelessWidget {
             left: RgSpace.gutterCard,
             right: RgSpace.gutterCard,
             bottom: bottom,
-            // 안 읽은 공지가 있으면 「설정」에 점(소식은 거의 매일이라 탭바에는 달지 않는다)
-            child: FutureBuilder(
-              future: loadNotices(),
-              builder: (context, snap) => ValueListenableBuilder(
-                valueListenable: readItems,
-                builder: (context, _, _) => RgBottomTabBar(
-                  tabs: _tabs,
-                  currentIndex: shell.currentIndex,
-                  onTap: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
-                  dots: {if (hasNewNotice(snap.data)) 3},
-                ),
-              ),
+            // 새 글 점은 탭바에 달지 않는다(피드백: 「해야 할 일」처럼 보인다). 설정 탭 안 공지사항 행에만.
+            child: RgBottomTabBar(
+              tabs: _tabs,
+              currentIndex: shell.currentIndex,
+              onTap: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
             ),
           ),
         ],

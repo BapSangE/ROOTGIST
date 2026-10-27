@@ -2,6 +2,12 @@ import 'package:flutter/foundation.dart';
 
 enum ReaderMode { together, translation, original }
 
+String readerModeLabel(ReaderMode m) => switch (m) {
+  ReaderMode.together => '함께',
+  ReaderMode.translation => '번역',
+  ReaderMode.original => '원문',
+};
+
 // 저장 키 settings.readerMode·readerScale (9.4). 저장은 storage.dart.
 final readerDefaultMode = ValueNotifier(ReaderMode.together);
 final readerScale = ValueNotifier(1.0);

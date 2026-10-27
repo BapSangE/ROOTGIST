@@ -129,6 +129,19 @@ class RgCircleButton extends StatelessWidget {
   }
 }
 
+// 뒤로 가기: 원 없이 화살표만(피드백). 누르는 영역 44는 그대로 두고, 화살표가 아래 제목(좌우 20)과 줄 맞게 왼쪽으로 당긴다.
+class RgBackButton extends StatelessWidget {
+  const RgBackButton({super.key, required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Transform.translate(
+    // 상단 바 좌우 16 − 16 → 44 영역 안 화살표 획이 제목 글자(좌우 20)와 같은 세로줄에 온다
+    offset: const Offset(-16, 0),
+    child: RgCircleButton(semanticLabel: '뒤로', icon: 'chevron-left', variant: RgCircleVariant.plain, onTap: onTap),
+  );
+}
+
 // 북마크 버튼 공통: 저장 상태에 따라 아이콘·변형·라벨이 바뀐다.
 class RgBookmarkButton extends StatelessWidget {
   const RgBookmarkButton({super.key, required this.saved, required this.onTap, this.variant = RgCircleVariant.outline, this.size = 44});

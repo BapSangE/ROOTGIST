@@ -82,7 +82,7 @@ class _NoticesScreenState extends State<NoticesScreen> {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
                   child: Row(
-                    children: [RgCircleButton(semanticLabel: '뒤로', icon: 'chevron-left', onTap: () => context.pop())],
+                    children: [RgBackButton(onTap: () => context.pop())],
                   ),
                 ),
               ),
@@ -145,14 +145,12 @@ class _NoticesScreenState extends State<NoticesScreen> {
       builder: (sheet) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SizedBox(height: 22),
+          const SizedBox(height: RgSpace.s4), // 손잡이(누르는 높이 24) 아래
           Text(n.date, style: RgText.caption.copyWith(color: RgColors.textSecondary)),
           const SizedBox(height: RgSpace.s6),
           Semantics(header: true, child: KeepAllText(n.title, style: RgText.titleSection)),
           const SizedBox(height: RgSpace.s16),
           ...markdownWidgets(n.body),
-          const SizedBox(height: RgSpace.s12),
-          RgNeutralButton(label: '닫기', onTap: () => Navigator.of(sheet).pop()),
         ],
       ),
     );

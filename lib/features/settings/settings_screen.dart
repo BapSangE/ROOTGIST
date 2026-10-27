@@ -48,30 +48,16 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
         ),
+        // 읽기 설정은 하위 화면으로(피드백 13 가안): 첫 화면에는 한 줄만
         group('읽기', first: true),
         _SettingsCard(children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: RgSpace.s16),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              Text('초록 기본 보기', style: RgText.titleList),
-              const SizedBox(height: RgSpace.s12),
-              ValueListenableBuilder(
-                valueListenable: readerDefaultMode,
-                builder: (_, mode, _) => RgSegmented(
-                  options: const [
-                    (ReaderMode.together, '함께'),
-                    (ReaderMode.translation, '번역'),
-                    (ReaderMode.original, '원문'),
-                  ],
-                  value: mode,
-                  onChanged: (m) => readerDefaultMode.value = m,
-                ),
-              ),
-            ]),
-          ),
-          ValueListenableBuilder(
-            valueListenable: readerScale,
-            builder: (_, s, _) => _Row(label: '글자 크기', value: readerScaleLabel(s), onTap: () => showTextSizeSheet(context)),
+          ListenableBuilder(
+            listenable: Listenable.merge([readerDefaultMode, readerScale]),
+            builder: (_, _) => _Row(
+              label: '읽기 설정',
+              value: '${readerModeLabel(readerDefaultMode.value)} · ${readerScaleLabel(readerScale.value)}',
+              onTap: () => context.go('/settings/reading'),
+            ),
           ),
         ]),
         group('안내'),
@@ -150,7 +136,11 @@ class _Row extends StatelessWidget {
       child: Row(spacing: RgSpace.s4, children: [
         Expanded(child: Text(label, style: RgText.titleList)),
         if (dot) const Padding(padding: EdgeInsets.only(right: RgSpace.s4), child: RgNewDot()),
-        if (value != null) Text(value!, style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
+        // 큰 글자에서 값(「함께 · 기본」)이 넘치지 않게 줄을 바꾼다. Expanded: Flexible이면 값이 가운데부터 놓였다
+        if (value != null)
+          Expanded(
+            child: KeepAllText(value!, style: RgText.bodySmall.copyWith(color: RgColors.textSecondary), textAlign: TextAlign.end),
+          ),
         if (chevron) const RgIcon('chevron-right', size: 18, color: RgColors.textTertiary),
       ]),
     );
@@ -174,6 +164,55 @@ Future<void> _contact(BuildContext context) async {
       // 떠 있는 탭바(64) 위로(S05 해제 스낵바와 같은 자리)
       margin: EdgeInsets.fromLTRB(RgSpace.gutterCard, 0, RgSpace.gutterCard, (bottom > 30 ? bottom : 30) + 64 + RgSpace.s8),
     ));
+}
+
+// 읽기 설정(피드백 13 가안): 초록 기본 보기와 글자 크기(예시와 함께).
+class ReadingSettingsScreen extends StatelessWidget {
+  const ReadingSettingsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    Widget card(String title, String sub, Widget child) => RgCard(
+      padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s18),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Semantics(header: true, child: Text(title, style: RgText.titleList)),
+        const SizedBox(height: RgSpace.s4),
+        KeepAllText(sub, style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
+        const SizedBox(height: RgSpace.s14),
+        child,
+      ]),
+    );
+    return ListView(
+      padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top, bottom: RgSpace.bottomScrollInset),
+      children: [
+        SizedBox(
+          height: RgSpace.topBar,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
+            child: Row(children: [RgBackButton(onTap: () => context.pop())]),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s12, RgSpace.gutterText, RgSpace.s20),
+          child: HeadingTextScale(child: Semantics(header: true, child: Text('읽기 설정', style: RgText.titleDetail))),
+        ),
+        card(
+          '초록 기본 보기',
+          '초록 리더를 열 때 처음 보이는 방식이에요',
+          ValueListenableBuilder(
+            valueListenable: readerDefaultMode,
+            builder: (_, mode, _) => RgSegmented(
+              options: const [(ReaderMode.together, '함께'), (ReaderMode.translation, '번역'), (ReaderMode.original, '원문')],
+              value: mode,
+              onChanged: (m) => readerDefaultMode.value = m,
+            ),
+          ),
+        ),
+        const SizedBox(height: RgSpace.s12),
+        card('글자 크기', 'AI 요약·핵심 내용과 초록 리더 본문에 적용돼요', const TextSizePicker()),
+      ],
+    );
+  }
 }
 
 // 데이터 출처 (G7, 시안 없음): 텍스트 화면.
@@ -202,7 +241,7 @@ class DataSourceScreen extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
             child: Row(children: [
-              RgCircleButton(semanticLabel: '뒤로', icon: 'chevron-left', onTap: () => context.pop()),
+              RgBackButton(onTap: () => context.pop()),
             ]),
           ),
         ),
@@ -215,7 +254,7 @@ class DataSourceScreen extends StatelessWidget {
               spacing: RgSpace.s12,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                for (final p in paragraphs) KeepAllText(p, style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
+                for (final p in paragraphs) KeepAllText(p, perSentence: true, style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
               ],
             ),
           ]),
@@ -255,7 +294,7 @@ class _DocScreenState extends State<DocScreen> {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
               child: Row(children: [
-                RgCircleButton(semanticLabel: '뒤로', icon: 'chevron-left', onTap: () => context.pop()),
+                RgBackButton(onTap: () => context.pop()),
               ]),
             ),
           ),
@@ -301,12 +340,12 @@ List<Widget> markdownWidgets(List<(MdBlock, String)> blocks) {
           padding: const EdgeInsets.only(bottom: RgSpace.s6),
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s8, children: [
             Text('·', style: body),
-            Expanded(child: KeepAllText(text, style: body)),
+            Expanded(child: KeepAllText(text, perSentence: true, style: body)),
           ]),
         ),
         MdBlock.paragraph => Padding(
           padding: const EdgeInsets.only(bottom: RgSpace.s12),
-          child: KeepAllText(text, style: body),
+          child: KeepAllText(text, perSentence: true, style: body),
         ),
       },
   ];

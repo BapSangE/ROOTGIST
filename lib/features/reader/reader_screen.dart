@@ -99,12 +99,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
                 child: Row(
                   spacing: RgSpace.s8,
                   children: [
-                    RgCircleButton(
-                      semanticLabel: '뒤로',
-                      icon: 'chevron-left',
-                      variant: RgCircleVariant.neutral,
-                      onTap: () => context.pop(),
-                    ),
+                    RgBackButton(onTap: () => context.pop()),
                     Expanded(
                       child: RgSegmented(
                         options: const [

@@ -58,7 +58,7 @@ class _WidgetGalleryState extends State<WidgetGallery> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
                 child: RgBottomTabBar(
-                  tabs: const [RgTab('홈', 'house'), RgTab('탐색', 'compass'), RgTab('보관함', 'bookmark'), RgTab('설정', 'sliders-vertical')],
+                  tabs: const [RgTab('홈', 'house'), RgTab('탐색', 'compass'), RgTab('보관함', 'bookmark'), RgTab('설정', 'settings')],
                   currentIndex: _tab,
                   onTap: (i) => setState(() => _tab = i),
                 ),

@@ -4,7 +4,6 @@ import '../../data/models.dart';
 import '../../design/tokens.dart';
 import '../../design/typography.dart';
 import '../../design/widgets/rg_bottom_sheet.dart';
-import '../../design/widgets/rg_buttons.dart';
 
 // C02 용어 설명 시트 (HANDOFF 7.5). 한국어 대응어는 용어 사전에 연결된 경우에만(G1).
 Future<void> showTermSheet(BuildContext context, GlossaryTerm t) {
@@ -13,7 +12,7 @@ Future<void> showTermSheet(BuildContext context, GlossaryTerm t) {
     builder: (sheet) => Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SizedBox(height: 22),
+        const SizedBox(height: RgSpace.s4), // 손잡이(누르는 높이 24) 아래
         Text('용어', style: RgText.caption.copyWith(color: RgColors.textSecondary)),
         const SizedBox(height: RgSpace.s6),
         HeadingTextScale(child: Semantics(header: true, child: Text(t.term, style: RgText.serifTerm))),
@@ -34,8 +33,6 @@ Future<void> showTermSheet(BuildContext context, GlossaryTerm t) {
         Text('이 논문에서의 뜻', style: RgText.caption.copyWith(color: RgColors.textSecondary)),
         const SizedBox(height: RgSpace.s6),
         KeepAllText(t.definition, style: RgText.bodyDefinition),
-        const SizedBox(height: RgSpace.s24),
-        RgNeutralButton(label: '닫기', onTap: () => Navigator.of(sheet).pop()),
       ],
     ),
   );

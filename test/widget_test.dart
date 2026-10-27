@@ -219,7 +219,7 @@ void main() {
     expect(find.text('핵심 내용 3의 근거'), findsOneWidget);
     expect(find.text('On the example benchmark, the method uses 30% less compute at matched accuracy.'), findsOneWidget);
 
-    await tester.tap(find.text('닫기'));
+    await tester.tap(find.bySemanticsLabel('닫기')); // 시트 손잡이(보이는 닫기 버튼은 없다)
     await tester.pumpAndSettle();
     expect(find.text('핵심 내용 3의 근거'), findsNothing);
 
@@ -340,7 +340,7 @@ void main() {
     await tester.tap(find.text(keepAll('가상의 예시 API를 소개합니다')));
     await settle(tester);
     expect(find.text('Introducing a fictional example API'), findsOneWidget);
-    expect(find.text(keepAll('가상의 예시 API를 소개하는 가상 글이에요. 실제 내용이 아니에요.')), findsOneWidget); // AI 요약
+    expect(find.text(keepAll(byLine('가상의 예시 API를 소개하는 가상 글이에요. 실제 내용이 아니에요.'))), findsOneWidget); // AI 요약
     expect(find.text('근거 · 원문 소개문'), findsNWidgets(2)); // OpenAI는 피드 소개문이 근거
     router.pop();
     await settle(tester);
@@ -391,7 +391,7 @@ void main() {
 
     await tester.tap(find.text('example-video'));
     await settle(tester);
-    expect(find.text(keepAll('제작사가 모델 카드에 강점이나 평가 결과를 밝히지 않았어요. 연결된 논문에서 확인해 보세요.')), findsOneWidget);
+    expect(find.text(keepAll(byLine('제작사가 모델 카드에 강점이나 평가 결과를 밝히지 않았어요. 연결된 논문에서 확인해 보세요.'))), findsOneWidget);
     expect(find.text('arXiv · 0000.00001'), findsOneWidget);
   });
 
@@ -432,14 +432,14 @@ void main() {
     await settle(tester);
     await tester.tap(find.text('모델 더 보기'));
     await settle(tester);
-    expect(find.text(keepAll('요즘 Hugging Face에서 주목받는 모델이에요. 순서는 Hugging Face의 트렌딩 순위예요.')), findsOneWidget);
+    expect(find.text(keepAll(byLine('요즘 Hugging Face에서 주목받는 모델이에요. 순서는 Hugging Face의 트렌딩 순위예요.'))), findsOneWidget);
 
     router.go('/library');
     await settle(tester);
     expect(find.textContaining('공식 소식 · '), findsOneWidget);
   });
 
-  testWidgets('새 글 점: 안 연 공지·소식에만, 열면 사라진다(설정 탭바·공지 행·탐색 칸·소식 행)', (tester) async {
+  testWidgets('새 글 점: 안 연 공지·소식에만, 열면 사라진다(설정 공지 행·탐색 칸·소식 행, 탭바에는 없음)', (tester) async {
     tester.view.physicalSize = const Size(390, 3200);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -453,14 +453,19 @@ void main() {
     final notices = (await tester.runAsync(loadNotices))!; // 실제 파일 읽기는 runAsync 안에서
     final fresh = [for (final n in notices) if (n.isNew) n];
     expect(fresh, isNotEmpty);
-    expect(find.bySemanticsLabel('설정, 새 글'), findsOneWidget); // 탭바
+    expect(find.bySemanticsLabel('설정, 새 글'), findsNothing); // 탭바에는 점을 달지 않는다(피드백)
 
-    // 공지를 모두 열면 설정 탭바 점이 사라진다
+    // 설정 탭 안의 공지사항 행에만 점. 공지를 모두 열면 사라진다
+    router.go('/settings');
+    await settle(tester);
+    expect(find.byType(RgNewDot), findsOneWidget);
     for (final n in notices) {
       markRead(n.key);
     }
     await tester.pump();
-    expect(find.bySemanticsLabel('설정, 새 글'), findsNothing);
+    expect(find.byType(RgNewDot), findsNothing);
+    router.go('/home');
+    await settle(tester);
 
     // 홈의 공식 발표 행: 7일 안의 안 연 글에 점, 상세를 열면 그 글만 사라진다
     final dots = find.descendant(of: find.byType(NewsRow), matching: find.byType(RgNewDot));
@@ -517,7 +522,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('이 논문에서의 뜻'), findsOneWidget);
     expect(find.text(keepAll('학습이나 추론에 쓸 수 있도록 미리 정해 둔 계산량의 한도.')), findsOneWidget);
-    await tester.tap(find.text('닫기'));
+    await tester.tap(find.bySemanticsLabel('닫기')); // 시트 손잡이(보이는 닫기 버튼은 없다)
     await tester.pumpAndSettle();
 
     // 함께 모드: 같은 용어가 영문·한국어 양쪽에 강조되고, 한국어 쪽을 눌러도 C02에 대응어가 나온다(G1·G2)
@@ -525,7 +530,7 @@ void main() {
     await tester.tap(find.bySemanticsLabel('용어 설명: inference-time compute').first);
     await tester.pumpAndSettle();
     expect(find.text('추론 시점 연산'), findsWidgets);
-    await tester.tap(find.text('닫기'));
+    await tester.tap(find.bySemanticsLabel('닫기')); // 시트 손잡이(보이는 닫기 버튼은 없다)
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('원문'));
@@ -607,14 +612,25 @@ void main() {
 
     router.go('/settings');
     await tester.pumpAndSettle();
+    // 설정 행의 값은 오른쪽 끝(카드 안쪽 354)에 맞춘다. 가운데부터 놓이던 회귀를 막는다
+    expect(tester.getTopRight(find.text(keepAll(appVersion))).dx, moreOrLessEquals(354, epsilon: 1));
+    await tester.tap(find.text('읽기 설정')); // 초록 기본 보기·글자 크기는 하위 화면으로(피드백 13)
+    await settle(tester);
     await tester.tap(find.text('원문'));
     await tester.pumpAndSettle();
     expect(readerDefaultMode.value, ReaderMode.original);
+    await tester.tap(find.text('크게'));
+    await tester.pumpAndSettle();
+    expect(readerScale.value, 1.15);
+    expect(find.text(keepAll('AI 요약과 초록 번역이 이 크기로 보여요.')), findsOneWidget); // 고른 크기 예시
+    router.go('/settings');
+    await settle(tester);
+    expect(find.text(keepAll('원문 · 크게')), findsOneWidget);
 
     await tester.tap(find.text('AI 생성 안내'));
     await tester.pumpAndSettle();
     expect(find.text(keepAll(aiNoticeParagraphs.first)), findsOneWidget);
-    await tester.tap(find.text('닫기'));
+    await tester.tap(find.bySemanticsLabel('닫기')); // 시트 손잡이(보이는 닫기 버튼은 없다)
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('데이터 출처'));
@@ -696,7 +712,7 @@ void main() {
     await tester.tap(find.text(keepAll('AI가 만든 내용과 사용한 모델')));
     await tester.pumpAndSettle();
     expect(find.textContaining(keepAll('DeepSeek V4.1 Flash')), findsOneWidget);
-    await tester.tap(find.text('닫기'));
+    await tester.tap(find.bySemanticsLabel('닫기')); // 시트 손잡이(보이는 닫기 버튼은 없다)
     await tester.pumpAndSettle();
     // 공지에 적은 모델이 바뀌면 이 테스트가 알려 준다(worker/llm.py DEEPSEEK_MODELS: 운영 제공처)
     final md = File('docs/notices.md').readAsStringSync();
@@ -730,7 +746,7 @@ void main() {
 
     expect(find.textContaining(keepAll('오늘은 새 논문이 없어요'), findRichText: true), findsOneWidget);
     expect(find.textContaining(keepAll('10월 19일 월요일'), findRichText: true), findsOneWidget); // 헤드라인 날짜는 오늘
-    expect(find.text(keepAll('주말에는 새 논문이 발표되지 않아요. 가장 최근인 10월 18일 일요일 논문을 보여 드려요.')), findsOneWidget);
+    expect(find.text(keepAll(byLine('주말에는 새 논문이 발표되지 않아요. 가장 최근인 10월 18일 일요일 논문을 보여 드려요.'))), findsOneWidget);
     expect(find.text('10월 18일 주요 논문'), findsOneWidget);
     expect(find.text('논문 더 보기'), findsOneWidget);
 
@@ -935,7 +951,7 @@ void main() {
     await tester.tap(find.text('시트 열기'));
     await tester.pumpAndSettle();
     expect(find.text('inference-time compute'), findsOneWidget);
-    await tester.tap(find.text('닫기').last);
+    await tester.tap(find.bySemanticsLabel('닫기').last);
     await tester.pumpAndSettle();
     expect(find.text('inference-time compute'), findsNothing);
   });
@@ -948,7 +964,7 @@ void main() {
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
     await pumpApp(tester);
 
-    for (final path in ['/home', '/explore', '/explore/2026-10-18', '/library', '/settings', '/settings/source', '/paper/0000.00001', '/paper/0000.00001/reader']) {
+    for (final path in ['/home', '/explore', '/explore/2026-10-18', '/library', '/settings', '/settings/reading', '/settings/source', '/paper/0000.00001', '/paper/0000.00001/reader']) {
       router.go('/home');
       await settle(tester);
       path.startsWith('/paper') ? router.push(path) : router.go(path);

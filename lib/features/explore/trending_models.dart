@@ -43,7 +43,7 @@ class _TrendingModelsSectionState extends State<TrendingModelsSection> {
                 padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s16, RgSpace.gutterText, 0),
                 child: KeepAllText(
                   '요즘 Hugging Face에서 주목받는 모델이에요. 순서는 Hugging Face의 트렌딩 순위예요.',
-                  style: RgText.bodySmall.copyWith(color: RgColors.textSecondary),
+                  perSentence: true, style: RgText.bodySmall.copyWith(color: RgColors.textSecondary),
                 ),
               ),
               if (snap.hasError) ...[

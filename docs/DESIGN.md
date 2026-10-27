@@ -146,10 +146,12 @@
 
 | 변형 | 모양 | 쓰는 곳 |
 |---|---|---|
-| `outline` | 흰 바탕 + `borderDefault` 1pt | 상세 화면 상단 바(뒤로·↗·공유·북마크) |
-| `neutral` | `fillNeutral` 바탕 | 리더 상단 바(뒤로·가) |
+| `outline` | 흰 바탕 + `borderDefault` 1pt | 상세 화면 상단 바 오른쪽(↗·가·공유·북마크) |
+| `neutral` | `fillNeutral` 바탕 | 리더 상단 바 「가」 |
 | `filled` | `actionPrimary` 바탕, 흰 아이콘 | 저장된 북마크(상단 바) |
 | `plain` | 바탕 없음, 아이콘 `textTertiary` | 목록 행·카드 안 공유·북마크 |
+
+뒤로 가기 `RgBackButton`: 원 없이 화살표만(`plain`, `textPrimary`). 누르는 영역 44는 그대로이고, 화살표가 아래 제목(좌우 20)과 같은 세로줄에 오도록 16pt 왼쪽으로 당긴다. 모든 하위 화면과 리더에 같다.
 
 북마크 버튼 `RgBookmarkButton`: 저장 전 `bookmark`(빈 아이콘), 저장 후 `bookmark-filled`. plain이면 저장 후 아이콘 색만 `textPrimary`, outline이면 저장 후 `filled`로 바뀐다. 화면 읽기: 「북마크에 저장」 / 「저장됨, 북마크 해제」.
 
@@ -166,7 +168,7 @@
 | 부품 | 모양 | 쓰는 곳 |
 |---|---|---|
 | 주 버튼 `RgPrimaryButton` | 검정 알약, 흰 글자 15/600. 카드 안 최소 높이 48, 하단 고정은 56 + `primaryFloating`, 글자 16 | 「번역과 함께 초록 읽기」(하단 고정), 「다시 시도」 |
-| 회색 버튼 `RgNeutralButton` | `fillNeutral` 알약, 폭 전체, 최소 높이 48, 15/600 | 시트 「닫기」 |
+| 회색 버튼 `RgNeutralButton` | `fillNeutral` 알약, 폭 전체, 최소 높이 48, 15/600 | (지금은 쓰는 곳 없음. 시트의 「닫기」는 없앴다) |
 | 외곽 알약(보관함 빈 상태) | 흰 바탕 + 테두리, 높이 44, 14/600 | 「오늘의 논문 보기」 |
 | 더 보기 `MoreLink` | 글자 `bodySmall` 500 `textSecondary` + 셰브론 16, 오른쪽 정렬, 높이 44, 좌우 20 | 홈 묶음 밑 「… 더 보기 ›」 |
 
@@ -182,15 +184,15 @@
 
 ### 5.9 시트 `showRgBottomSheet`
 
-아래에서 올라오는 흰 시트, 위 모서리 28, 뒤 어둡게 `overlayDim`, 최대 높이 화면의 85%(넘치면 스크롤). 안쪽 여백 위 10 · 좌우 24 · 아래 40. 맨 위 손잡이 36×5(`grabber`, 모서리 3). 손잡이 아래 22 띄우고 내용. 바깥 탭·아래로 밀기·뒤로가기로 닫힌다. 탭바 위를 덮는다. 맨 아래는 대개 「닫기」 회색 버튼.
+아래에서 올라오는 흰 시트, 위 모서리 28, 뒤 어둡게 `overlayDim`, 최대 높이 화면의 85%(넘치면 스크롤). 안쪽 여백 위 10 · 좌우 24 · 아래 40. 맨 위 손잡이 36×5(`grabber`, 모서리 3)를 누르는 높이 24 안 가운데에 두고, 그 아래 4 띄우고 내용. 바깥 탭·아래로 밀기·뒤로가기로 닫힌다. **「닫기」 버튼은 두지 않는다.** 화면 읽기에서는 손잡이가 「닫기」 버튼으로 읽히고 누르면 닫힌다. 탭바 위를 덮는다.
 
 ### 5.10 하단 탭바 `RgBottomTabBar`
 
 - 높이 64, 흰 알약, 그림자 `tabBar`, 좌우 16 안쪽, 화면 위에 떠 있다(본문이 밑으로 지나간다).
 - 안쪽 6, 4칸 균등(간격 4). 칸: 아이콘 22 + 간격 2 + 라벨(`tabLabel`).
 - 선택된 칸: `fillSelected` 알약 + 글자·아이콘 `textPrimary`, 라벨 600. 나머지 `textSecondary`.
-- 칸: 홈(`house`) · 탐색(`compass`) · 보관함(`bookmark`) · 설정(`sliders-vertical`).
-- 안 읽은 공지가 있으면 「설정」 아이콘 오른쪽 위(위 −1, 오른쪽 −3)에 7pt 새 글 점.
+- 칸: 홈(`house`) · 탐색(`compass`) · 보관함(`bookmark`) · 설정(`settings`, 톱니바퀴).
+- 새 글 점은 탭바에 달지 않는다(설정 탭 안의 공지사항 행에만).
 - 이미 선택된 칸을 다시 누르면 그 탭의 첫 화면으로 돌아간다.
 
 ### 5.11 탐색 칸 `_Tabs`
@@ -229,13 +231,31 @@
 
 | 이름 | 크기 | 쓰는 곳 |
 |---|---|---|
-| `chevron-left` | 20 | 뒤로 |
+| `chevron-left` | 20 | 뒤로(원 없이 화살표만, `RgBackButton`) |
 | `chevron-right` | 14~20 | 행 이동, 근거 링크, 더 보기, 접힌 달(90° 돌림) |
 | `arrow-up-right` | 14·20 | 외부 원문 열기 |
 | `share` | 20 | 공유 |
 | `bookmark` / `bookmark-filled` | 20 | 북마크 |
 | `info` | 14 | 안내 문구 |
-| `house` · `compass` · `sliders-vertical` · `bookmark` | 22 | 탭바 |
+| `house` · `compass` · `settings` · `bookmark` | 22 | 탭바 |
+
+## 6.1 로고·앱 아이콘·스플래시
+
+- **마크:** 펼친 책 겸 새싹. 왼쪽 장은 검정, 오른쪽 장이 넘어가며 안쪽이 주황으로 보인다. 두 장 사이 가는 틈이 아래 끝에서 만난다.
+- **색:** 검정 `textPrimary #111111`, 주황 `newDot #E0533A`, 바탕 `bgApp #F6F5F3`. 받은 원본(2026-10-27)은 파일마다 색이 조금 달라 `tool/branding.py`가 토큰 색으로 다시 칠한다.
+- **원본:** `assets/branding/rootgist_mark_source.png`(마크 1254px), `assets/branding/rootgist_logo_horizontal_source.png`(마크 + 글자, 투명 2000px). 벡터 원본은 아직 없다.
+- **만드는 것**(`python3 tool/branding.py` → `dart run flutter_launcher_icons` → `dart run flutter_native_splash:create`):
+
+| 파일 | 내용 |
+|---|---|
+| `icon.png` | 앱 아이콘 1024, 바탕 위 마크, 긴 변 52% |
+| `icon_foreground.png` | Android 적응형 아이콘 전경(투명), 긴 변 35%(바깥 1/6씩 잘림) |
+| `splash.png` | 실행 화면: 가로 로고, 화면 폭 220pt |
+| `splash_android12.png` | Android 12+ 실행 화면: 마크만(가운데 원 안) |
+
+- 두 도구는 `Info.plist`와 Xcode 설정(`ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS`)도 건드린다. 이미지와 `LaunchScreen.storyboard`의 크기만 남기고 나머지는 되돌린다.
+- **앱 안 워드마크:** 홈 왼쪽 위 「ROOTGIST」는 로고 이미지가 아니라 글자(`wordmark`, Pretendard Bold)다. 가로 로고의 글자 모양과는 다르다(로고 글자는 그림이라 다른 크기로 다시 만들 수 없다).
+- **작은 크기:** 60px까지 또렷하다. 40px 이하에서는 가운데 틈이 흐려진다.
 
 ## 7. 글과 표기 규칙
 
@@ -244,6 +264,7 @@
 - **날짜:** 모두 한국 시간. 헤드라인·날짜 행 「10월 18일 일요일」, 메타 「10월 18일」, 논문 발행일·모델 공개일 「2026.10.18」, 공지 「2026.10.27」, 시각 「05:12」.
 - **숫자:** 1만 미만은 쉼표(1,234), 1만 이상은 「5.7만」(10만 이상은 소수 없이 「12만」). 파라미터 「400억 파라미터」, 1조 이상 「1.2조 파라미터」.
 - **AI 표시:** AI가 만든 글이 있는 화면에는 ⓘ 안내 문구를 둔다(문구는 SCREENS.md 각 화면).
+- **문장마다 줄바꿈:** 여러 문장인 안내 문구(ⓘ), 공식 소식 요약, 공지 본문, 데이터 출처 문단, 빈 날 안내는 문장마다 줄을 바꾼다(`KeepAllText(perSentence: true)`, `byLine()`). 한글·닫는 괄호 뒤 마침표에서만 나눈다(「3.0배」는 그대로). 논문 AI 요약은 문장마다 문단(간격 8).
 
 ## 8. 동작 규칙
 

@@ -96,7 +96,7 @@ class LibraryScreen extends StatelessWidget {
                   Expanded(
                     child: KeepAllText(
                       '인터넷 연결이 없어도 저장한 목록은 볼 수 있어요. 요약과 번역은 연결된 뒤에 불러와요.',
-                      style: RgText.caption.copyWith(height: 17 / 12, color: RgColors.textSecondary),
+                      perSentence: true, style: RgText.caption.copyWith(height: 17 / 12, color: RgColors.textSecondary),
                     ),
                   ),
                 ]),

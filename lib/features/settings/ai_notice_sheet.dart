@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../design/tokens.dart';
 import '../../design/typography.dart';
 import '../../design/widgets/rg_bottom_sheet.dart';
-import '../../design/widgets/rg_buttons.dart';
 
 // C03 AI 생성 안내 (HANDOFF 7.8). 논문 본문 전체를 읽었다는 표현은 쓰지 않는다.
 const aiNoticeParagraphs = [
@@ -18,18 +17,16 @@ Future<void> showAiNoticeSheet(BuildContext context) {
     builder: (sheet) => Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SizedBox(height: 22),
+        const SizedBox(height: RgSpace.s4), // 손잡이(누르는 높이 24) 아래
         Semantics(header: true, child: Text('AI 생성 안내', style: RgText.titleSection)),
         const SizedBox(height: RgSpace.s12),
         Column(
           spacing: RgSpace.s12,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            for (final p in aiNoticeParagraphs) KeepAllText(p, style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
+            for (final p in aiNoticeParagraphs) KeepAllText(p, perSentence: true, style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
           ],
         ),
-        const SizedBox(height: RgSpace.s24),
-        RgNeutralButton(label: '닫기', onTap: () => Navigator.of(sheet).pop()),
       ],
     ),
   );

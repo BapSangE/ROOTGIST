@@ -134,7 +134,7 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
               _updates
                   ? '공지 요약과 릴리스 노트 요약은 AI가 원문만 보고 정리했어요. 정확한 내용은 원문에서 확인해요.'
                   : '제목·요약·핵심 내용은 AI가 원문만 보고 한국어로 정리했어요. 글 전체를 옮기지 않으니 자세한 내용은 원문에서 읽어요.',
-              style: RgText.caption.copyWith(color: RgColors.textSecondary),
+              perSentence: true, style: RgText.caption.copyWith(color: RgColors.textSecondary),
             ),
           ),
         ]),
@@ -225,7 +225,7 @@ class _NewsCard extends StatelessWidget {
         ),
         if (news.summaryKo case final s?) ...[
           const SizedBox(height: RgSpace.s12),
-          KeepAllText(s, style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
+          KeepAllText(s, perSentence: true, style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
         ],
         if (news.keyPoints.isNotEmpty) ...[const SizedBox(height: RgSpace.s12), NewsPoints(news: news)],
         if (release) ...[
@@ -272,8 +272,9 @@ class NewsPoints extends StatelessWidget {
     final linkStyle = RgText.meta.copyWith(color: RgColors.textSecondary);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s10, children: [
       for (final (i, p) in news.keyPoints.indexed)
-        Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s10, children: [
-          Text('${i + 1}', style: RgText.meta.copyWith(height: 23 / 13, fontWeight: FontWeight.w600, color: RgColors.textTertiary)),
+        // 번호는 본문과 같은 15pt, 간격 8(S02 핵심 내용과 같다)
+        Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s8, children: [
+          Text('${i + 1}', style: RgText.bodySummary.copyWith(fontWeight: FontWeight.w600, color: RgColors.textSecondary)),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               KeepAllText(p.text, style: RgText.bodySummary),

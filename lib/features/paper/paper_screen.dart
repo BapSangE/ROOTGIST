@@ -189,7 +189,7 @@ class _PaperScreenState extends State<PaperScreen> {
                   Expanded(
                     child: KeepAllText(
                       '초록을 바탕으로 AI가 정리했어요. 논문 본문 전체를 반영하지는 않아요.',
-                      style: RgText.caption.copyWith(height: 17 / 12, color: RgColors.textSecondary),
+                      perSentence: true, style: RgText.caption.copyWith(height: 17 / 12, color: RgColors.textSecondary),
                     ),
                   ),
                 ],
@@ -285,7 +285,7 @@ class _TopBar extends StatelessWidget {
           child: Row(
             spacing: RgSpace.s8,
             children: [
-              RgCircleButton(semanticLabel: '뒤로', icon: 'chevron-left', onTap: () => context.pop()),
+              RgBackButton(onTap: () => context.pop()),
               const Spacer(),
               if (p != null) ...[
                 // AI 카드 글자 크기(S03과 같은 4단계). 카드가 있을 때만(iOS QA)
@@ -321,13 +321,14 @@ class _KeyPointItem extends StatelessWidget {
     final n = sentenceNumber(point.evidenceIds.first);
     final linkStyle = RgText.meta.copyWith(color: RgColors.textSecondary);
     void open() => showEvidenceSheet(context, paper: paper, pointIndex: index, sentenceId: point.evidenceIds.first);
+    // 번호는 본문과 같은 15pt·같은 행간, 간격 8(피드백: 번호가 작고 내용과 너무 떨어져 보였다)
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: RgSpace.s12,
+      spacing: RgSpace.s8,
       children: [
         Text(
           '$index',
-          style: RgText.meta.copyWith(height: 23 / 13, fontWeight: FontWeight.w600, color: RgColors.textTertiary),
+          style: RgText.bodySummary.copyWith(fontWeight: FontWeight.w600, color: RgColors.textSecondary),
         ),
         Expanded(
           child: Column(

@@ -112,7 +112,7 @@ class _HomeScreenState extends State<HomeScreen> {
           spacing: RgSpace.s12,
           children: [
             if (widget.date != null)
-              RgCircleButton(semanticLabel: '뒤로', icon: 'chevron-left', onTap: () => context.pop()),
+              RgBackButton(onTap: () => context.pop()),
             Text('ROOTGIST', style: RgText.wordmark),
           ],
         ),
@@ -161,7 +161,7 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s18),
           child: KeepAllText(
             [if (weekend) '주말에는 새 논문이 발표되지 않아요.', '가장 최근인 ${koreanDate(fallback.date)} 논문을 보여 드려요.'].join(' '),
-            style: RgText.bodySmall.copyWith(color: RgColors.textSecondary),
+            perSentence: true, style: RgText.bodySmall.copyWith(color: RgColors.textSecondary),
           ),
         ),
       ],
@@ -172,7 +172,7 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s18),
           child: KeepAllText(
             [if (digest?.lastSuccessAt case final t?) '마지막 정상 수집 ${kstDateTime(t)}.', '모이는 대로 이 화면에 올라와요.'].join(' '),
-            style: RgText.bodySmall.copyWith(color: RgColors.textSecondary),
+            perSentence: true, style: RgText.bodySmall.copyWith(color: RgColors.textSecondary),
           ),
         ),
       ],
