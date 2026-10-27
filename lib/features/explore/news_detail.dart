@@ -11,6 +11,7 @@ import '../../design/widgets/rg_card.dart';
 import '../../design/widgets/rg_pressable.dart';
 import '../../design/widgets/rg_states.dart';
 import '../../data/unread.dart';
+import '../home/home_screen.dart';
 import 'official_news.dart';
 import 'trending_models.dart';
 
@@ -24,9 +25,12 @@ class NewsDetailScreen extends StatefulWidget {
 }
 
 class _NewsDetailScreenState extends State<NewsDetailScreen> {
-  late final _req = Reloadable(
-    () async => (await repository.listOfficialNews()).where((n) => n.id == widget.id).firstOrNull,
-  );
+  // 이 글과 관련 소식(같은 목록에서 id로 찾는다)
+  late final _req = Reloadable(() async {
+    final all = await repository.listOfficialNews();
+    final n = all.where((n) => n.id == widget.id).firstOrNull;
+    return (n, [for (final r in n?.related ?? const <String>[]) ...all.where((x) => x.id == r)]);
+  });
 
   @override
   void initState() {
@@ -49,7 +53,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
       builder: (context, _) => FutureBuilder(
         future: _req.future,
         builder: (context, snap) {
-          final n = snap.data;
+          final (n, related) = snap.data ?? (null, const <OfficialNews>[]);
           return StatusBarBand(child: ListView(
             padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top, bottom: RgSpace.bottomScrollInset),
             children: [
@@ -60,7 +64,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
                   padding: const EdgeInsets.all(RgSpace.gutterText),
                   child: KeepAllText('이 소식을 찾을 수 없어요', style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
                 ),
-              if (n != null) ..._body(n),
+              if (n != null) ..._body(n, related),
             ],
           ));
         },
@@ -68,7 +72,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
     );
   }
 
-  List<Widget> _body(OfficialNews n) => [
+  List<Widget> _body(OfficialNews n, List<OfficialNews> related) => [
     Padding(
       padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s12, RgSpace.gutterText, 0),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -84,7 +88,19 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
       ]),
     ),
     const SizedBox(height: RgSpace.s24),
-    if (n.summaryKo != null || n.keyPoints.isNotEmpty)
+    // 원문이 소개문 한 줄뿐인 글: 「AI 요약」이 있는 척하지 않고 소개문 번역을 그대로 보여 준다(실기기 QA)
+    if (n.thin && n.summaryKo != null) ...[
+      RgCard(
+        padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s18),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Semantics(header: true, child: Text('원문 소개문', style: RgText.titleCard)),
+          const SizedBox(height: RgSpace.s8),
+          KeepAllText(n.summaryKo!, style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
+        ]),
+      ),
+      const SizedBox(height: RgSpace.s12),
+      _Note('${n.sourceLabel} 글은 자동으로 본문을 읽을 수 없어 소개문만 옮겼어요. 자세한 내용은 원문에서 확인해 주세요.'),
+    ] else if (n.summaryKo != null || n.keyPoints.isNotEmpty)
       RgCard(
         padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s18),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -110,8 +126,17 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
         padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
         child: KeepAllText('이 글은 요약을 만들지 못했어요. 원문에서 읽어 주세요.', style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
       ),
-    const SizedBox(height: RgSpace.s12),
-    const _Note('원문만 보고 AI가 한국어로 정리했어요. 글 전체를 옮기지 않으니 자세한 내용은 원문에서 읽어요.'),
+    if (!n.thin) ...[
+      const SizedBox(height: RgSpace.s12),
+      const _Note('원문만 보고 AI가 한국어로 정리했어요. 글 전체를 옮기지 않으니 자세한 내용은 원문에서 읽어요.'),
+    ],
+    // 관련 소식: 같은 모델·제품 이름이 나오는 다른 공식 자료(예: 출시 글 ↔ SDK 릴리스)
+    if (related.isNotEmpty) ...[
+      const SectionTitle('관련 소식'),
+      RgCard(
+        child: Column(children: [for (final (i, r) in related.indexed) RelatedRow(news: r, about: n, last: i == related.length - 1)]),
+      ),
+    ],
     const SizedBox(height: RgSpace.s28),
     _LinkCard(label: '원문', value: n.sourceLabel, url: n.url),
   ];

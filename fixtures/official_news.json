@@ -91,10 +91,28 @@
         },
         {
           "text": "예시 오류를 고쳤어요"
+        },
+        {
+          "text": "가상의 exa-7.5-nova 모델 식별자가 추가됐어요"
         }
       ],
       "published_at": "2026-10-18T12:00:00+00:00",
       "url": "https://example.com/fixture/releases"
+    },
+    {
+      "source": "openai",
+      "source_label": "OpenAI",
+      "category": "Product",
+      "title_en": "Introducing exa-7.5-nova",
+      "title_ko": "가상의 exa-7.5-nova 소개",
+      "url": "https://example.com/fixture/news-thin",
+      "published_at": "2026-10-13T17:00:00+00:00",
+      "summary_ko": "가상의 exa-7.5-nova를 모두에게 열어요.",
+      "key_points": [],
+      "thin": true,
+      "related": [
+        "https://example.com/fixture/releases"
+      ]
     }
   ]
 }

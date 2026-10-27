@@ -171,6 +171,51 @@ class NewsRow extends StatelessWidget {
   }
 }
 
+// 상세 화면 「관련 소식」 한 줄: 출처·날짜 + 제목, 그리고 두 글을 잇는 문장(관련 글의 핵심 내용 중 겹치는 이름이 나오는 것).
+class RelatedRow extends StatelessWidget {
+  const RelatedRow({super.key, required this.news, required this.about, required this.last});
+  final OfficialNews news;
+  final OfficialNews about; // 지금 보고 있는 글
+  final bool last;
+
+  @override
+  Widget build(BuildContext context) {
+    final n = news;
+    final hint = relatedHint(n, about);
+    return RgListRow(
+      showDivider: !last,
+      onTap: () => context.push('/news/${Uri.encodeComponent(n.id)}'),
+      trailing: const Padding(
+        padding: EdgeInsets.only(top: 2, right: RgSpace.s12),
+        child: RgIcon('chevron-right', size: 18, color: RgColors.textTertiary),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(newsMeta(n), style: RgText.caption.copyWith(color: RgColors.textSecondary)),
+        const SizedBox(height: RgSpace.s4),
+        KeepAllText(n.titleKo ?? n.titleEn, style: RgText.titleList),
+        if (hint != null) ...[
+          const SizedBox(height: RgSpace.s4),
+          KeepAllText(hint, style: RgText.bodySmall.copyWith(color: RgColors.textBody)),
+        ],
+      ]),
+    );
+  }
+}
+
+// 관련 글의 핵심 내용 중 지금 글 제목의 이름(gpt-6.1-terra 등)이 나오는 문장. 없으면 null.
+String? relatedHint(OfficialNews related, OfficialNews about) {
+  final key = RegExp(r'[a-z]+-\d+(?:\.\d+)*(?:-[a-z]+)?')
+      .allMatches(about.titleEn.toLowerCase().replaceAll(RegExp(r'\s+'), '-'))
+      .map((m) => m.group(0)!)
+      .where((n) => n.length >= 7)
+      .toList();
+  for (final p in related.keyPoints) {
+    final t = p.text.toLowerCase().replaceAll(RegExp(r'\s+'), '-');
+    if (key.any((k) => t.contains(k.replaceFirst(RegExp(r'^(introducing|developing|building)-'), '')))) return p.text;
+  }
+  return null;
+}
+
 // 출처 머리글자 배지 32×32(모서리 8, fillNeutral). 로고 대신 글자(상표·이미지 권리 부담 없이 출처를 구분).
 class SourceBadge extends StatelessWidget {
   const SourceBadge({super.key, required this.news});

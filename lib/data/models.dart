@@ -179,7 +179,9 @@ class OfficialNews {
         titleEn = j['title_en'],
         titleKo = j['title_ko'],
         publishedAt = DateTime.parse(j['published_at']),
-        url = j['url'];
+        url = j['url'],
+        thin = j['thin'] ?? false,
+        related = [for (final r in j['related'] ?? const []) r as String];
 
   final String id;
   final String source; // openai, anthropic, …
@@ -192,6 +194,9 @@ class OfficialNews {
   final String? titleKo; // 제목만 LLM이 옮긴다. 없으면 원문 제목만
   final DateTime publishedAt; // UTC
   final String url;
+  // 원문이 피드 소개문 한 줄뿐(OpenAI 글 페이지는 자동 접근을 막는다). summaryKo는 요약이 아니라 그 소개문의 번역
+  final bool thin;
+  final List<String> related; // 모델·제품 이름이 겹치는 다른 소식 id(수집기가 잇는다)
 
   bool get isUpdate => kind != 'post'; // 「업데이트」 칸(공지·릴리스)
 

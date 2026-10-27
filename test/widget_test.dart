@@ -507,6 +507,23 @@ void main() {
     readItems.value = {};
   });
 
+  testWidgets('짧은 원문(소개문 한 줄)은 「원문 소개문」으로, 이름이 겹치는 관련 소식을 잇는다', (tester) async {
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+    router.push('/news/${Uri.encodeComponent('https://example.com/fixture/news-thin')}');
+    await settle(tester);
+    expect(find.text('원문 소개문'), findsOneWidget);
+    expect(find.text('AI 요약'), findsNothing); // 요약이 있는 척하지 않는다
+    expect(find.text(keepAll('가상의 exa-7.5-nova를 모두에게 열어요.')), findsOneWidget);
+    expect(find.textContaining(keepAll('소개문만 옮겼어요')), findsOneWidget);
+    // 관련 소식: 릴리스의 같은 이름이 나오는 핵심 내용을 함께 보여 준다
+    expect(find.text('관련 소식'), findsOneWidget);
+    expect(find.byType(RelatedRow), findsOneWidget);
+    expect(find.text(keepAll('가상의 exa-7.5-nova 모델 식별자가 추가됐어요')), findsOneWidget);
+  });
+
   test('바뀐 도구 버전 태그: 마지막 버전과 건수, 버전이 없으면 건수만, 공지는 「공지」', () {
     OfficialNews n(String kind, String title) => OfficialNews.fromJson({
       'id': 'x', 'source': 's', 'source_label': 'S', 'kind': kind, 'title_en': title, 'url': 'u',

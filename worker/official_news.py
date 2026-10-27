@@ -23,6 +23,7 @@ worker/out/official_news.json          수집 결과
 worker/out/official_news.define.json   DB 없이 앱 미리보기용(--dart-define-from-file)
 """
 import argparse
+import difflib
 import email.utils
 import gzip
 import hashlib
@@ -247,9 +248,39 @@ def save_state(db, key: str, path: Path, value: dict):
 
 
 NEWS_COLUMNS = ("id", "source", "source_label", "kind", "category", "title_en", "title_ko", "url", "published_at",
-                "summary_ko", "key_points")
+                "summary_ko", "key_points", "thin", "related")
 MODEL_COLUMNS = ("id", "rank", "author", "name", "task", "params", "license", "likes", "downloads", "created_at",
                  "arxiv", "url", "card")
+
+
+# 관련 소식: 같은 실행에서 모은 공식 자료끼리, 모델·제품 이름처럼 확실한 이름이 겹칠 때만 잇는다
+# (예: 「Introducing GPT-6.1 Terra」 ↔ OpenAI Python SDK 릴리스 「gpt-6.1-terra 모델 식별자 추가」).
+# 이름 = 「영문자-숫자」로 시작하는 7자 이상(gpt-6.1-terra, claude-opus-5, gemini-4-argon). 띄어쓰기는 -로 본다.
+# 「gpt-6」처럼 짧은 이름은 같은 계열 글을 다 잇게 되어 뺀다.
+NAME = re.compile(r"[a-z]+(?:-[a-z]+)*-\d+(?:\.\d+)*(?:-[a-z]+)?")
+SKIP = {"introducing", "developing", "building", "using", "with", "for", "and", "the", "new", "our", "api에"}
+
+
+def names(item: dict) -> set[str]:
+    text = " ".join([item.get("title_en") or "", item.get("_desc") or "", item.get("notes") or "",
+                     *[p.get("text", "") for p in item.get("key_points") or []]])
+    flat = re.sub(r"\s+", "-", text.lower())
+    out = set()
+    for n in NAME.findall(flat):
+        parts = n.split("-")
+        while parts and parts[0] in SKIP:  # 「introducing-gpt-6.1-terra」 → 「gpt-6.1-terra」
+            parts.pop(0)
+        n = "-".join(parts)
+        if len(n) >= 7 and not re.fullmatch(r"v\d.*", n):
+            out.add(n)
+    return out
+
+
+def link_related(items: list[dict], limit: int = 3):
+    found = {i["id"]: names(i) for i in items}
+    for i in items:
+        mine = found[i["id"]]
+        i["related"] = [j["id"] for j in items if j is not i and mine & found[j["id"]]][:limit]
 
 
 def save_db(db, items: list[dict], models: list[dict], now: datetime):
@@ -329,7 +360,68 @@ POST_SYSTEM = (
 ) + HAEYO
 
 
-def summarize_post(title: str, paras: list[str], api_key: str, log) -> tuple[str, list[dict]] | None:
+# 원문이 이만큼(글자)보다 짧으면 요약하지 않고 소개문을 한국어로 옮기기만 한다. OpenAI는 글 페이지가 자동 접근을
+# 막아(403) 피드 소개문 한 줄(50자 안팎)만 근거로 쓸 수 있는데, 그걸로 요약을 만들면 제목을 되풀이하거나
+# 지어내게 된다(「GPT-6.1 Terra를 소개하는 글이에요」, 실기기 QA 2026-10-27).
+THIN_CHARS = 200
+
+
+def _norm(t: str) -> str:
+    return re.sub(r"[\s.,·!?「」\"'()]+", "", t or "").lower()
+
+
+def _bigrams(t: str) -> set[str]:
+    t = _norm(t)
+    return {t[i:i + 2] for i in range(len(t) - 1)}
+
+
+def contained(part: str, whole: str) -> float:
+    """part의 글자쌍 중 whole에 들어 있는 비율. 단순 유사도는 「요약을 다시 쓴 핵심 내용」(0.93)과
+    「요약의 한 부분을 짚은 핵심 내용」(0.81)을 가르지 못했다(2026-10-27 실데이터)."""
+    p = _bigrams(part)
+    return len(p & _bigrams(whole)) / len(p) if p else 0.0
+
+
+META = re.compile(r"(소개|설명|정리)하는 글이에요|다루는 글이에요|내용을 다뤄요")
+
+
+def tautology(title_ko: str | None, summary: str) -> bool:
+    """요약이 제목을 되풀이할 뿐인가: 모든 문장이 제목 글자를 거의 그대로 쓰거나 「소개하는 글이에요」류 말뿐."""
+    sents = [x for x in re.split(r"(?<=[.!?])\s+", summary.strip()) if x]
+    return bool(sents) and all((title_ko and contained(title_ko, x) >= 0.8) or META.search(x) for x in sents)
+
+
+def drop_repeats(summary: str, points: list[dict]) -> list[dict]:
+    """요약이나 앞 핵심 내용을 다시 쓴 핵심 내용(글자쌍 90% 이상이 이미 나온 것)은 뺀다."""
+    out = []
+    for pt in points:
+        if contained(pt["text"], summary) < 0.9 and all(contained(pt["text"], q["text"]) < 0.9 for q in out):
+            out.append(pt)
+    return out
+
+
+THIN_SYSTEM = (
+    "Translate the given short English blurb into one natural Korean sentence for a Korean reading app. "
+    "Do not add, explain, or guess anything that is not in the blurb. Keep product, model and company names in their original spelling. "
+    "Return only a JSON object: {\"summary\": \"...\"}."
+) + HAEYO
+
+
+def translate_blurb(blurb: str, api_key: str, log) -> str | None:
+    """짧은 원문(피드 소개문)을 한국어 한 문장으로. 요약이 아니라 번역이다(앱은 「원문 소개문」으로 보여 준다)."""
+    msgs = [{"role": "system", "content": THIN_SYSTEM}, {"role": "user", "content": blurb}]
+
+    def check(out):
+        s = out.get("summary") if isinstance(out, dict) else None
+        if not isinstance(s, str) or not s.strip():
+            return ["summary_missing"]
+        return ["not_haeyo"] if not_haeyo([s]) else []
+
+    out, _ = llm.generate(api_key, msgs, check, log)
+    return out["summary"].strip() if out else None
+
+
+def summarize_post(title: str, paras: list[str], api_key: str, log, title_ko: str | None = None) -> tuple[str, list[dict]] | None:
     body, used = [], 0
     for i, p in enumerate(paras, 1):
         if used + len(p) > BODY_CHARS:
@@ -347,7 +439,9 @@ def summarize_post(title: str, paras: list[str], api_key: str, log) -> tuple[str
         for pt in pts:
             if not (isinstance(pt, dict) and isinstance(pt.get("text"), str) and isinstance(pt.get("para"), int) and 1 <= pt["para"] <= len(body)):
                 return ["point_evidence_invalid"]  # 근거 문단이 없는 핵심 내용은 받지 않는다
-        return ["not_haeyo"] if not_haeyo([out["summary"]] + [pt["text"] for pt in pts]) else []
+        if not_haeyo([out["summary"]] + [pt["text"] for pt in pts]):
+            return ["not_haeyo"]
+        return ["summary_repeats_title"] if tautology(title_ko, out["summary"]) else []
 
     out, _ = llm.generate(api_key, msgs, check, log)
     if not out:
@@ -357,7 +451,7 @@ def summarize_post(title: str, paras: list[str], api_key: str, log) -> tuple[str
         q = (pt.get("quote") or "").strip()
         # 구절이 그 문단에 실제로 있어야 원문의 그 자리로 여는 링크를 단다(없으면 문단 번호만)
         points.append({"text": pt["text"].strip(), "para": pt["para"], "quote": q if q and q in paras[pt["para"] - 1] else None})
-    return out["summary"].strip(), points
+    return out["summary"].strip(), drop_repeats(out["summary"], points)
 
 
 def from_hf_trending() -> list[dict]:
@@ -474,9 +568,13 @@ def main(argv=None):
         cache["_provider"] = llm.provider()
     for item in items:
         hit = cache.get(item["url"], {})
-        if not_haeyo([hit.get("summary_ko")] + [p.get("text") for p in hit.get("key_points") or []]):
-            hit = {"title_ko": hit.get("title_ko")}  # 예전 합니다체 요약은 다시 만든다(제목 번역은 그대로)
-        item.update({k: v for k, v in hit.items() if k in ("title_ko", "summary_ko", "key_points")})
+        pts = [p.get("text") for p in hit.get("key_points") or []]
+        stale = (not_haeyo([hit.get("summary_ko")] + pts)  # 예전 합니다체 요약
+                 or ("thin" not in hit and hit.get("summary_ko") is not None)  # 짧은 원문 구분 전에 만든 요약
+                 or (hit.get("summary_ko") and not hit.get("thin") and tautology(hit.get("title_ko"), hit["summary_ko"])))
+        if stale:
+            hit = {"title_ko": hit.get("title_ko")}  # 요약은 다시 만들고 제목 번역은 그대로
+        item.update({k: v for k, v in hit.items() if k in ("title_ko", "summary_ko", "key_points", "thin")})
     todo = [i for i in items if not i.get("title_ko")]
     ko = translate([i["title_en"] for i in todo], key, lambda e: None) if key and todo else None
     report.append(f"제목 번역: 새 {len(todo)}개 " + ("완료" if ko or not todo else "건너뜀(키 없음)" if not key else "실패, 원문만"))
@@ -489,7 +587,14 @@ def main(argv=None):
             paras = body_paragraphs(item)
         except Exception:
             paras = []
-        got = summarize_post(item["title_en"], paras, key, lambda e: None) if key and paras else None
+        if not key or not paras:
+            item["summary_ko"], item["key_points"] = None, []
+            return
+        if sum(map(len, paras)) < THIN_CHARS:  # 소개문 한 줄: 요약 대신 번역만
+            item["thin"] = True
+            item["summary_ko"], item["key_points"] = translate_blurb(" ".join(paras), key, lambda e: None), []
+            return
+        got = summarize_post(item["title_en"], paras, key, lambda e: None, item.get("title_ko"))
         item["summary_ko"], item["key_points"] = got if got else (None, [])
 
     def digest_release(r):
@@ -521,7 +626,8 @@ def main(argv=None):
                   f"모델 카드: {sum(bool(m['card']) for m in models)}/{len(models)}")
     for i in items:
         if i.get("summary_ko"):
-            cache[i["url"]] = {"title_ko": i["title_ko"], "summary_ko": i["summary_ko"], "key_points": i["key_points"]}
+            cache[i["url"]] = {"title_ko": i["title_ko"], "summary_ko": i["summary_ko"], "key_points": i["key_points"],
+                               "thin": bool(i.get("thin"))}
     for r in releases:
         if r["key_points"]:
             cache[r["title_en"]] = {"key_points": r["key_points"]}
@@ -531,9 +637,12 @@ def main(argv=None):
     save_state(db, "digest_cache", DIGEST_CACHE, cache)
     items += releases
     for item in items:
+        item["id"] = hashlib.sha1(item["url"].encode()).hexdigest()[:12]  # 앱 상세 화면 주소용
+    link_related(items)
+    for item in items:
         item.pop("_desc", None)
         item.pop("notes", None)
-        item["id"] = hashlib.sha1(item["url"].encode()).hexdigest()[:12]  # 앱 상세 화면 주소용
+        item["thin"] = bool(item.get("thin"))
         item["published_at"] = item["published_at"].astimezone(timezone.utc).isoformat()
 
     items.sort(key=lambda i: i["published_at"], reverse=True)

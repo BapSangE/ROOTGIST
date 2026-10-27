@@ -362,6 +362,40 @@ class OfficialNewsTest(unittest.TestCase):
         official_news.save_db(FakeDb(), [item], [], now)
         self.assertEqual([c[1] for c in calls], ["official_news"])  # 트렌딩을 못 받은 날은 그대로 둔다
 
+    def test_tautology_and_repeated_points(self):
+        # 실데이터(2026-10-27): 제목만 되풀이한 요약은 거르고, 내용 있는 요약은 남긴다
+        self.assertTrue(official_news.tautology("GPT-6.1 Terra 소개",
+            "GPT-6.1 Terra를 소개하는 글이에요. 빠르고 뛰어난 컴퓨터 사용을 모두에게 제공하는 내용을 다뤄요."))
+        self.assertFalse(official_news.tautology("Anthropic, IPO 제안 위해 SEC에 S-1 제출",
+            "Anthropic이 미국 SEC에 S-1 등록서류를 제출했어요. 나스닥 상장을 추진 중이지만 공모 규모는 아직 정해지지 않았어요."))
+        summary = "이 글은 어떤 애플리케이션에도 빠르고 집중적이며 비용이 낮은 의사결정을 제공하는 Decisions API를 소개해요."
+        kept = official_news.drop_repeats(summary, [
+            {"text": "Decisions API는 어떤 애플리케이션에도 빠르고 집중적이며 비용이 낮은 의사결정을 제공해요."},  # 요약을 다시 씀
+            {"text": "요청마다 응답 시간이 100ms 안쪽이에요."},
+        ])
+        self.assertEqual([p["text"] for p in kept], ["요청마다 응답 시간이 100ms 안쪽이에요."])
+
+    def test_thin_source_is_translated_not_summarized(self):
+        calls = []
+        def fake(key, model, messages):
+            calls.append(messages[0]["content"])
+            return {"content": json.dumps({"summary": "빠르고 뛰어난 컴퓨터 사용을 모두에게 열어요."}, ensure_ascii=False), "finish_reason": "stop"}
+        with mock.patch.object(llm, "stream_chat", fake):
+            got = official_news.translate_blurb("Bringing fast and capable computer use to everyone", "k", lambda e: None)
+        self.assertEqual(got, "빠르고 뛰어난 컴퓨터 사용을 모두에게 열어요.")
+        self.assertIn("Do not add, explain, or guess", calls[0])
+
+    def test_related_links_by_model_name(self):
+        items = [
+            {"id": "a", "title_en": "Introducing GPT-6.1 Terra", "_desc": "Bringing fast computer use"},
+            {"id": "b", "title_en": "OpenAI Python SDK v3.36.0~v3.39.0 (5 releases)",
+             "key_points": [{"text": "API에 gpt-6.1-terra 모델 식별자가 추가됐어요."}]},
+            {"id": "c", "title_en": "GPT-6.1 Sol helps CodeRabbit strengthen security"},  # 다른 모델
+            {"id": "d", "title_en": "Introducing GPT-6 Astra"},  # 「gpt-6」처럼 짧은 이름으로는 잇지 않는다
+        ]
+        official_news.link_related(items)
+        self.assertEqual([i["related"] for i in items], [["b"], ["a"], [], []])
+
     def test_haeyo_rejects_hamnida_and_plain_endings(self):
         from worker.official_news import not_haeyo
         self.assertTrue(not_haeyo(["API 버전 지원이 추가되었습니다."]))
