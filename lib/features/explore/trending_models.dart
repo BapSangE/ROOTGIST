@@ -84,7 +84,7 @@ class ModelRow extends StatelessWidget {
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s12, children: [
         SizedBox(
           width: RgSpace.s20,
-          child: Text('${m.rank}', style: RgText.meta.copyWith(height: 23 / 13, fontWeight: FontWeight.w600, color: RgColors.textSecondary)),
+          child: Text('${m.rank}', style: RgText.meta.copyWith(height: 23 / RgText.meta.fontSize!, fontWeight: FontWeight.w600, color: RgColors.textSecondary)),
         ),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s4, children: [
@@ -102,5 +102,5 @@ class ModelRow extends StatelessWidget {
   }
 }
 
-ItemActions modelActions(TrendingModel m, {RgCircleVariant variant = RgCircleVariant.plain}) =>
-    ItemActions(id: m.id, title: m.name, url: m.url, source: 'Hugging Face', kind: 'model', variant: variant);
+ItemActions modelActions(TrendingModel m, {RgCircleVariant variant = RgCircleVariant.neutral, bool share = false}) =>
+    ItemActions(id: m.id, title: m.name, url: m.url, source: 'Hugging Face', kind: 'model', variant: variant, share: share);

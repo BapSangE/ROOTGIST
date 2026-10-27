@@ -183,8 +183,15 @@ class NewsMetaLine extends StatelessWidget {
 String newsKey(OfficialNews n) => 'news:${n.id}';
 bool hasNewNews(Iterable<OfficialNews> news) => news.any((n) => isNew(newsKey(n), n.publishedAt));
 
-ItemActions newsActions(OfficialNews n, {RgCircleVariant variant = RgCircleVariant.plain}) =>
-    ItemActions(id: n.id, title: n.titleKo ?? n.titleEn, url: n.url, source: n.sourceLabel, kind: 'news', variant: variant);
+ItemActions newsActions(OfficialNews n, {RgCircleVariant variant = RgCircleVariant.neutral, bool share = false}) => ItemActions(
+  id: n.id,
+  title: n.titleKo ?? n.titleEn,
+  url: n.url,
+  source: n.sourceLabel,
+  kind: 'news',
+  variant: variant,
+  share: share,
+);
 
 class _NewsCard extends StatelessWidget {
   const _NewsCard({required this.news});
@@ -219,7 +226,8 @@ class _NewsCard extends StatelessWidget {
                 ]),
               ),
               // 누르는 영역 44는 그대로 두고 모양만 카드 모서리 쪽으로(추천 카드와 같게)
-              Transform.translate(offset: const Offset(RgSpace.s12, -RgSpace.s10), child: newsActions(news)),
+              // 업데이트 카드는 상세 화면이 없어 공유도 여기에
+              Transform.translate(offset: const Offset(RgSpace.s12, -RgSpace.s10), child: newsActions(news, share: true)),
             ]),
           ),
         ),

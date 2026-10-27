@@ -373,7 +373,7 @@ class _HomeSkeleton extends StatelessWidget {
               children: [
                 RgBar(lineHeight: 24, widthFactor: 0.4),
                 RgBar(lineHeight: 29, widthFactor: 0.9),
-                RgBar(lineHeight: 18, widthFactor: 0.45),
+                RgBar(lineHeight: 20, widthFactor: 0.45),
                 SizedBox(height: RgSpace.s8),
                 RgBar(lineHeight: 23),
                 RgBar(lineHeight: 23, widthFactor: 0.7), // 「자세히 읽기」 버튼 자리는 없앴다(P5)

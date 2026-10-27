@@ -189,7 +189,7 @@ class _PaperScreenState extends State<PaperScreen> {
                   Expanded(
                     child: KeepAllText(
                       '초록을 바탕으로 AI가 정리했어요. 논문 본문 전체를 반영하지는 않아요.',
-                      perSentence: true, style: RgText.caption.copyWith(height: 17 / 12, color: RgColors.textSecondary),
+                      perSentence: true, style: RgText.caption.copyWith(color: RgColors.textSecondary),
                     ),
                   ),
                 ],
@@ -246,7 +246,7 @@ class _PaperSkeleton extends StatelessWidget {
                 SizedBox(height: RgSpace.s8),
                 RgBar(lineHeight: 22, widthFactor: 0.7),
                 SizedBox(height: RgSpace.s10),
-                RgBar(lineHeight: 18, widthFactor: 0.45),
+                RgBar(lineHeight: 20, widthFactor: 0.45),
               ],
             ),
           ),

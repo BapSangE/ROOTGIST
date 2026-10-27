@@ -53,7 +53,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
           return StatusBarBand(child: ListView(
             padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top, bottom: RgSpace.bottomScrollInset),
             children: [
-              _TopBar(url: n?.url, actions: n == null ? null : newsActions(n, variant: RgCircleVariant.outline)),
+              _TopBar(url: n?.url, actions: n == null ? null : newsActions(n, variant: RgCircleVariant.outline, share: true)),
               if (snap.hasError) RgErrorCard(error: snap.error, onRetry: _req.reload),
               if (snap.connectionState == ConnectionState.done && n == null)
                 Padding(
@@ -148,7 +148,7 @@ class _ModelDetailScreenState extends State<ModelDetailScreen> {
           return StatusBarBand(child: ListView(
             padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top, bottom: RgSpace.bottomScrollInset),
             children: [
-              _TopBar(url: m?.url, actions: m == null ? null : modelActions(m, variant: RgCircleVariant.outline)),
+              _TopBar(url: m?.url, actions: m == null ? null : modelActions(m, variant: RgCircleVariant.outline, share: true)),
               if (snap.hasError) RgErrorCard(error: snap.error, onRetry: _req.reload),
               if (snap.connectionState == ConnectionState.done && m == null)
                 Padding(

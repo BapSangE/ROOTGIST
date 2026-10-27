@@ -144,7 +144,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
                         RgSkeleton(
                           child: Column(
                             children: [
-                              const RgBar(lineHeight: 16, widthFactor: 0.3),
+                              const RgBar(lineHeight: 18, widthFactor: 0.3),
                               const SizedBox(height: RgSpace.s6),
                               const RgBar(lineHeight: 31, widthFactor: 0.8),
                               const SizedBox(height: RgSpace.s28),
@@ -282,7 +282,7 @@ class _Pair extends StatelessWidget {
           child: ExcludeSemantics(
             child: Text(
               '${sentenceNumber(sentence.id)}',
-              style: RgText.meta.copyWith(height: firstLine / 13, fontWeight: FontWeight.w600, color: RgColors.textTertiary),
+              style: RgText.meta.copyWith(height: firstLine / RgText.meta.fontSize!, fontWeight: FontWeight.w600, color: RgColors.textTertiary),
             ),
           ),
         ),

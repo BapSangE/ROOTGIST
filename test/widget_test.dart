@@ -407,7 +407,9 @@ void main() {
     expect(find.text('주목받는 모델'), findsOneWidget);
     expect(find.text('example-coder'), findsOneWidget);
     // 홈 논문은 추천 1 + 행 2 = 3편
-    expect(find.bySemanticsLabel('공유'), findsNWidgets(3 + 2 + 2 + 2));
+    // 목록·카드에는 북마크만(공유는 상세 화면에서). 논문 3 + 발표 2 + 업데이트 2 + 모델 2
+    expect(find.bySemanticsLabel('공유'), findsNothing);
+    expect(find.bySemanticsLabel('북마크에 저장'), findsNWidgets(3 + 2 + 2 + 2));
 
     // 공식 발표를 저장하면 보관함에 「공식 소식」으로
     await tester.tap(find.descendant(of: find.byType(NewsRow).first, matching: find.bySemanticsLabel('북마크에 저장')));

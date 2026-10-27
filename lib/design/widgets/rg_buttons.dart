@@ -62,7 +62,11 @@ class RgNeutralButton extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s12),
           alignment: Alignment.center,
           decoration: BoxDecoration(color: RgColors.fillNeutral, borderRadius: BorderRadius.circular(RgRadius.pill)),
-          child: Text(label, textAlign: TextAlign.center, style: RgText.bodySmall.copyWith(fontSize: 15, height: 1.2, fontWeight: FontWeight.w600)),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: RgText.bodySmall.copyWith(fontSize: 15, height: 1.2, fontWeight: FontWeight.w600),
+          ),
         ),
       ),
     );
@@ -83,6 +87,7 @@ class RgCircleButton extends StatelessWidget {
     this.size = 44,
     this.iconColor,
     this.selected,
+    this.visualSize,
   }) : assert((icon == null) != (text == null));
 
   final String semanticLabel;
@@ -93,6 +98,7 @@ class RgCircleButton extends StatelessWidget {
   final double size;
   final Color? iconColor;
   final bool? selected; // 토글(북마크)일 때 상태 낭독
+  final double? visualSize; // 보이는 원 크기(목록 행은 36). 누르는 영역은 size(44) 그대로
 
   @override
   Widget build(BuildContext context) {
@@ -110,19 +116,27 @@ class RgCircleButton extends StatelessWidget {
           width: size,
           height: size,
           alignment: Alignment.center,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: switch (variant) {
-              RgCircleVariant.outline => RgColors.surfaceCard,
-              RgCircleVariant.neutral => RgColors.fillNeutral,
-              RgCircleVariant.filled => RgColors.actionPrimary,
-              RgCircleVariant.plain => null,
-            },
-            border: variant == RgCircleVariant.outline ? Border.all(color: RgColors.borderDefault) : null,
+          child: Container(
+            width: visualSize ?? size,
+            height: visualSize ?? size,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: switch (variant) {
+                RgCircleVariant.outline => RgColors.surfaceCard,
+                RgCircleVariant.neutral => RgColors.fillNeutral,
+                RgCircleVariant.filled => RgColors.actionPrimary,
+                RgCircleVariant.plain => null,
+              },
+              border: variant == RgCircleVariant.outline ? Border.all(color: RgColors.borderDefault) : null,
+            ),
+            child: icon != null
+                ? RgIcon(icon!, size: 20, color: fg)
+                : Text(
+                    text!,
+                    style: RgText.bodySmall.copyWith(fontSize: 15, height: 1.2, fontWeight: FontWeight.w600, color: fg),
+                  ),
           ),
-          child: icon != null
-              ? RgIcon(icon!, size: 20, color: fg)
-              : Text(text!, style: RgText.bodySmall.copyWith(fontSize: 15, height: 1.2, fontWeight: FontWeight.w600, color: fg)),
         ),
       ),
     );
@@ -144,11 +158,19 @@ class RgBackButton extends StatelessWidget {
 
 // 북마크 버튼 공통: 저장 상태에 따라 아이콘·변형·라벨이 바뀐다.
 class RgBookmarkButton extends StatelessWidget {
-  const RgBookmarkButton({super.key, required this.saved, required this.onTap, this.variant = RgCircleVariant.outline, this.size = 44});
+  const RgBookmarkButton({
+    super.key,
+    required this.saved,
+    required this.onTap,
+    this.variant = RgCircleVariant.outline,
+    this.size = 44,
+    this.visualSize,
+  });
   final bool saved;
   final VoidCallback? onTap;
-  final RgCircleVariant variant; // plain(목록 행) 또는 outline(카드·상단 바)
+  final RgCircleVariant variant; // neutral(목록 행·카드, 보이는 원 36) 또는 outline(상단 바). plain은 예전 목록 행
   final double size;
+  final double? visualSize;
 
   @override
   Widget build(BuildContext context) {
@@ -159,6 +181,7 @@ class RgBookmarkButton extends StatelessWidget {
       onTap: onTap,
       icon: saved ? 'bookmark-filled' : 'bookmark',
       size: size,
+      visualSize: visualSize,
       variant: plain ? variant : (saved ? RgCircleVariant.filled : variant),
       iconColor: plain ? (saved ? RgColors.textPrimary : RgColors.textTertiary) : null,
     );
@@ -169,8 +192,7 @@ class RgBookmarkButton extends StatelessWidget {
 // 알약 칩·세그먼트 글자(bodySmall 14, 줄 높이 1.2)가 더 큰 텍스트에서 잘리지 않도록 높이를 글자에 맞춰 늘린다.
 // 배율은 2배에서 멈춘다: 세그먼트 칸 폭이 좁아(4등분) 그 이상은 칸 안에 들어가지 않는다(iOS QA Q02).
 TextScaler rgPillTextScaler(BuildContext context) => MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 2);
-double rgPillHeight(BuildContext context, double base) =>
-    math.max(base, rgPillTextScaler(context).scale(14) * 1.2 + RgSpace.s16);
+double rgPillHeight(BuildContext context, double base) => math.max(base, rgPillTextScaler(context).scale(14) * 1.2 + RgSpace.s16);
 
 class RgFilterChip extends StatelessWidget {
   const RgFilterChip({super.key, required this.label, required this.selected, required this.onTap});

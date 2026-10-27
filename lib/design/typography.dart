@@ -29,9 +29,10 @@ abstract class RgText {
   static final bodyDefinition = _s(16, 26, FontWeight.w400, 0);
   static final bodySummary = _s(15, 23, FontWeight.w400, 0);
   static final bodySmall = _s(14, 21, FontWeight.w400, 0);
-  static final meta = _s(13, 18, FontWeight.w400, 0);
-  static final caption = _s(12, 16, FontWeight.w400, 0);
-  static final tabLabel = _s(11, 14, FontWeight.w500, 0);
+  // 메타·캡션은 피드백(보조 글자가 너무 작다)으로 13/18 → 14/20, 12/16 → 13/18
+  static final meta = _s(14, 20, FontWeight.w400, 0);
+  static final caption = _s(13, 18, FontWeight.w400, 0);
+  static final tabLabel = _s(13, 16, FontWeight.w500, 0); // 피드백: 11/14는 너무 작았다
   static final serifTogether = _s(14, 22, FontWeight.w400, 0, isSerif: true); // iOS QA: 15/25 → 14/22(번역이 주, 원문은 대조용)
   static final serifOnly = _s(18, 30, FontWeight.w400, 0, isSerif: true);
   static final serifTerm = _s(26, 32, FontWeight.w600, 0, isSerif: true);

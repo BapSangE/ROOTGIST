@@ -69,9 +69,11 @@ class LibraryScreen extends StatelessWidget {
                     RgListRow(
                       showDivider: i < list.length - 1,
                       onTap: () => context.push(b.path),
+                      // 다른 목록과 같은 옅은 원 북마크(저장됨 = 검정 원)
                       trailing: RgBookmarkButton(
                         saved: true,
-                        variant: RgCircleVariant.plain,
+                        variant: RgCircleVariant.neutral,
+                        visualSize: 36,
                         onTap: () => _remove(context, b),
                       ),
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -96,7 +98,7 @@ class LibraryScreen extends StatelessWidget {
                   Expanded(
                     child: KeepAllText(
                       '인터넷 연결이 없어도 저장한 목록은 볼 수 있어요. 요약과 번역은 연결된 뒤에 불러와요.',
-                      perSentence: true, style: RgText.caption.copyWith(height: 17 / 12, color: RgColors.textSecondary),
+                      perSentence: true, style: RgText.caption.copyWith(color: RgColors.textSecondary),
                     ),
                   ),
                 ]),

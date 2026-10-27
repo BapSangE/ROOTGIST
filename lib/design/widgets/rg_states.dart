@@ -135,7 +135,7 @@ class RgSkeletonRows extends StatelessWidget {
             child: const Column(spacing: RgSpace.s4, children: [
               RgBar(lineHeight: 23),
               RgBar(lineHeight: 23, widthFactor: 0.6),
-              RgBar(lineHeight: 18, widthFactor: 0.4),
+              RgBar(lineHeight: 20, widthFactor: 0.4),
             ]),
           ),
       ]),
