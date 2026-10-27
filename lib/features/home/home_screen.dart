@@ -108,12 +108,14 @@ class _HomeScreenState extends State<HomeScreen> {
       height: RgSpace.topBar,
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: widget.date == null ? RgSpace.gutterText : RgSpace.gutterCard),
+        // 뒤로 화살표는 원 없이 16pt 왼쪽으로 당겨져 있어(RgBackButton), 워드마크도 그만큼 당긴다
         child: Row(
-          spacing: RgSpace.s12,
           children: [
-            if (widget.date != null)
-              RgBackButton(onTap: () => context.pop()),
-            Text('ROOTGIST', style: RgText.wordmark),
+            if (widget.date != null) RgBackButton(onTap: () => context.pop()),
+            Transform.translate(
+              offset: Offset(widget.date != null ? -12 : 0, 0),
+              child: Text('ROOTGIST', style: RgText.wordmark),
+            ),
           ],
         ),
       ),
