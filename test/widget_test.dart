@@ -43,6 +43,8 @@ Future<void> pumpApp(WidgetTester tester) async {
   readerDefaultMode.value = ReaderMode.together;
   readerScale.value = 1.0;
   backdrop.value = Backdrop.white;
+  exploreTab.value = 0;
+  newsUpdates.value = false;
   fixtureMode.value = FixtureMode.normal;
   exploreJump.value = null;
   // 새 글 점은 기본으로 끈다(따로 확인하는 테스트에서 켠다)
@@ -55,6 +57,15 @@ Future<void> pumpApp(WidgetTester tester) async {
   });
   await tester.pumpAndSettle();
 }
+
+// 옆으로 밀어 칸이 미끄러져 넘어가는 동안의 프레임도 실제 async 영역에서 그린다. 넘기는 중에 새로 만들어지는
+// 칸(옆 칸 미리 만들기 포함)의 fixture 읽기가 fake async 안에서 시작되면 끝나지 않는다.
+Future<void> slide(WidgetTester tester) => tester.runAsync(() async {
+  for (var i = 0; i < 8; i++) {
+    await tester.pump(const Duration(milliseconds: 50));
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+  }
+});
 
 // 화면 이동 뒤 새 화면의 fixture 읽기도 같은 이유로 실제 async 영역에서 프레임을 그린다.
 Future<void> settle(WidgetTester tester) async {
@@ -329,6 +340,7 @@ void main() {
 
     // 왼쪽으로 밀면 공식 소식
     await tester.fling(find.byType(PageView), const Offset(-300, 0), 1000);
+    await slide(tester); // 칸 넘김 애니메이션
     await settle(tester);
     expect(find.text('OpenAI · 제품 · 10월 18일'), findsOneWidget); // UTC 17시 = KST 다음 날
     expect(find.text(keepAll('가상의 예시 API를 소개합니다')), findsOneWidget);
@@ -354,8 +366,14 @@ void main() {
     expect(find.text('릴리스 노트 전체 보기'), findsOneWidget);
     expect(find.text('근거 · 원문 1번째 문단'), findsOneWidget); // 커뮤니티 공지
 
-    // 오른쪽으로 밀면 다시 논문
+    // 오른쪽으로 밀면 발표, 한 번 더 밀면 논문(공식 소식 안의 발표 | 업데이트도 밀기 순서에 들어간다)
     await tester.fling(find.byType(PageView), const Offset(300, 0), 1000);
+    await slide(tester);
+    await settle(tester);
+    expect(newsUpdates.value, isFalse);
+    expect(find.text('Claude Code · 릴리스 · 10월 18일'), findsNothing);
+    await tester.fling(find.byType(PageView), const Offset(300, 0), 1000);
+    await slide(tester);
     await settle(tester);
     expect(find.text('지난 논문'), findsOneWidget);
   });
@@ -1071,6 +1089,49 @@ void main() {
     backdrop.value = Backdrop.white;
     await tester.pumpAndSettle();
     expect(scaffoldBg(), const Color(0xFFFFFFFF));
+  });
+
+  testWidgets('옆으로 밀기: 홈 → 탐색 칸들 → 공식 소식 발표·업데이트 → 보관함 → 설정, 반대로 밀면 거꾸로', (tester) async {
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+    String where() {
+      final path = router.routerDelegate.currentConfiguration.uri.path;
+      return path == '/explore' ? 'explore ${exploreTab.value}${exploreTab.value == 1 ? (newsUpdates.value ? ' 업데이트' : ' 발표') : ''}' : path;
+    }
+
+
+    Future<void> swipe(double dx) async {
+      await tester.flingFrom(const Offset(200, 700), Offset(dx, 0), 1200);
+      await slide(tester); // 칸 넘김 애니메이션
+      await settle(tester);
+    }
+
+    const forward = ['explore 0', 'explore 1 발표', 'explore 1 업데이트', 'explore 2', '/library', '/settings'];
+    for (final w in forward) {
+      await swipe(-300);
+      expect(where(), w);
+    }
+    await swipe(-300); // 설정이 끝: 더 가지 않는다
+    expect(where(), '/settings');
+    for (final w in forward.reversed.skip(1)) {
+      await swipe(300);
+      expect(where(), w);
+    }
+    await swipe(300);
+    expect(where(), '/home');
+    // 짧게 살짝 끈 것은 넘기지 않는다
+    await tester.dragFrom(const Offset(200, 700), const Offset(-20, 0));
+    await settle(tester);
+    expect(where(), '/home');
+
+    // 탭 안 하위 화면(지난 날짜)에서는 넘기지 않는다(가장자리 뒤로 가기와 다투지 않게)
+    router.go('/explore/2026-10-18');
+    await settle(tester);
+    await swipe(-300);
+    expect(router.routerDelegate.currentConfiguration.uri.path, '/explore/2026-10-18');
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('S1: 글자 크기 4단계가 S02 AI 요약·핵심 내용에도 적용된다', (tester) async {

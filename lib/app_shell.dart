@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'design/tokens.dart';
+import 'data/repository.dart';
 import 'design/widgets/rg_bottom_tab_bar.dart';
 import 'debug/widget_gallery.dart';
 import 'features/explore/explore_screen.dart';
@@ -118,7 +119,7 @@ class AppShell extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
-          Positioned.fill(child: shell),
+          Positioned.fill(child: _TabSwipe(shell: shell, child: shell)),
           // 상태바 밑에 배경색 띠: 스크롤한 내용이 시계·배터리 아이콘과 겹치지 않게(에뮬레이터 QA)
           Positioned(
             top: 0,
@@ -161,6 +162,91 @@ class _WithTabBar extends StatelessWidget {
           shell.goBranch(i, initialLocation: i == shell.currentIndex);
         },
       ),
+    );
+  }
+}
+
+// 옆으로 밀어 탭 넘기기(실기기 QA 요청). 한 줄로 이어진 자리를 차례로 넘는다:
+// 홈 → 탐색·논문 → 탐색·공식 소식(발표) → 공식 소식(업데이트) → 탐색·모델 → 보관함 → 설정.
+// 왼쪽으로 밀면 다음, 오른쪽으로 밀면 이전. 하단 탭바 선택도 같이 옮겨 간다.
+// 탭의 첫 화면에서만: 지난 날짜·설정 하위 화면에서는 가장자리 밀기(뒤로)가 먼저다. 가로로 넘기는 칩 목록은 칩이 먼저 넘어간다.
+typedef TabStop = (int branch, int exploreTab, bool updates);
+
+const tabStops = <TabStop>[
+  (0, 0, false),
+  (1, 0, false),
+  (1, 1, false),
+  (1, 1, true),
+  (1, 2, false),
+  (2, 0, false),
+  (3, 0, false),
+];
+
+// 지금 자리. 탐색이 아니면 탐색 칸 값은 보지 않는다.
+int currentStop(int branch, int tab, bool updates) => tabStops.indexWhere(
+  (s) => s.$1 == branch && (branch != 1 || (s.$2 == tab && (tab != 1 || s.$3 == updates))),
+);
+
+class _TabSwipe extends StatefulWidget {
+  const _TabSwipe({required this.shell, required this.child});
+  final StatefulNavigationShell shell;
+  final Widget child;
+
+  static const _roots = {'/home', '/explore', '/library', '/settings'};
+
+  @override
+  State<_TabSwipe> createState() => _TabSwipeState();
+}
+
+class _TabSwipeState extends State<_TabSwipe> {
+  double _dx = 0;
+  GoRouterDelegate? _router;
+
+  // 화면을 옮길 때마다 탭 첫 화면인지 다시 본다
+  void _changed() => setState(() {});
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final r = GoRouter.of(context).routerDelegate;
+    if (r != _router) {
+      _router?.removeListener(_changed);
+      _router = r..addListener(_changed);
+    }
+  }
+
+  @override
+  void dispose() {
+    _router?.removeListener(_changed);
+    super.dispose();
+  }
+
+  void _end(DragEndDetails d) {
+    final v = d.primaryVelocity ?? 0;
+    final dx = _dx;
+    _dx = 0;
+    // 살짝 밀거나(60pt) 빠르게 튕기면(초당 300pt) 넘긴다
+    if (dx.abs() < 60 && v.abs() < 300) return;
+    final shell = widget.shell;
+    final at = currentStop(shell.currentIndex, exploreTab.value, newsUpdates.value);
+    final next = at + ((dx != 0 ? dx : v) < 0 ? 1 : -1);
+    if (at < 0 || next < 0 || next >= tabStops.length) return;
+    final (branch, tab, updates) = tabStops[next];
+    if (branch == 1) exploreJump.value = ExploreJump(tab, updates: updates, animate: shell.currentIndex == 1);
+    if (branch != shell.currentIndex) shell.goBranch(branch);
+  }
+
+  // 탭 첫 화면이 아니면 끌기를 아예 받지 않는다: 받기만 해도 하위 화면의 가장자리 뒤로 가기와 다툰다.
+  // 위젯 모양은 그대로 두고 콜백만 비운다(바꾸면 쉘 상태가 새로 만들어진다).
+  @override
+  Widget build(BuildContext context) {
+    final root = _TabSwipe._roots.contains(GoRouter.of(context).routerDelegate.currentConfiguration.uri.path);
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onHorizontalDragStart: root ? (_) => _dx = 0 : null,
+      onHorizontalDragUpdate: root ? (d) => _dx += d.delta.dx : null,
+      onHorizontalDragEnd: root ? _end : null,
+      child: widget.child,
     );
   }
 }

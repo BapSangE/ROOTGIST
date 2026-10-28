@@ -40,7 +40,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
   // 「공식 소식」 칸 이름 옆 새 글 점
   final _news = repository.listOfficialNews().catchError((_) => <OfficialNews>[]);
-  late var _tab = exploreJump.value?.tab ?? 0; // 0 논문, 1 공식 소식, 2 모델
+  late var _tab = exploreTab.value = exploreJump.value?.tab ?? 0; // 0 논문, 1 공식 소식, 2 모델
   late final _pages = PageController(initialPage: _tab);
   final _open = <String>{}; // 펼친 지난달
 
@@ -48,7 +48,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
   void _jump() {
     final j = exploreJump.value;
     if (j == null || !_pages.hasClients) return;
-    _pages.jumpToPage(j.tab);
+    if (j.animate) {
+      _pages.animateToPage(j.tab, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+    } else {
+      _pages.jumpToPage(j.tab);
+    }
   }
 
   @override
@@ -104,9 +108,13 @@ class _ExploreScreenState extends State<ExploreScreen> {
             ),
           ),
           Expanded(
+            // 옆으로 밀기는 쉘이 맡는다(홈 → 탐색 칸들 → 공식 소식 발표·업데이트 → 보관함 → 설정이 한 줄로 이어진다).
+            // PageView가 끌기를 먼저 가져가면 모델 칸 끝에서 보관함으로, 공식 소식 안에서 업데이트로 넘어가지 못한다.
             child: PageView(
               controller: _pages,
-              onPageChanged: (i) => setState(() => _tab = i),
+              physics: const NeverScrollableScrollPhysics(),
+              allowImplicitScrolling: true, // 옆 칸을 미리 만들어 두어 넘기자마자 내용이 보인다
+              onPageChanged: (i) => setState(() => _tab = exploreTab.value = i),
               children: [_papers(), const OfficialNewsSection(), const TrendingModelsSection()],
             ),
           ),

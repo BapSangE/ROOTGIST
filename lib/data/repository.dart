@@ -129,11 +129,17 @@ void toggleBookmark(String id, String title, {String source = 'arXiv', String ki
 
 void restoreBookmark(Bookmark b) => bookmarks.value = {...bookmarks.value, b.id: b};
 
-// 홈 「더 보기」 → 탐색의 그 칸으로. (칸, 업데이트 선택 여부). 같은 칸을 다시 눌러도 알리도록 매번 새 값.
+// 홈 「더 보기」·옆으로 밀기 → 탐색의 그 칸으로. (칸, 업데이트 선택 여부). 같은 칸을 다시 눌러도 알리도록 매번 새 값.
+// animate: 탐색 안에서 밀어 넘길 때는 칸이 미끄러져 넘어간다(다른 탭에서 들어올 때는 바로).
 class ExploreJump {
-  const ExploreJump(this.tab, {this.updates = false});
+  const ExploreJump(this.tab, {this.updates = false, this.animate = false});
   final int tab; // 0 논문, 1 공식 소식, 2 모델
   final bool updates;
+  final bool animate;
 }
 
 final exploreJump = ValueNotifier<ExploreJump?>(null);
+
+// 지금 보이는 탐색 칸과 공식 소식의 발표·업데이트. 쉘의 옆으로 밀기가 다음·이전 자리를 정할 때 읽는다.
+final exploreTab = ValueNotifier(0);
+final newsUpdates = ValueNotifier(false);

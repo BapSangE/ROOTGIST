@@ -26,7 +26,7 @@ class OfficialNewsSection extends StatefulWidget {
 
 class _OfficialNewsSectionState extends State<OfficialNewsSection> {
   final _req = Reloadable(repository.listOfficialNews);
-  var _updates = exploreJump.value?.updates ?? false; // false = 발표, true = 업데이트
+  late var _updates = newsUpdates.value = exploreJump.value?.updates ?? false; // false = 발표, true = 업데이트
   String? _source; // null = 전체
 
   // 홈 「업데이트 더 보기」로 들어오면 업데이트를, 「공식 발표 더 보기」면 발표를 고른다
@@ -34,7 +34,7 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
     final j = exploreJump.value;
     if (j != null && j.tab == 1 && mounted) {
       setState(() {
-        _updates = j.updates;
+        _updates = newsUpdates.value = j.updates;
         _source = null;
       });
     }
@@ -68,7 +68,7 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
               labels: const ['발표', '업데이트'],
               selected: _updates ? 1 : 0,
               onTap: (i) => setState(() {
-                _updates = i == 1;
+                _updates = newsUpdates.value = i == 1;
                 _source = null;
               }),
             ),
