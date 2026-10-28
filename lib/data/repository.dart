@@ -1,3 +1,4 @@
+import '../analytics/posthog_sink.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -125,9 +126,14 @@ void toggleBookmark(String id, String title, {String source = 'arXiv', String ki
   final next = {...bookmarks.value};
   if (next.remove(id) == null) next[id] = Bookmark(id, title, DateTime.now(), source: source, kind: kind);
   bookmarks.value = next;
+  analytics.bookmark(id, kind, next.containsKey(id));
 }
 
-void restoreBookmark(Bookmark b) => bookmarks.value = {...bookmarks.value, b.id: b};
+void restoreBookmark(Bookmark b) {
+  if (bookmarks.value.containsKey(b.id)) return;
+  bookmarks.value = {...bookmarks.value, b.id: b};
+  analytics.bookmark(b.id, b.kind, true, restored: true);
+}
 
 // 홈 「더 보기」·옆으로 밀기 → 탐색의 그 칸으로. (칸, 업데이트 선택 여부). 같은 칸을 다시 눌러도 알리도록 매번 새 값.
 // animate: 탐색 안에서 밀어 넘길 때는 칸이 미끄러져 넘어간다(다른 탭에서 들어올 때는 바로).

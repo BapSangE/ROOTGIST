@@ -1,0 +1,38 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><link rel="stylesheet" href="base.css"><script src="kit.js"></script>
+<style>
+  .opt { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-top: 1px solid var(--line); }
+  .opt:first-of-type { border-top: 0; }
+  .radio { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid #C9C9C2; flex: none; }
+  .radio.on { border: 7px solid var(--ink); }
+  .scale { display: flex; align-items: flex-end; justify-content: space-between; padding: 4px 6px 0; }
+  .scale span { font-weight: 700; color: var(--faint); } .scale span.on { color: var(--ink); }
+  .track { position: relative; height: 4px; border-radius: 2px; background: var(--fill); margin: 14px 6px 0; }
+  .track i { position: absolute; left: 0; top: 0; height: 4px; width: 33%; border-radius: 2px; background: var(--ink); }
+  .track b { position: absolute; left: 33%; top: -10px; width: 24px; height: 24px; margin-left: -12px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.25); }
+</style></head><body>
+<div class="screen" data-tab="3"><div class="scroll" style="padding-top:54px">
+  <div class="topbar"><span class="back"><span data-i="back"></span></span></div>
+  <div class="px mt4"><div class="t-xl">읽기 설정</div></div>
+
+  <div class="card pad mt24">
+    <div class="t-row" style="font-weight:700">초록 기본 보기</div>
+    <div class="meta mt2">초록 리더를 열 때 처음 보이는 방식이에요</div>
+    <div class="mt12">
+      <div class="opt"><span class="radio on"></span><div class="grow"><div class="t-row">함께</div><div class="meta">번역 아래 원문을 맞대어 보여요</div></div></div>
+      <div class="opt"><span class="radio"></span><div class="grow"><div class="t-row">번역</div><div class="meta">한국어 번역만 보여요</div></div></div>
+      <div class="opt"><span class="radio"></span><div class="grow"><div class="t-row">원문</div><div class="meta">영어 원문만 보여요</div></div></div>
+    </div>
+  </div>
+
+  <div class="card pad mt12">
+    <div class="t-row" style="font-weight:700">글자 크기</div>
+    <div class="meta mt2">AI 요약·핵심 내용과 초록 리더 본문에 적용돼요</div>
+    <div class="scale mt20"><span style="font-size:13px">가</span><span class="on" style="font-size:16px">가</span><span style="font-size:19px">가</span><span style="font-size:22px">가</span></div>
+    <div class="track"><i></i><b></b></div>
+    <div class="row between mt12 meta" style="font-size:12.5px;padding:0 2px"><span>작게</span><span style="color:var(--ink);font-weight:600">기본</span><span>크게</span><span>아주 크게</span></div>
+    <div class="mt20" style="background:var(--paper);border-radius:16px;padding:16px 18px">
+      <div style="font:400 16px/26px var(--sans)">AI 요약과 초록 번역이 이 크기로 보여요.</div>
+      <div class="serif mt8" style="font-size:14px;line-height:22px;color:var(--mute);border-left:2px solid var(--line);padding-left:12px">The original abstract looks like this.</div>
+    </div>
+  </div>
+</div></div></body></html>

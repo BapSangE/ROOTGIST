@@ -1,3 +1,4 @@
+import '../../analytics/posthog_sink.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -33,6 +34,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
           if (ctx != null) Scrollable.ensureVisible(ctx);
         });
       }
+      if (mounted) analytics.readerLoaded(widget.paperId);
       return p;
     }),
   );
@@ -48,6 +50,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
 
   @override
   void dispose() {
+    analytics.readerDisposed(widget.paperId);
     readerScale.removeListener(_onScale);
     _scroll.dispose();
     _req.dispose();

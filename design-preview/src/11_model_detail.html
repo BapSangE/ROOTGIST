@@ -1,0 +1,45 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><link rel="stylesheet" href="base.css"><script src="kit.js"></script>
+<style>
+  .stat { flex: 1; padding: 14px 0 0; } .stat + .stat { border-left: 1px solid var(--line); padding-left: 14px; }
+  .bm { display: flex; justify-content: space-between; align-items: flex-start; padding: 14px 0; border-top: 1px solid var(--line); }
+  .bm b { font: 800 20px/24px var(--sans); letter-spacing: -0.5px; }
+  .bul { display: flex; gap: 10px; } .bul::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--ink); margin-top: 10px; flex: none; }
+</style></head><body>
+<div class="screen" data-tab="1"><div class="scroll" style="padding-top:54px">
+  <div class="topbar">
+    <span class="back"><span data-i="back"></span></span>
+    <div class="row gap8"><span class="circle sm line"><span data-i="arrow" class="s"></span></span><span class="circle sm line"><span data-i="share" class="s"></span></span><span class="circle sm line"><span data-i="bookmark" class="s"></span></span></div>
+  </div>
+  <div class="px mt8">
+    <div class="row gap8"><span class="tag" style="background:var(--ink);color:#fff">모델</span><span class="meta">트렌딩 1위</span></div>
+    <div class="t-xl mt12">example-coder</div>
+    <div class="meta mt6">example-lab · 2026.10.15 공개</div>
+  </div>
+
+  <div class="card pad mt24">
+    <div class="t-m">한눈에</div>
+    <div class="body mt8">400억 파라미터 텍스트 생성 모델</div>
+    <div class="row mt16" style="border-top:1px solid var(--line)">
+      <div class="stat"><div class="meta" style="font-size:12.5px">하는 일</div><div class="t-row mt2">텍스트 생성</div></div>
+      <div class="stat"><div class="meta" style="font-size:12.5px">크기</div><div class="t-row mt2">400억</div></div>
+      <div class="stat"><div class="meta" style="font-size:12.5px">라이선스</div><div class="t-row mt2">Apache-2.0</div></div>
+    </div>
+    <div class="row gap8 mt16"><span class="tag" style="height:28px"><span data-i="heart" class="s"></span>좋아요 1,234</span><span class="tag" style="height:28px"><span data-i="download" class="s"></span>다운로드 5.7만</span></div>
+  </div>
+
+  <div class="card pad mt12">
+    <div class="t-m">제작사가 내세운 강점</div>
+    <div class="mt12" style="display:grid;gap:8px">
+      <div class="bul body" style="color:var(--ink)">가상의 코딩 에이전트용 모델이에요.</div>
+      <div class="bul body" style="color:var(--ink)">예시 GPU 한 장으로 돌아가요.</div>
+    </div>
+    <div class="meta mt20" style="font-weight:600;color:var(--ink)">제작사 측정 점수</div>
+    <div class="mt8">
+      <div class="bm" style="border-top:0"><div><div class="t-row">SWE-bench Verified</div><div class="meta">실제 GitHub 이슈를 고치는 코딩 능력</div></div><b>12.3%</b></div>
+      <div class="bm"><div class="t-row">Example-Bench</div><b>45.6</b></div>
+    </div>
+    <div class="meta mt8" style="font-weight:600;color:var(--ink)">제작사가 밝힌 한계</div>
+    <div class="body-s mt6">가상 모델이라 실제로 쓸 수 없어요.</div>
+  </div>
+  <div class="note mt12"><span data-i="info" class="s" style="margin-top:2px"></span><span>모델 카드에 적힌 제작사 발표를 AI가 정리했어요.<br>독립적으로 검증된 결과가 아니에요.</span></div>
+</div></div></body></html>

@@ -40,6 +40,7 @@ dependencies:
   share_plus: ^13.3.1
   shared_preferences: ^2.5.6
   http: ^1.6.0
+  posthog_flutter: 5.57.1
 
 dev_dependencies:
   flutter_test:

@@ -1,3 +1,4 @@
+import '../../analytics/posthog_sink.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -325,7 +326,10 @@ class _DigestPapersState extends State<DigestPapers> {
                 return RgFilterChip(
                   label: topic == null ? '전체' : topicLabels[topic]!,
                   selected: _topic == topic,
-                  onTap: () => setState(() => _topic = topic),
+                  onTap: () {
+                    analytics.category(topic);
+                    setState(() => _topic = topic);
+                  },
                 );
               },
             ),

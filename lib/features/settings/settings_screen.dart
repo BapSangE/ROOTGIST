@@ -1,3 +1,4 @@
+import '../../analytics/posthog_sink.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -73,6 +74,32 @@ class SettingsScreen extends StatelessWidget {
           ),
           _Row(icon: 'sparkles', label: 'AI 생성 안내', onTap: () => showAiNoticeSheet(context)),
           _Row(icon: 'layers', label: '데이터 출처', onTap: () => context.go('/settings/source')),
+        ]),
+        group('사용 분석'),
+        _SettingsCard(children: [
+          ValueListenableBuilder(
+            valueListenable: analyticsCollectionEnabled,
+            builder: (_, enabled, _) => Material(
+              color: Colors.transparent,
+              child: SwitchListTile.adaptive(
+                key: const ValueKey('analytics-collection'),
+                contentPadding: const EdgeInsets.symmetric(vertical: RgSpace.s8),
+                title: Text('사용 분석 데이터 수집', style: RgText.bodySummary),
+                subtitle: Text(
+                  '선택 사항 · 기본 꺼짐\n화면 방문·기능 사용·활성 독서 시간과 임의의 앱 식별자를 PostHog에 보내 앱을 개선해요. 본문·번역문·이메일은 보내지 않아요. 언제든 끌 수 있어요.',
+                  style: RgText.caption.copyWith(color: RgColors.textSecondary),
+                ),
+                activeThumbColor: RgColors.textPrimary,
+                value: enabled,
+                onChanged: (value) => analyticsCollectionEnabled.value = value,
+              ),
+            ),
+          ),
+          if (!analytics.configured)
+            Padding(
+              padding: const EdgeInsets.only(bottom: RgSpace.s12),
+              child: Text('이 빌드에는 분석 연결이 설정되어 있지 않아 전송하지 않아요.', style: RgText.caption),
+            ),
         ]),
         group('정보'),
         _SettingsCard(children: [

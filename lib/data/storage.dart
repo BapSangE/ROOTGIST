@@ -1,3 +1,4 @@
+import '../analytics/posthog_sink.dart';
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -26,6 +27,8 @@ Future<void> initStorage() async {
   final since = DateTime.tryParse(prefs.getString('unread.since') ?? '');
   newSince = since ?? DateTime.now().toUtc().subtract(const Duration(days: 3));
   if (since == null) await prefs.setString('unread.since', newSince.toIso8601String());
+  analyticsCollectionEnabled.value = prefs.getBool('settings.analyticsConsent.v1') ?? false;
+  analyticsCollectionEnabled.addListener(() => prefs.setBool('settings.analyticsConsent.v1', analyticsCollectionEnabled.value));
   readItems.value = {...?prefs.getStringList('unread.read')};
   readerDefaultMode.value = ReaderMode.values.asNameMap()[prefs.getString('settings.readerMode')] ?? ReaderMode.together;
   backdrop.value = Backdrop.values.asNameMap()[prefs.getString('settings.backdrop')] ?? Backdrop.white;

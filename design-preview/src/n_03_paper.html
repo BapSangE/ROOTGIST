@@ -1,0 +1,54 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><link rel="stylesheet" href="neutral.css"><script src="kit.js"></script>
+<style>
+  .kp { display: flex; gap: 12px; padding: 16px 0; border-top: 1px solid var(--line); }
+  .kp:first-of-type { border-top: 0; padding-top: 4px; }
+  .kp .n { font: 700 15px/24px var(--sans); color: var(--ink); width: 16px; flex: none; }
+  .ev { display: inline-flex; align-items: center; gap: 4px; margin-top: 10px; height: 30px; padding: 0 11px; border-radius: 999px; background: var(--fill); font: 500 13px/1 var(--sans); color: var(--ink-2); }
+  .info .r { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-top: 1px solid var(--line); font: 400 14.5px/21px var(--sans); }
+  .info .r:first-child { border-top: 0; }
+  .info .r span:first-child { color: var(--mute); }
+</style></head><body>
+<div class="screen" data-tab="0"><div class="scroll" style="padding-top:54px;padding-bottom:190px">
+  <div class="topbar">
+    <span class="back"><span data-i="back"></span></span>
+    <div class="row gap8"><span class="circle sm line" style="font:700 14px/1 var(--sans)">가</span></div>
+  </div>
+  <div class="px mt8">
+    <div class="row gap6"><span class="tag" style="background:var(--ink);color:#fff">언어 모델</span><span class="meta">arXiv 0000.00001</span></div>
+    <div class="t-xl mt16">추론 시점 연산의<br>효율적 확장</div>
+    <div class="serif mt8" style="font-size:16px;line-height:23px;color:var(--mute)">Efficient Scaling of Inference-Time Compute</div>
+    <div class="row gap6 mt16" style="flex-wrap:wrap">
+      <span class="tag" style="height:30px;background:var(--surface);border:1px solid var(--line)"><span data-i="users" class="s"></span>Author 01 외 6명</span>
+      <span class="tag" style="height:30px;background:var(--surface);border:1px solid var(--line)"><span data-i="calendar" class="s"></span>2026.10.18 발행</span>
+    </div>
+  </div>
+
+  <div class="card pad mt24">
+    <div class="row between"><div class="t-m">AI 요약</div><span class="meta">초록 기반</span></div>
+    <div class="body mt12">입력마다 필요한 추론 연산량이 다르다는 점에 착안해, 연산을 입력 복잡도에 맞춰 배분하는 방법을 제안한 연구예요.</div>
+    <div class="body mt8">고정된 연산 예산을 쓰는 방식과 비교해 평가했고, 예시 벤치마크에서 같은 정확도로 연산을 30% 적게 썼다고 보고해요.</div>
+  </div>
+
+  <div class="card pad mt12">
+    <div class="t-m">핵심 내용</div>
+    <div class="mt12">
+      <div class="kp"><span class="n">1</span><div class="grow"><div class="body" style="color:var(--ink)">입력 복잡도에 따른 추론 연산의 동적 배분</div><span class="ev"><span data-i="quote" class="s"></span>근거 · 초록 2번째 문장</span></div></div>
+      <div class="kp"><span class="n">2</span><div class="grow"><div class="body" style="color:var(--ink)">고정 연산 예산 방식과의 비교 평가</div><span class="ev"><span data-i="quote" class="s"></span>근거 · 초록 3번째 문장</span></div></div>
+      <div class="kp"><span class="n">3</span><div class="grow"><div class="body" style="color:var(--ink)">같은 정확도에서 연산 30% 절감(예시 벤치마크)</div><span class="ev"><span data-i="quote" class="s"></span>근거 · 초록 4번째 문장</span></div></div>
+    </div>
+  </div>
+  <div class="note mt12"><span data-i="info" class="s" style="margin-top:2px"></span><span>초록을 바탕으로 AI가 정리했어요.<br>논문 본문 전체를 반영하지는 않아요.</span></div>
+
+  <div class="card info mt24" style="padding:4px 20px">
+    <div class="r"><span>원문 출처</span><span class="row gap6">arXiv · 0000.00001 <span data-i="arrow" class="s faint"></span></span></div>
+    <div class="r"><span>논문 페이지</span><span class="row gap6">Hugging Face <span data-i="arrow" class="s faint"></span></span></div>
+    <div class="r"><span>발행일</span><span>2026.10.18</span></div>
+  </div>
+</div>
+<!-- A안: 탭바 바로 위에 붙은 버튼 줄. 탭바와는 가는 선 하나로 나뉜다 -->
+<div class="dock">
+  <span class="pill ink lg grow" style="justify-content:center;gap:8px"><span data-i="book" class="m"></span>번역과 함께 초록 읽기</span>
+  <span class="circle line" style="width:50px;height:50px"><span data-i="share" class="m"></span></span>
+  <span class="circle line" style="width:50px;height:50px"><span data-i="bookmark" class="m"></span></span>
+</div>
+</div></body></html>

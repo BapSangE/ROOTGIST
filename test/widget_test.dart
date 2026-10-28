@@ -34,6 +34,7 @@ import 'package:rootgist/features/paper/paper_screen.dart';
 import 'package:rootgist/features/reader/reader_screen.dart';
 import 'package:rootgist/features/reader/term_sheet.dart';
 import 'package:rootgist/main.dart';
+import 'package:rootgist/analytics/posthog_sink.dart';
 
 // 에셋 읽기는 실제 I/O라 fake async 안에서 시작하면 끝나지 않고, rootBundle이 그 미완료 Future를 캐시해
 // 다음 테스트까지 막는다. 첫 프레임(initState의 fixture 읽기)을 실제 async 영역에서 띄운다.
@@ -98,6 +99,24 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
     expect((jsonDecode(prefs.getString('bookmarks')!) as List).map((j) => j['paper_id']), containsAll(['0000.00001', '0000.00002']));
     expect(prefs.getDouble('settings.readerScale'), 0.9);
+  });
+
+  testWidgets('분석은 기본 거부이며 설정에서 변경한 동의를 로컬에 보존한다', (tester) async {
+    analyticsCollectionEnabled.value = false;
+    await pumpApp(tester);
+    router.go('/settings');
+    await settle(tester);
+    final toggle = find.byKey(const ValueKey('analytics-collection'));
+    await tester.ensureVisible(toggle);
+    expect(tester.widget<SwitchListTile>(toggle).value, false);
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+    expect(analyticsCollectionEnabled.value, true);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getBool('settings.analyticsConsent.v1'), true);
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+    expect(prefs.getBool('settings.analyticsConsent.v1'), false);
   });
 
   testWidgets('M3: 모드를 바꿔도 맨 위에 걸친 문장 쌍이 제자리', (tester) async {

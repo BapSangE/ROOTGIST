@@ -1,0 +1,84 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><link rel="stylesheet" href="neutral.css"><script src="kit.js"></script>
+<style>
+  .hero .bul { display: flex; gap: 10px; color: #D6D6D6; font: 400 14.5px/22px var(--sans); }
+  .hero .bul::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: #8F8F8F; margin-top: 9px; flex: none; }
+  .rank { font: 800 30px/30px var(--sans); letter-spacing: -1px; width: 30px; flex: none; }
+  .more { display: flex; justify-content: flex-end; padding: 10px 20px 0; }
+</style></head><body>
+<div class="screen" data-tab="0"><div class="scroll">
+
+  <div class="px row between" style="height:44px">
+    <span style="font:800 15px/1 var(--sans);letter-spacing:.22em">ROOTGIST</span>
+  </div>
+  <div class="px mt12">
+    <div class="meta" style="font-size:15px;font-weight:500">10월 19일 월요일</div>
+    <div class="display mt6">새 논문 6편이<br>올라왔어요</div>
+  </div>
+
+  <!-- 추천 논문: 다크 카드 -->
+  <div class="dark hero mt24">
+    <div class="row between top">
+      <div class="row gap8"><span class="tag">언어 모델</span><span class="meta" style="font-size:13px">오늘의 주요 논문</span></div>
+      <span class="circle sm glass" style="margin:-6px -8px 0 0"><span data-i="bookmark" class="m"></span></span>
+    </div>
+    <div class="t-l mt16" style="color:#fff">추론 시점 연산의<br>효율적 확장</div>
+    <div class="meta mt8">Author 01 외 6명 · 2026.10.18</div>
+    <div class="mt16" style="display:grid;gap:6px">
+      <div class="bul">입력 복잡도에 따른 추론 연산의 동적 배분</div>
+      <div class="bul">고정 연산 예산 방식과의 비교 평가</div>
+    </div>
+  </div>
+
+  <!-- 논문 목록: 카드 없이 바탕 위 행 -->
+  <div class="plain-list mt16">
+    <div class="item" style="border-top:0">
+      <div class="grow"><div class="eyebrow">검색·검색 증강</div><div class="t-row mt4">Benchmarking Long-Context Retrieval</div><div class="meta mt4">Author 01 외 6명 · 2026.10.18</div></div>
+      <span class="circle sm soft"><span data-i="bookmark" class="s"></span></span>
+    </div>
+    <div class="item">
+      <div class="grow"><div class="eyebrow">멀티모달</div><div class="t-row mt4">소수 예시 기반 영상 분할의 일반화 성능 분석</div><div class="meta mt4">Author 01 외 3명 · 2026.10.18</div></div>
+      <span class="circle sm soft"><span data-i="bookmark" class="s"></span></span>
+    </div>
+  </div>
+  <div class="more"><span class="pill soft" style="height:34px;font-size:13.5px">논문 6편 모두 보기 <span data-i="chev" class="s"></span></span></div>
+
+  <!-- 연구소 소식 -->
+  <div class="section-h" style="display:block">
+    <div class="caps">OpenAI · Anthropic · Google</div>
+    <div class="t-m mt4">연구소 소식</div>
+  </div>
+  <div class="card">
+    <div style="padding:20px 20px 18px">
+      <div class="row between top">
+        <div class="row gap6 meta"><span class="dot"></span>Anthropic · 연구 · 10월 18일</div>
+        <span class="circle sm soft" style="margin:-8px -8px 0 0"><span data-i="bookmark" class="s"></span></span>
+      </div>
+      <div class="t-m mt8">예시 에이전트에 관한 가상 연구</div>
+      <div class="body-s mute mt6">가상의 에이전트가 여러 단계를 거쳐 과제를 해결하는 과정을 살펴본 가상 연구예요.</div>
+    </div>
+    <div class="hair" style="margin:0 20px"></div>
+    <div class="row gap12" style="padding:16px 20px">
+      <span class="badge-sq">OA</span>
+      <div class="grow"><div class="meta">OpenAI · 제품 · 10월 18일</div><div class="t-row mt2">가상의 예시 API를 소개합니다</div></div>
+      <span data-i="chev" class="s faint"></span>
+    </div>
+  </div>
+  <div class="more"><span class="link">소식 더 보기 <span data-i="chev" class="s"></span></span></div>
+
+  <!-- 이번 주 바뀐 도구 -->
+  <div class="section-h"><div class="t-m">이번 주 바뀐 도구</div></div>
+  <div class="card list">
+    <div class="item" style="align-items:center"><span class="badge-sq">CC</span><div class="grow"><div class="t-row">Claude Code</div><div class="meta">10월 18일 · 3건</div></div><span class="tag" style="font-family:ui-monospace,Menlo;font-size:12px">v0.0.3</span></div>
+    <div class="item" style="align-items:center"><span class="badge-sq">OA</span><div class="grow"><div class="t-row">가상의 예시 기능을 이제 쓸 수 있어요</div><div class="meta">OpenAI 커뮤니티 · 10월 17일</div></div><span class="tag">공지</span></div>
+  </div>
+  <div class="more"><span class="link">업데이트 더 보기 <span data-i="chev" class="s"></span></span></div>
+
+  <!-- 요즘 많이 쓰는 모델 -->
+  <div class="section-h"><div class="t-m">요즘 많이 쓰는 모델</div><span class="meta">Hugging Face 트렌딩</span></div>
+  <div class="card list">
+    <div class="item"><span class="rank">1</span><div class="grow"><div class="t-row">example-coder</div><div class="body-s mt2">example-lab · 400억 파라미터 텍스트 생성</div><div class="row gap6 mt8"><span class="tag">Apache-2.0</span><span class="tag">♡ 1,234</span><span class="tag">↓ 5.7만</span></div></div></div>
+    <div class="item"><span class="rank faint">2</span><div class="grow"><div class="t-row">example-video</div><div class="body-s mt2">example-lab · 이미지 → 영상 생성</div><div class="row gap6 mt8"><span class="tag">개별 라이선스</span><span class="tag">♡ 99</span><span class="tag">↓ 12만</span></div></div></div>
+  </div>
+  <div class="more"><span class="link">모델 더 보기 <span data-i="chev" class="s"></span></span></div>
+</div></div>
+</body></html>

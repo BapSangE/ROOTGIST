@@ -1,0 +1,34 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><link rel="stylesheet" href="neutral.css"><script src="kit.js"></script>
+<style>
+  .pair { display: flex; gap: 12px; padding: 18px 0; border-top: 1px solid var(--line); }
+  .pair:first-of-type { border-top: 0; }
+  .pair .n { font: 600 12px/29px var(--sans); color: var(--faint); width: 14px; flex: none; }
+  .ko { font: 400 17.5px/30px var(--sans); color: var(--ink); letter-spacing: -0.2px; }
+  .en { font: 400 15px/24px var(--serif); color: var(--mute); margin-top: 10px; }
+  mark { background: var(--hl); color: inherit; padding: 1px 3px; border-radius: 3px; }
+  mark.en-term { background: #EFEFEF; }
+</style></head><body>
+<div class="screen paper"><div class="scroll" style="padding-top:54px">
+  <div class="topbar">
+    <span class="back"><span data-i="back"></span></span>
+    <span class="meta">초록 · 4문장</span>
+    <span style="width:44px"></span>
+  </div>
+  <div style="padding:8px 24px 0">
+    <div class="t-l">추론 시점 연산의 효율적 확장</div>
+    <div class="meta mt6">원문과 번역을 문장마다 맞대어 읽어요</div>
+    <div class="mt20">
+      <div class="pair"><span class="n">1</span><div><div class="ko">대규모 언어 모델에서 <mark>추론 시점 연산</mark>은 성능을 높이는 주요 수단으로 주목받고 있다.</div><div class="en">For large language models, <mark class="en-term">inference-time compute</mark> has emerged as a key lever for improving performance.</div></div></div>
+      <div class="pair"><span class="n">2</span><div><div class="ko">본 연구는 입력 복잡도에 따라 추론 연산을 동적으로 배분하는 방법을 제안한다.</div><div class="en">We propose a method that dynamically allocates inference compute according to input complexity.</div></div></div>
+      <div class="pair"><span class="n">3</span><div><div class="ko">제안 방법은 고정된 연산 예산을 사용하는 방식과 비교하여 평가된다.</div><div class="en">We evaluate the proposed method against approaches that use a fixed <mark class="en-term">compute budget</mark>.</div></div></div>
+      <div class="pair"><span class="n">4</span><div><div class="ko">예시 벤치마크에서 이 방법은 같은 정확도에서 연산을 30% 적게 사용한다.</div><div class="en">On the example benchmark, the method uses 30% less compute at matched accuracy.</div></div></div>
+    </div>
+  </div>
+</div>
+<div class="fade"></div>
+<!-- 레퍼런스 009: 떠 있는 검정 조절 바(모드 세그먼트 + 글자 크기) -->
+<div class="float" style="left:20px;right:20px">
+  <div class="seg ink grow" style="height:52px;align-items:center"><span class="on" style="height:44px">함께</span><span style="height:44px">번역</span><span style="height:44px">원문</span></div>
+  <span class="circle ink" style="width:52px;height:52px;font:700 16px/1 var(--sans)">가</span>
+</div>
+</div></body></html>

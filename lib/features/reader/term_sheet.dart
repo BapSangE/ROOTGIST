@@ -1,3 +1,4 @@
+import '../../analytics/posthog_sink.dart';
 import 'package:flutter/material.dart';
 
 import '../../data/models.dart';
@@ -7,6 +8,7 @@ import '../../design/widgets/rg_bottom_sheet.dart';
 
 // C02 용어 설명 시트 (HANDOFF 7.5). 한국어 대응어는 용어 사전에 연결된 경우에만(G1).
 Future<void> showTermSheet(BuildContext context, GlossaryTerm t) {
+  analytics.termOpened(highlighted: t.highlight, hasTranslation: t.termKo != null);
   return showRgBottomSheet<void>(
     context,
     builder: (sheet) => Column(
