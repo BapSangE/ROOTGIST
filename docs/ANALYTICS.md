@@ -2,6 +2,23 @@
 
 2026-10-28 · 다음 빌드용 연동 · SDK `posthog_flutter: 5.57.1`
 
+
+## 인수인계 요약
+
+2026-10-28 문서 보완 시 확인한 저장소 HEAD는 `b8e5c6a` (`testflight연동_posthog세팅`)다. 아래 검증 결과는 이전 연동 작업 당시의 기록이며, 이번 문서 정리에서는 앱 코드·설정·배포를 변경하거나 테스트를 재실행하지 않았다.
+
+| 구분 | 현재 상태 |
+|---|---|
+| 소스 연동 | 공식 Flutter SDK 설치, 화면/행동 이벤트, 수집 제어, 활성 독서 시간 연결 완료 |
+| 수집 기본값 | OFF. 설정에서 사용자가 직접 켜고 유효한 빌드 설정이 있어야 전송 |
+| 검증 | 정적 분석과 Flutter 회귀 테스트 완료. 상세 결과는 아래 검증 기록 참조 |
+| 실제 PostHog 연결 | 연동 작업 당시 실제 토큰/Host가 제공되지 않아 운영 수신 확인 미실시 |
+| 네이티브 실행 | iOS simulator 빌드가 환경 문제로 실패하여 실기기 검증 필요 |
+| 개인정보 고지 | `privacy.md`는 다음 빌드용 개정 초안. 처리 지역·보관 기간·시행일 등 미확정 |
+| 기존 심사 빌드 | 연동 작업에서 기존 IPA 교체·아카이브 재생성·업로드·배포·심사 취소하지 않음 |
+
+다음 담당자는 **설정과 새 빌드 → 이벤트 명세 → 대시보드 설정 → 배포 전 체크리스트** 순서로 확인한다. 수집에 동의한 설치만 측정하므로 분석 결과를 전체 TestFlight 사용자의 유지율로 해석하지 않는다.
+
 ## 현재 구조와 변경 범위
 
 분석한 기준 HEAD: `39774dfbbbd1aea22dd29d27d9576c75b292cfaa`. Flutter 3.47.8 / Dart 3.13.7, go_router 18.1.1. 앱은 Supabase 읽기 RPC와 로컬 캐시를 사용한다. Python 배치·DB·마이그레이션·Flutter 콘텐츠 파싱은 바꾸지 않았다. 북마크·설정은 기존 SharedPreferences 구조를 유지한다.
@@ -9,6 +26,32 @@
 SDK 호출은 `lib/analytics/`에 한정한다. 앱 루트가 routerDelegate.state.uri의 실제 표시 경로와 탐색 하위 탭을 관찰한다. IndexedStack의 숨은 탭과 단순 rebuild로 화면 이벤트가 중복되지 않는다. 자동 PosthogObserver를 함께 넣지 않는다. 쿼리·원시 경로·날짜·URL 대신 허용된 화면 이름을 사용한다.
 
 초기 설정은 수집 거부다. 설정 → 사용 분석 → 사용 분석 데이터 수집에서 켜야 SDK가 초기화된다. 키는 `settings.analyticsConsent.v1`. SDK 시작도 optOut=true이며 수동 optIn 이후에만 전송한다. 토큰·Host 누락/개인 API 키(phx_)/잘못된 환경이면 수집하지 않는다. 초기화 중 발생한 동작은 버리고, 준비 완료 시 현재 화면만 기록한다. 초기화나 전송의 오류는 앱 호출자에게 전파하지 않는다. 초기화가 지연되어도 실행·탐색은 대기하지 않는다.
+
+
+## 연동 변경 파일과 책임
+
+| 파일 | 역할 |
+|---|---|
+| `pubspec.yaml`, `pubspec.lock` | 공식 SDK 5.57.1 고정 설치 |
+| `lib/analytics/analytics.dart` | dart-define 검증, 동의 상태, 허용 이벤트 속성, 화면 분류, 활성 독서 시간 |
+| `lib/analytics/posthog_sink.dart` | 공식 SDK 어댑터, 수동 초기화, 리플레이·자동 수집 제한 |
+| `lib/main.dart` | 실제 표시 경로, 탐색 하위 탭, 앱 lifecycle, 30초 체크포인트 관찰 |
+| `lib/data/storage.dart` | 기존 SharedPreferences에 `settings.analyticsConsent.v1` 저장 |
+| `lib/data/repository.dart` | 중앙 북마크 추가·해제·되돌리기 이벤트 |
+| `lib/features/home/home_screen.dart` | 논문 주제 칩 선택 이벤트 |
+| `lib/features/reader/reader_screen.dart` | 리더 로딩 성공·종료 시점 연결 |
+| `lib/features/reader/term_sheet.dart` | 용어 바텀 시트 열기 이벤트 |
+| `lib/features/settings/settings_screen.dart` | 수집 제어 스위치와 간단한 고지 |
+| `ios/Runner/Info.plist` | SDK 자동 초기화와 푸시 prewarm 차단 |
+| `android/app/src/main/AndroidManifest.xml` | SDK 자동 초기화 차단 |
+| `macos/Flutter/GeneratedPluginRegistrant.swift` | 의존성 설치가 생성한 플러그인 등록. macOS 분석은 활성화하지 않음 |
+| `test/analytics_test.dart` | 설정·동의·실패 격리·속성 제한·화면·활성 시간 단위 테스트 |
+| `test/analytics_integration_test.dart` | 공식 SDK Dart 호출부터 mock 네이티브 경계까지 실제 push/pop 흐름 검증 |
+| `test/widget_test.dart` | 수집 스위치와 로컬 저장 회귀 테스트 |
+| `docs/privacy.md` | 다음 빌드용 개인정보 처리방침 개정 초안 |
+| `docs/ANALYTICS.md` | 이 인수인계 문서와 이벤트·빌드·운영 명세 |
+
+기존 콘텐츠·북마크 저장 형식, Flutter 디자인 토큰, `worker/`, `supabase/`, `lib/data/supabase_repository.dart`는 연동 작업에서 변경하지 않았다. 작업 전부터 있던 Xcode 프로젝트 사용자 설정 변경, 디자인 미리보기, QA 스프레드시트도 보존했다.
 
 ## 설정과 새 빌드
 
@@ -82,6 +125,40 @@ flutter build ipa --release --build-number="$NEXT_BUILD_NUMBER" \
 운영자가 확정할 값: 실제 리전과 처리자 법인/연락처, 데이터 보관·삭제 기간과 실제 프로젝트 설정, 필요한 국외 이전 안내, 시행일. 현재 실제 프로젝트/자격 증명이 없어 해당 값을 임의로 만들지 않았다. 새 빌드 배포 전에 초안 표시를 제거하고 앱·공개 방침을 함께 맞춘다.
 
 Apple App Privacy는 SDK가 수집하는 항목까지 실제 설정에 맞춰 답한다. 검토 항목은 Product Interaction(Usage Data), 임의 설치 식별자(Identifiers), 기기/OS 등 실제 수신 기술 속성, 목적 Analytics다. 로그인/이메일과 연결하지 않고 광고 추적에 쓰지 않는 현재 동작을 기준으로 연결·추적 여부를 검토한다. 선택 동의만으로 자동 공개 면제라고 가정하지 않는다. SDK PrivacyInfo.xcprivacy는 패키지에 포함되지만 App Store Connect 고지를 대신하지 않는다.
+
+
+## 연동 작업의 검증 기록
+
+2026-10-28 실행 결과이며, 아래 명령 절은 재검증 방법이다.
+
+| 검증 | 결과 |
+|---|---|
+| 변경 전 `flutter analyze` / `flutter test` | 이상 없음 / 기존 46개 통과 |
+| 변경 후 `flutter analyze` | No issues found |
+| 설정 없는 `flutter test` | 55개 통과, 설정이 필요한 SDK 경계 통합 테스트 1개 skip |
+| 테스트용 dart-define을 전달한 전체 테스트 | 56개 모두 통과. 네이티브 전송은 mock하여 외부 이벤트 전송 없음 |
+| `git diff --check` | 통과 |
+| iOS Info.plist / Android manifest | plist 및 XML 문법 검사 통과 |
+| 기존 배포 산출물 보존 | 기존 IPA 및 archive Info.plist의 SHA-256이 작업 전 기록과 일치 |
+| iOS simulator debug 빌드 | SwiftPM 캐시 쓰기 제한 및 CoreSimulator 서비스/런타임 문제로 실패. 네이티브 실행 검증으로 간주하지 않음 |
+
+독립 코드 리뷰에서 `go_router`의 `currentConfiguration.uri`가 imperative `push()`에서 하위 상세 경로를 반영하지 않는 문제를 발견했다. 실제 **논문 push → 리더 push → pop → 논문 상세 → pop → 홈** 테스트로 이벤트 누락을 재현하고, `routerDelegate.state.uri`를 사용하도록 수정해 통과시켰다. 향후 라우터 수정 시 `go()`만으로 테스트하지 말고 이 흐름을 유지한다.
+
+## 다음 빌드 배포 전 체크리스트
+
+이 목록은 실제 실행 확인용이다. 토큰이 없던 연동 작업 당시 완료하지 않은 항목을 임의로 완료 표시하지 않는다.
+
+- [ ] 실제 PostHog 프로젝트의 리전·Project token·ingestion Host를 확인한다. 저장소에 실제 값을 기록하지 않는다.
+- [ ] development/testflight 환경을 각각 명시하고, 기존 Supabase dart-define을 함께 전달한다.
+- [ ] 설정에서 수집을 켠 뒤 Live events에 화면·상세·용어·북마크·카테고리 이벤트가 도착하는지 확인한다.
+- [ ] 수신 속성에 본문·번역·이메일·제목·원문 URL이 없는지 확인한다. SDK 기본 기술 속성도 함께 점검한다.
+- [ ] 수집을 끈 뒤 새 이벤트가 발생하지 않고, 앱 재시작 후 거부 상태가 유지되는지 확인한다.
+- [ ] 실기기에서 리더 활성/비활성/복귀, 다른 화면 이동, 재시작을 검증한다. 백그라운드 시간이 독서 시간에 더해지지 않아야 한다.
+- [ ] iOS 네이티브 빌드·실행을 완료한다. 당시 환경 제한으로 실패한 simulator 빌드와 별도로 확인한다.
+- [ ] 실제 처리 지역·처리자·보관/삭제 기간·국외 이전 안내·시행일을 확정하고, `privacy.md` 초안을 확정한다. 공개 웹 방침 및 App Store Connect 고지도 맞춘다.
+- [ ] 프로젝트에서도 세션 리플레이를 비활성화하고, 모든 TestFlight 인사이트에 `environment=testflight` 필터를 적용한다.
+- [ ] 기존 IPA·archive를 별도 보관하고 기존보다 큰 새 빌드 번호로 빌드한다. 기존 심사 빌드 변경과 새 빌드 배포를 혼동하지 않는다.
+- [ ] 새 빌드에서 실제 수신을 확인한 뒤 D1/D7 코호트 집계와 지표 해석을 확인한다.
 
 ## 검증 명령
 

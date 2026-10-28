@@ -1,0 +1,63 @@
+# ROOTGIST 관리자 웹 진행 기록
+
+## 2026-10-28 — M0~M3 로컬 R0 구현
+
+**상태:** 여섯 화면의 로컬 조회·미리보기 구현. 실제 Supabase Auth/DB·운영 환경 연결은 미검증. 쓰기·승인·게시는 모두 비활성. 최종 서비스 완성을 뜻하지 않는다.
+
+### 범위와 변경
+
+- 사용자: 작업계획 승인 후 순차 진행. 최초 범위는 M0~M3, 실행 방식은 직접 구현 후 독립 코드 리뷰.
+- 기준 HEAD b8e5c6a. 기존 문서 변경 보존, 새 `admin/` 경로 사용. 별도 worktree·브랜치 생성·커밋·푸시·배포 없음.
+- `admin/`: Next.js 16.4.3 / React 19.3.1 / TypeScript 6.0.3. Flutter 웹이 아니며 루트 Flutter web/은 변경하지 않음.
+- M0: BASELINE, 패키지 버전/lockfile, local fixture/staging/production 경계와 기존 테스트·산출물 기준 기록.
+- M1: 사전 등록 관리자용 Supabase 서버 로그인/로그아웃, getUser+UUID 검증, 비관리자 차단, private/no-store, server-only privileged GET 전송. fixture는 로컬 development/test만 허용하고 production/Vercel에서 차단.
+- M2: 앱 통일 무채색 토큰·로컬 글꼴/라이선스·공통 shell/queue/문장/미리보기. firstHighlights/latexDisplay와 정규화 계약을 JS 순수 함수로 포팅.
+- M3: 대시보드, 용어, 논문, 뉴스/모델, 공지, 출처·운영 화면. 가상 fixture와 기존 스키마 DTO 어댑터. 실제 데이터 연결은 하지 않음.
+- 용어: 위험 작업 우선, 검색/필터, 원문·번역, sense/별칭/후보 구분, 논문별 ko_span 입력을 **메모리 내 미리보기**로만 비교. 저장되지 않으며 이동 시 초기화됨.
+- 논문: A문장 근거 클릭 후 번역 탭 유지·원문/번역 위치 이동, 기존 노출/철회/AI 상태를 분리 표시.
+- 뉴스: 출처/유형 필터, thin 소개문·release null 요약·관련 ID, 모델 card=null/제작사 점수 처리.
+- 공지: 현재 앱 번들 snapshot을 읽기 표시. 원격 게시/새 앱 연결 전임을 명시.
+- 운영: 코드 출처 카탈로그와 차단 URL 조회. 전체 배치/출처별 실행 이력은 미연동으로 표시. 예약 KST 04:17과 수집/성공 시각을 혼동하지 않음.
+- 모든 capability=false. 모든 POST/PUT/PATCH/DELETE 요청은 인증 후 423. 실제 콘텐츠 변경 없음.
+
+### 검증 결과
+
+- Flutter 기준 검증: analyze 이상 없음, test 55 passed / 설정 의존 통합 1 skipped. 기존 lib/test/워커/DB 소스를 이후 변경하지 않았으므로 최종 보존은 파일 해시로 확인.
+- Python 기준 검증: Python 3.12.15의 별도 작업 공간 venv, 기존 worker.test_worker 37 passed. 초기 jsonschema 미설치는 venv 설치 후 해결.
+- 관리자 단위/통합: 인증 401/403/200·배포 fixture 차단·비밀 오류 제거, 강조 규칙·금지 원문·겹침·null/빈 값, 큐/커서/검색, 읽기 전송 차단. ADMIN_TEST_URL 실행에서는 실제 localhost GET/모든 쓰기 verb 차단까지 포함해 **28 passed**.
+- 관리자 lint/typecheck/production build: 최종 실행 모두 exit 0으로 통과했다. 실제 명령은 admin/README.md에 기록.
+- 로컬 production 모드 검사: fixture 강제 설정은 API 503, Supabase 모드의 미로그인 API는 401, /admin은 /login으로 307. 실제 자격 증명 없이 더미 URL과 공개 테스트 값만 사용. 응답은 private/no-store.
+- 합성 서버 비밀값을 build env에 넣고 브라우저 .next/static JS에 포함되지 않는지 검사. 실제 비밀값을 사용하거나 로그로 출력하지 않음.
+- 인앱 브라우저: 여섯 메뉴 실제 이동, 검색 0건/복귀, 번역 표기 수정에 따른 노란 강조, 입력 미선택 첫 진입, 직접 링크 선택 유지, 다음/첫 페이지, AI 실패 라벨, thin 0포인트, card=null 확인.
+- 레이아웃: 1280×800 / 1440×900 / 1600×1000에서 가로 페이지 넘침 없음. 720×450 CSS 뷰포트(1440×900에서 200% 확대에 해당하는 레이아웃 폭)도 가로 넘침 없음. 브라우저 자체 줌 배율을 변경한 검증은 아님. 검색 키보드 포커스 3px·가림 없음 확인.
+- Playwright E2E 스크립트 5개 작성. 이 환경의 Chromium 기동은 macOS MachPort 권한으로 실패했고, 샌드박스 밖 실행 요청도 현재 승인 정책에서 허용되지 않음. 자동 E2E 통과로 보고하지 않는다. 인앱 브라우저의 실제 검증과 별도 기록한다.
+
+### 리뷰·수정 기록
+
+- 독립 리뷰: 관리자 권한·fixture 배포 제한·server-only 읽기·앱 강조 호환에서 Critical 없음.
+- 일반 목록의 50개 이후 접근 누락: generic queue에 next_cursor/첫 페이지 제어 추가. 작은 page size 검증 테스트 RED→GREEN 및 실제 브라우저 다음 페이지 확인.
+- 처리 failed 항목의 대기 오표시: 잘못된 운영 상태이므로 중요 수정으로 취급, 실패 fixture에서 재현 후 별도 실패 라벨 표시를 브라우저로 확인.
+- 직접 선택 항목이 검색 필터 밖일 때 다른 행으로 바뀌던 문제: 명시적 id 유지, 실제 브라우저 재현·수정 확인. 첫 로딩의 undefined 선택은 typecheck와 첫 진입/0건 흐름으로 검증.
+- 문장 선택 URL이 목록을 다시 읽으며 번역 탭을 초기화하던 문제: 목록 query에서 id/paper/sentence 제외. 단위 테스트 RED→GREEN, 근거 클릭 후 번역 탭과 문장 표시 확인.
+
+### 남은 작업과 다음 단계
+
+1. 실제 분리된 환경에서 Supabase 관리자 계정·비관리자 계정·만료 세션, 실제 테이블/RLS/키·DTO 조회를 검증한다. 아직 없는 staging을 구성된 것으로 표시하지 않는다.
+2. 일반 실행 환경/CI에서 Playwright 5개를 실행하고, 실제 200% 브라우저 줌·전체 키보드·긴 운영 데이터 스크롤을 추가 확인한다. 현재 시각 검수는 가상 데이터 중심이다.
+3. R0 snapshot 어댑터는 표당 최대 10,000행, 여러 표의 단일 트랜잭션 snapshot이 아니다. 초과는 503이며 일부 데이터를 전체로 표시하지 않는다. 운영 연결 전 데이터 규모·비용·공개 응답 최소화를 재확인한다.
+4. `source-catalog.json`/`notices-snapshot.json`은 기준 b8e5c6a의 참조본이다. 자동 최신 정보·원격 공지 게시가 아니다.
+5. 후속 M4에서 관리자 초안/control/audit와 공통 잠금·버전·멱등 계약의 구체적 변경 패키지를 검토한다. M5 워커 보호까지 통합되기 전에는 term/occurrence 쓰기를 켜지 않는다.
+6. 원격 공지/앱 연결, 실제 실행 계측, 배포 도메인·Vercel·운영 DDL은 아직 범위 밖이며 수행하지 않았다.
+
+### 결정
+
+승인된 Ink & Paper 시안 유지. UI/UX Pro Max의 부적합한 자동 스타일 추천은 미채택하고 확인된 포커스 UX 지침만 적용했다. 인증 프레임워크 검색은 0건이어서 공식 Supabase SSR 문서를 사용했다. 로컬 fixture는 실제 로그인 성공의 증거가 아니다. 현 checkout에 변경을 남겨 사용자가 검토할 수 있도록 한다.
+
+## 2026-10-28 — 커밋·푸시 승인과 다음 순서
+
+- 사용자 요청으로 R0 관리자 웹, 설계/진행 문서, 앞서 정리한 PostHog 인수인계를 `main`에서 커밋하고 `origin/main`에 일반 푸시한다. 강제 푸시·배포 명령·운영 DB 변경은 포함하지 않는다.
+- 커밋 직전 검증을 다시 실행했다: lint/typecheck/build exit 0, 실제 localhost HTTP를 포함한 테스트 28 passed. 알려진 비밀키 패턴 검사에서 일치 항목 없음. `.env.example`만 포함하며 실제 환경 파일·node_modules·.next·테스트 산출물은 제외한다.
+- Next dev가 생성한 `admin/AGENTS.md`도 개발 지침으로 포함한다.
+- 다음 1: 남은 R0 검증 — 분리된 Supabase 환경의 실제 관리자/비관리자/만료 세션과 읽기 DTO를 검증하고, 실행 가능한 환경에서 자동 E2E를 확인한다. 자격 증명은 문서/채팅/저장소에 기록하지 않고 로컬 환경에 설정한다.
+- 다음 2: M4 — 관리자 control/drafts/audit, 공통 트랜잭션·revision/hash·충돌 감지·operation_id 멱등성의 로컬 DB 구현 및 변경 패키지 검토.
+- 다음 3: M5 배치 수정본 보호까지 연결한 뒤 M6 용어 적용 위치 저장을 활성화한다. 보호 통합 전에는 현재 쓰기 차단을 유지한다.

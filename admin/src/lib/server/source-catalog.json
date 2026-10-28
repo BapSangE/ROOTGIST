@@ -1,0 +1,86 @@
+{
+  "source": "worker/official_news.py",
+  "baseline": "b8e5c6a",
+  "rows": [
+    {
+      "id": "openai",
+      "label": "OpenAI",
+      "method": "RSS",
+      "url": "https://openai.com/news/rss.xml",
+      "rights": "권리 검토 기록 연동 전",
+      "reference": "docs/RIGHTS.md"
+    },
+    {
+      "id": "deepmind",
+      "label": "Google DeepMind",
+      "method": "RSS",
+      "url": "https://deepmind.google/blog/rss.xml",
+      "rights": "권리 검토 기록 연동 전",
+      "reference": "docs/RIGHTS.md"
+    },
+    {
+      "id": "google_research",
+      "label": "Google Research",
+      "method": "RSS",
+      "url": "https://research.google/blog/rss/",
+      "rights": "권리 검토 기록 연동 전",
+      "reference": "docs/RIGHTS.md"
+    },
+    {
+      "id": "huggingface",
+      "label": "Hugging Face",
+      "method": "RSS",
+      "url": "https://huggingface.co/blog/feed.xml",
+      "rights": "권리 검토 기록 연동 전",
+      "reference": "docs/RIGHTS.md"
+    },
+    {
+      "id": "openai_community",
+      "label": "OpenAI 커뮤니티",
+      "method": "RSS",
+      "url": "https://community.openai.com/c/announcements/6.rss",
+      "rights": "권리 검토 기록 연동 전",
+      "reference": "docs/RIGHTS.md"
+    },
+    {
+      "id": "claude_code",
+      "label": "Claude Code",
+      "method": "Atom · 릴리스",
+      "url": "https://github.com/anthropics/claude-code/releases.atom",
+      "rights": "권리 검토 기록 연동 전",
+      "reference": "docs/RIGHTS.md"
+    },
+    {
+      "id": "anthropic_sdk",
+      "label": "Anthropic Python SDK",
+      "method": "Atom · 릴리스",
+      "url": "https://github.com/anthropics/anthropic-sdk-python/releases.atom",
+      "rights": "권리 검토 기록 연동 전",
+      "reference": "docs/RIGHTS.md"
+    },
+    {
+      "id": "openai_sdk",
+      "label": "OpenAI Python SDK",
+      "method": "Atom · 릴리스",
+      "url": "https://github.com/openai/openai-python/releases.atom",
+      "rights": "권리 검토 기록 연동 전",
+      "reference": "docs/RIGHTS.md"
+    },
+    {
+      "id": "anthropic",
+      "label": "Anthropic",
+      "method": "사이트맵",
+      "url": "https://www.anthropic.com/sitemap.xml",
+      "rights": "권리 검토 기록 연동 전",
+      "reference": "docs/RIGHTS.md"
+    },
+    {
+      "id": "hf_models",
+      "label": "HF 트렌딩 모델",
+      "method": "API",
+      "url": "https://huggingface.co/api/models?sort=trendingScore&limit=40",
+      "rights": "권리 검토 기록 연동 전",
+      "reference": "docs/RIGHTS.md"
+    }
+  ]
+}

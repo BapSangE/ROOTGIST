@@ -1,0 +1,38 @@
+{
+  "source": "docs/notices.md",
+  "baseline": "b8e5c6a",
+  "rows": [
+    {
+      "id": "bundle-0",
+      "title": "AI가 만든 내용과 사용한 모델",
+      "date": "2026.10.27",
+      "body": "ROOTGIST의 요약, 핵심 내용, 번역, 용어 설명은 AI가 만들어요.\n\n- 논문: 초록만 근거로 한국어 요약, 핵심 내용, 문장별 번역, 용어 설명을 만들어요. 핵심 내용은 초록 안에서 근거 문장을 찾을 수 있는 것만 보여 드려요.\n- 공식 소식: 연구소 블로그 원문의 문단을 근거로 제목 번역, 요약, 핵심 내용을 만들고, 릴리스 노트는 핵심 변경 사항만 정리해요. 글 전체를 옮기지는 않아요.\n- 사용 모델: DeepSeek 공식 API의 DeepSeek V4.1 Flash를 써요. 응답이 없거나 형식이 맞지 않으면 같은 모델로 다시 만들어요.\n- AI에 보내는 것은 논문 초록, 공개된 블로그 글처럼 누구나 볼 수 있는 자료뿐이에요. 앱을 쓰는 분의 정보는 보내지 않아요.\n\nAI가 만든 내용에는 오류가 있을 수 있어요. 중요한 내용은 각 화면의 원문 링크에서 확인해 주세요.",
+      "status": "bundled",
+      "origin": "app_bundle"
+    },
+    {
+      "id": "bundle-1",
+      "title": "새 논문은 언제 올라오나요",
+      "date": "2026.10.27",
+      "body": "- 매일 한국 시간 새벽 4시쯤 전날 Hugging Face Daily Papers에서 upvote가 많은 상위 10편을 모아 정리해요. 정리가 끝나기 전에는 홈에 「모으는 중」이라고 나와요.\n- arXiv는 주말에 새 논문을 발표하지 않아서 일요일·월요일 홈에는 새 논문이 없어요. 그날은 가장 최근 논문을 대신 보여 드려요.\n- 순서는 Hugging Face 이용자들의 반응이고, ROOTGIST가 논문을 평가한 결과가 아니에요.",
+      "status": "bundled",
+      "origin": "app_bundle"
+    },
+    {
+      "id": "bundle-2",
+      "title": "탐색에 「공식 소식」을 더했어요",
+      "date": "2026.10.27",
+      "body": "- 탐색 탭을 옆으로 밀면 Anthropic, OpenAI, Google DeepMind, Google Research, Hugging Face의 공식 블로그 소식을 볼 수 있어요.\n- 「업데이트」에서는 Claude Code·SDK 릴리스, Claude API 변경 사항, OpenAI 개발자 커뮤니티 공지를 모아 보여 드려요.\n- 핵심 내용의 「근거」를 누르면 원문의 해당 문단으로 바로 열려요.",
+      "status": "bundled",
+      "origin": "app_bundle"
+    },
+    {
+      "id": "bundle-3",
+      "title": "ROOTGIST 베타를 시작해요",
+      "date": "2026.10.27",
+      "body": "매일 올라오는 AI 논문을 한국어로 빠르게 읽을 수 있도록 만든 앱이에요. 지금은 베타라 화면과 기능이 바뀔 수 있어요.\n\n- 계정 없이 쓰고, 북마크와 읽기 설정은 이 기기 안에만 저장돼요. 자세한 내용은 설정 → 개인정보 처리방침에 있어요.\n- 불편한 점이나 제안은 설정 → 문의하기(help.rootgist@gmail.com)로 보내 주세요.",
+      "status": "bundled",
+      "origin": "app_bundle"
+    }
+  ]
+}

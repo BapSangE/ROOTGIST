@@ -1,0 +1,586 @@
+{
+  "fixture": true,
+  "showAiReviewedTerms": false,
+  "senses": [
+    {
+      "sense_id": "SENSE-demo-014",
+      "term_id": "TERM-demo-0",
+      "canonical_en": "frozen decoder",
+      "canonical_ko": "고정 디코더",
+      "definition_ko": "학습 중 가중치를 갱신하지 않고 고정해서 사용하는 디코더예요.",
+      "definition_kind": "ai_rewritten",
+      "review_status": "approved",
+      "ai_review_status": "first_pass_complete",
+      "full_form_en": null,
+      "scope": "AI · 가상 예시",
+      "domain": "machine_learning",
+      "review_note_ko": null,
+      "source_media_review_required": false
+    },
+    {
+      "sense_id": "SENSE-demo-015",
+      "term_id": "TERM-demo-1",
+      "canonical_en": "latent space",
+      "canonical_ko": "잠재 공간",
+      "definition_ko": "데이터의 특성을 압축해서 표현하는 공간이에요.",
+      "definition_kind": "ai_rewritten",
+      "review_status": "pending",
+      "ai_review_status": "first_pass_complete",
+      "full_form_en": null,
+      "scope": "AI · 가상 예시",
+      "domain": "machine_learning",
+      "review_note_ko": null,
+      "source_media_review_required": false
+    },
+    {
+      "sense_id": "SENSE-demo-016",
+      "term_id": "TERM-demo-2",
+      "canonical_en": "policy head",
+      "canonical_ko": "정책 헤드",
+      "definition_ko": "상태 표현에서 행동을 결정하는 출력 부분이에요.",
+      "definition_kind": "ai_rewritten",
+      "review_status": "pending",
+      "ai_review_status": "first_pass_complete",
+      "full_form_en": null,
+      "scope": "AI · 가상 예시",
+      "domain": "machine_learning",
+      "review_note_ko": null,
+      "source_media_review_required": false
+    },
+    {
+      "sense_id": "SENSE-demo-017",
+      "term_id": "TERM-demo-3",
+      "canonical_en": "retrieval augmentation",
+      "canonical_ko": "검색 증강",
+      "definition_ko": "외부에서 찾은 정보를 모델의 입력에 더하는 방법이에요.",
+      "definition_kind": "ai_rewritten",
+      "review_status": "approved",
+      "ai_review_status": "first_pass_complete",
+      "full_form_en": null,
+      "scope": "AI · 가상 예시",
+      "domain": "machine_learning",
+      "review_note_ko": null,
+      "source_media_review_required": false
+    },
+    {
+      "sense_id": "SENSE-demo-018",
+      "term_id": "TERM-demo-4",
+      "canonical_en": "token merging",
+      "canonical_ko": "토큰 병합",
+      "definition_ko": "비슷한 토큰을 묶어 처리할 토큰 수를 줄이는 방법이에요.",
+      "definition_kind": "ai_rewritten",
+      "review_status": "deferred",
+      "ai_review_status": "first_pass_complete",
+      "full_form_en": null,
+      "scope": "AI · 가상 예시",
+      "domain": "machine_learning",
+      "review_note_ko": null,
+      "source_media_review_required": false
+    }
+  ],
+  "aliases": [
+    {
+      "alias_id": "ALIAS-demo-01",
+      "sense_id": "SENSE-demo-014",
+      "surface_form": "frozen decoder",
+      "normalized_form": "frozen decoder",
+      "relation_type": "canonical",
+      "review_status": "approved",
+      "auto_match_allowed": true
+    },
+    {
+      "alias_id": "ALIAS-demo-02",
+      "sense_id": "SENSE-demo-014",
+      "surface_form": "fixed decoder",
+      "normalized_form": "fixed decoder",
+      "relation_type": "alias",
+      "review_status": "pending",
+      "auto_match_allowed": false
+    }
+  ],
+  "candidates": [
+    {
+      "normalized_form": "action chunk",
+      "surface_form": "action chunk",
+      "canonical_ko": null,
+      "canonical_ko_draft": "행동 청크",
+      "definition_ko": "여러 행동을 한 묶음으로 나타내는 단위예요.",
+      "review_status": "pending",
+      "seen_count": 8,
+      "first_paper_id": "0000.00002",
+      "sense_id": null,
+      "full_form_en": null,
+      "full_form_en_draft": null,
+      "draft_model": "fixture-model"
+    },
+    {
+      "normalized_form": "world model",
+      "surface_form": "world model",
+      "canonical_ko": null,
+      "canonical_ko_draft": "월드 모델",
+      "definition_ko": "환경이 어떻게 변할지 예측하는 모델이에요.",
+      "review_status": "pending",
+      "seen_count": 3,
+      "first_paper_id": null,
+      "sense_id": null,
+      "full_form_en": null,
+      "full_form_en_draft": null,
+      "draft_model": "fixture-model"
+    }
+  ],
+  "papers": [
+    {
+      "id": "0000.00001",
+      "title_en": "Efficient encoder adaptation with a small adapter",
+      "title_ko": "작은 조정기로 인코더를 효율적으로 조정하는 방법",
+      "abstract_en": "We study a small adapter in a synthetic setting. We adapt the encoder while keeping the frozen decoder unchanged. A policy head maps the latent space to actions. The example illustrates a review workflow, not a research result.",
+      "summary_ko": "가상 논문의 검수 흐름을 설명하기 위한 요약이에요. 원문과 번역을 문장별로 비교하고 용어가 쓰인 위치를 확인해요.",
+      "status": "ready",
+      "withdrawn": false,
+      "published_at": "2026-10-27T00:00:00Z",
+      "generated_at": "2026-10-28T00:30:00Z",
+      "model_id": "fixture-model",
+      "prompt_version": "fixture-v1",
+      "schema_version": "p2-output-v0.2",
+      "exposures": [
+        {
+          "date": "2026-10-28",
+          "is_exposed": true
+        }
+      ],
+      "sentences": [
+        {
+          "id": "A01",
+          "kind": "text",
+          "start_offset": 0,
+          "text": "We study a small adapter in a synthetic setting.",
+          "translation": "가상 실험에서 작은 조정기를 살펴봐요."
+        },
+        {
+          "id": "A02",
+          "kind": "text",
+          "start_offset": 100,
+          "text": "We adapt the encoder while keeping the frozen decoder unchanged.",
+          "translation": "인코더를 조정하는 동안 동결된 디코더는 변경하지 않아요."
+        },
+        {
+          "id": "A03",
+          "kind": "text",
+          "start_offset": 200,
+          "text": "A policy head maps the latent space to actions.",
+          "translation": "정책 헤드가 잠재 공간을 행동으로 연결해요."
+        },
+        {
+          "id": "A04",
+          "kind": "text",
+          "start_offset": 300,
+          "text": "The example illustrates a review workflow, not a research result.",
+          "translation": "이 예시는 연구 결과가 아니라 검수 흐름을 보여줘요."
+        }
+      ],
+      "glossary": [
+        {
+          "idx": 0,
+          "term": "frozen decoder",
+          "sense_id": "SENSE-demo-014",
+          "ko_span": "고정 디코더",
+          "sentence_ids": [
+            "A02"
+          ],
+          "definition_ko": "이 논문에서는 디코더를 그대로 두고 인코더만 조정한다는 뜻이에요.",
+          "context_ko": "",
+          "highlight": true,
+          "full_form_en": null
+        },
+        {
+          "idx": 1,
+          "term": "policy head",
+          "sense_id": "SENSE-demo-016",
+          "ko_span": null,
+          "sentence_ids": [
+            "A03"
+          ],
+          "definition_ko": "상태 표현에서 행동을 결정하는 출력 부분이에요.",
+          "context_ko": "",
+          "highlight": true,
+          "full_form_en": null
+        },
+        {
+          "idx": 2,
+          "term": "latent space",
+          "sense_id": "SENSE-demo-015",
+          "ko_span": "잠재 공간",
+          "sentence_ids": [
+            "A03"
+          ],
+          "definition_ko": "데이터의 특성을 압축해서 표현하는 공간이에요.",
+          "context_ko": "",
+          "highlight": true,
+          "full_form_en": null
+        }
+      ],
+      "key_points": [
+        {
+          "idx": 0,
+          "claim_ko": "인코더를 조정하는 동안 디코더는 그대로 유지해요.",
+          "evidence_sentence_ids": [
+            "A02"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "0000.00002",
+      "title_en": "A synthetic retrieval augmentation example",
+      "title_ko": "검색된 정보를 모델의 입력에 더하는 가상 실험",
+      "abstract_en": "Retrieval augmentation adds external context. An action chunk groups several actions.",
+      "summary_ko": "가상 논문의 검수 흐름을 설명하기 위한 요약이에요. 원문과 번역을 문장별로 비교하고 용어가 쓰인 위치를 확인해요.",
+      "status": "ready",
+      "withdrawn": false,
+      "published_at": "2026-10-27T00:00:00Z",
+      "generated_at": "2026-10-28T00:30:00Z",
+      "model_id": "fixture-model",
+      "prompt_version": "fixture-v1",
+      "schema_version": "p2-output-v0.2",
+      "exposures": [
+        {
+          "date": "2026-10-28",
+          "is_exposed": true
+        }
+      ],
+      "sentences": [
+        {
+          "id": "A01",
+          "kind": "text",
+          "start_offset": 0,
+          "text": "Retrieval augmentation adds external context.",
+          "translation": "검색 증강은 외부 문맥을 더해요."
+        },
+        {
+          "id": "A02",
+          "kind": "text",
+          "start_offset": 100,
+          "text": "An action chunk groups several actions.",
+          "translation": "행동 청크는 여러 행동을 묶어요."
+        }
+      ],
+      "glossary": [
+        {
+          "idx": 0,
+          "term": "retrieval augmentation",
+          "sense_id": "SENSE-demo-017",
+          "ko_span": "검색 증강",
+          "sentence_ids": [
+            "A01"
+          ],
+          "definition_ko": "외부에서 찾은 정보를 모델의 입력에 더하는 방법이에요.",
+          "context_ko": "",
+          "highlight": true,
+          "full_form_en": null
+        },
+        {
+          "idx": 1,
+          "term": "action chunk",
+          "sense_id": null,
+          "ko_span": null,
+          "sentence_ids": [
+            "A02"
+          ],
+          "definition_ko": "여러 행동을 한 묶음으로 나타내는 단위예요.",
+          "context_ko": "",
+          "highlight": true,
+          "full_form_en": null
+        }
+      ],
+      "key_points": [
+        {
+          "idx": 0,
+          "claim_ko": "검색한 정보를 입력 문맥에 더해요.",
+          "evidence_sentence_ids": [
+            "A01"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "0000.00003",
+      "title_en": "Synthetic token merging",
+      "title_ko": "토큰 병합으로 계산을 줄이는 가상 방법",
+      "abstract_en": "",
+      "summary_ko": null,
+      "status": "pending",
+      "withdrawn": false,
+      "published_at": "2026-10-27T00:00:00Z",
+      "generated_at": "2026-10-28T00:30:00Z",
+      "model_id": "fixture-model",
+      "prompt_version": "fixture-v1",
+      "schema_version": "p2-output-v0.2",
+      "exposures": [
+        {
+          "date": "2026-10-28",
+          "is_exposed": true
+        }
+      ],
+      "sentences": [],
+      "glossary": [],
+      "key_points": []
+    },
+    {
+      "id": "0000.00004",
+      "title_en": "A synthetic failed generation",
+      "title_ko": "해설 생성에 실패한 가상 논문",
+      "abstract_en": "",
+      "summary_ko": null,
+      "status": "failed",
+      "withdrawn": false,
+      "published_at": "2026-10-27T00:00:00Z",
+      "generated_at": "2026-10-28T00:30:00Z",
+      "model_id": "fixture-model",
+      "prompt_version": "fixture-v1",
+      "schema_version": "p2-output-v0.2",
+      "exposures": [
+        {
+          "date": "2026-10-28",
+          "is_exposed": true
+        }
+      ],
+      "sentences": [],
+      "glossary": [],
+      "key_points": []
+    }
+  ],
+  "news": [
+    {
+      "id": "demo-news-01",
+      "source": "demo_lab",
+      "source_label": "Demo AI Lab",
+      "kind": "post",
+      "category": "Research",
+      "title_en": "A synthetic update on model evaluation",
+      "title_ko": "모델 평가 방법을 소개하는 가상 소식",
+      "url": "https://example.com/news/evaluation",
+      "published_at": "2026-10-27T02:00:00Z",
+      "collected_at": "2026-10-28T00:30:00Z",
+      "summary_ko": "평가 방법을 소개하는 가상 소식이에요. 수집된 근거와 요약을 비교하는 흐름을 보여줘요.",
+      "key_points": [
+        {
+          "text": "평가 과정을 검토하는 예시예요.",
+          "para": 2,
+          "quote": "This is a synthetic evaluation example."
+        }
+      ],
+      "thin": false,
+      "related": [
+        "demo-news-02"
+      ]
+    },
+    {
+      "id": "demo-news-02",
+      "source": "demo_lab",
+      "source_label": "Demo AI Lab",
+      "kind": "post",
+      "category": "Product",
+      "title_en": "A brief synthetic announcement",
+      "title_ko": "짧은 가상 소개문",
+      "url": "https://example.com/news/brief",
+      "published_at": "2026-10-26T02:00:00Z",
+      "collected_at": "2026-10-28T00:30:00Z",
+      "summary_ko": "원문 소개문만 제공되는 가상 소식이에요.",
+      "key_points": [],
+      "thin": true,
+      "related": [
+        "demo-news-01"
+      ]
+    },
+    {
+      "id": "demo-release",
+      "source": "demo_sdk",
+      "source_label": "Demo SDK",
+      "kind": "release",
+      "category": null,
+      "title_en": "Demo SDK releases",
+      "title_ko": "Demo SDK 업데이트",
+      "url": "https://example.com/releases",
+      "published_at": "2026-10-26T01:00:00Z",
+      "collected_at": "2026-10-28T00:30:00Z",
+      "summary_ko": null,
+      "key_points": [
+        {
+          "text": "입력 처리를 개선하는 가상 변경이에요.",
+          "para": null,
+          "quote": null
+        }
+      ],
+      "thin": false,
+      "related": []
+    }
+  ],
+  "models": [
+    {
+      "id": "demo/Small-Model",
+      "rank": 1,
+      "author": "Demo Lab",
+      "name": "Small Model",
+      "task": "text-generation",
+      "params": 7000000000,
+      "license": "apache-2.0",
+      "likes": 120,
+      "downloads": 2400,
+      "arxiv": [],
+      "url": "https://example.com/models/small",
+      "collected_at": "2026-10-28T00:30:00Z",
+      "card": {
+        "strengths": [
+          "가상 검수에 사용할 작은 모델이에요."
+        ],
+        "benchmarks": [
+          {
+            "name": "가상 지표",
+            "score": "72.1"
+          }
+        ],
+        "limitation": "실제 성능을 나타내는 값이 아니에요."
+      }
+    },
+    {
+      "id": "demo/No-Card",
+      "rank": 2,
+      "author": "Demo Lab",
+      "name": "No Card",
+      "task": "image-text-to-text",
+      "params": null,
+      "license": null,
+      "likes": 40,
+      "downloads": 900,
+      "arxiv": [],
+      "url": "https://example.com/models/no-card",
+      "collected_at": "2026-10-28T00:30:00Z",
+      "card": null
+    }
+  ],
+  "notices": [
+    {
+      "id": "bundle-0",
+      "title": "AI가 만든 내용과 사용한 모델",
+      "date": "2026.10.27",
+      "body": "ROOTGIST의 요약, 핵심 내용, 번역, 용어 설명은 AI가 만들어요.\n\n- 논문: 초록만 근거로 한국어 요약, 핵심 내용, 문장별 번역, 용어 설명을 만들어요. 핵심 내용은 초록 안에서 근거 문장을 찾을 수 있는 것만 보여 드려요.\n- 공식 소식: 연구소 블로그 원문의 문단을 근거로 제목 번역, 요약, 핵심 내용을 만들고, 릴리스 노트는 핵심 변경 사항만 정리해요. 글 전체를 옮기지는 않아요.\n- 사용 모델: DeepSeek 공식 API의 DeepSeek V4.1 Flash를 써요. 응답이 없거나 형식이 맞지 않으면 같은 모델로 다시 만들어요.\n- AI에 보내는 것은 논문 초록, 공개된 블로그 글처럼 누구나 볼 수 있는 자료뿐이에요. 앱을 쓰는 분의 정보는 보내지 않아요.\n\nAI가 만든 내용에는 오류가 있을 수 있어요. 중요한 내용은 각 화면의 원문 링크에서 확인해 주세요.",
+      "status": "bundled",
+      "origin": "app_bundle"
+    },
+    {
+      "id": "bundle-1",
+      "title": "새 논문은 언제 올라오나요",
+      "date": "2026.10.27",
+      "body": "- 매일 한국 시간 새벽 4시쯤 전날 Hugging Face Daily Papers에서 upvote가 많은 상위 10편을 모아 정리해요. 정리가 끝나기 전에는 홈에 「모으는 중」이라고 나와요.\n- arXiv는 주말에 새 논문을 발표하지 않아서 일요일·월요일 홈에는 새 논문이 없어요. 그날은 가장 최근 논문을 대신 보여 드려요.\n- 순서는 Hugging Face 이용자들의 반응이고, ROOTGIST가 논문을 평가한 결과가 아니에요.",
+      "status": "bundled",
+      "origin": "app_bundle"
+    },
+    {
+      "id": "bundle-2",
+      "title": "탐색에 「공식 소식」을 더했어요",
+      "date": "2026.10.27",
+      "body": "- 탐색 탭을 옆으로 밀면 Anthropic, OpenAI, Google DeepMind, Google Research, Hugging Face의 공식 블로그 소식을 볼 수 있어요.\n- 「업데이트」에서는 Claude Code·SDK 릴리스, Claude API 변경 사항, OpenAI 개발자 커뮤니티 공지를 모아 보여 드려요.\n- 핵심 내용의 「근거」를 누르면 원문의 해당 문단으로 바로 열려요.",
+      "status": "bundled",
+      "origin": "app_bundle"
+    },
+    {
+      "id": "bundle-3",
+      "title": "ROOTGIST 베타를 시작해요",
+      "date": "2026.10.27",
+      "body": "매일 올라오는 AI 논문을 한국어로 빠르게 읽을 수 있도록 만든 앱이에요. 지금은 베타라 화면과 기능이 바뀔 수 있어요.\n\n- 계정 없이 쓰고, 북마크와 읽기 설정은 이 기기 안에만 저장돼요. 자세한 내용은 설정 → 개인정보 처리방침에 있어요.\n- 불편한 점이나 제안은 설정 → 문의하기(help.rootgist@gmail.com)로 보내 주세요.",
+      "status": "bundled",
+      "origin": "app_bundle"
+    }
+  ],
+  "sources": [
+    {
+      "id": "openai",
+      "label": "OpenAI",
+      "method": "RSS",
+      "url": "https://openai.com/news/rss.xml",
+      "rights": "권리 검토 기록 연동 전",
+      "reference": "docs/RIGHTS.md"
+    },
+    {
+      "id": "deepmind",
+      "label": "Google DeepMind",
+      "method": "RSS",
+      "url": "https://deepmind.google/blog/rss.xml",
+      "rights": "권리 검토 기록 연동 전",
+      "reference": "docs/RIGHTS.md"
+    },
+    {
+      "id": "google_research",
+      "label": "Google Research",
+      "method": "RSS",
+      "url": "https://research.google/blog/rss/",
+      "rights": "권리 검토 기록 연동 전",
+      "reference": "docs/RIGHTS.md"
+    },
+    {
+      "id": "huggingface",
+      "label": "Hugging Face",
+      "method": "RSS",
+      "url": "https://huggingface.co/blog/feed.xml",
+      "rights": "권리 검토 기록 연동 전",
+      "reference": "docs/RIGHTS.md"
+    },
+    {
+      "id": "openai_community",
+      "label": "OpenAI 커뮤니티",
+      "method": "RSS",
+      "url": "https://community.openai.com/c/announcements/6.rss",
+      "rights": "권리 검토 기록 연동 전",
+      "reference": "docs/RIGHTS.md"
+    },
+    {
+      "id": "claude_code",
+      "label": "Claude Code",
+      "method": "Atom · 릴리스",
+      "url": "https://github.com/anthropics/claude-code/releases.atom",
+      "rights": "권리 검토 기록 연동 전",
+      "reference": "docs/RIGHTS.md"
+    },
+    {
+      "id": "anthropic_sdk",
+      "label": "Anthropic Python SDK",
+      "method": "Atom · 릴리스",
+      "url": "https://github.com/anthropics/anthropic-sdk-python/releases.atom",
+      "rights": "권리 검토 기록 연동 전",
+      "reference": "docs/RIGHTS.md"
+    },
+    {
+      "id": "openai_sdk",
+      "label": "OpenAI Python SDK",
+      "method": "Atom · 릴리스",
+      "url": "https://github.com/openai/openai-python/releases.atom",
+      "rights": "권리 검토 기록 연동 전",
+      "reference": "docs/RIGHTS.md"
+    },
+    {
+      "id": "anthropic",
+      "label": "Anthropic",
+      "method": "사이트맵",
+      "url": "https://www.anthropic.com/sitemap.xml",
+      "rights": "권리 검토 기록 연동 전",
+      "reference": "docs/RIGHTS.md"
+    },
+    {
+      "id": "hf_models",
+      "label": "HF 트렌딩 모델",
+      "method": "API",
+      "url": "https://huggingface.co/api/models?sort=trendingScore&limit=40",
+      "rights": "권리 검토 기록 연동 전",
+      "reference": "docs/RIGHTS.md"
+    }
+  ],
+  "blockedUrls": [],
+  "digests": [
+    {
+      "date": "2026-10-28",
+      "status": "published",
+      "paper_count": 3,
+      "last_success_at": "2026-10-28T00:30:00Z"
+    }
+  ]
+}
