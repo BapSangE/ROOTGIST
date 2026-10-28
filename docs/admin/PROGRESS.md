@@ -61,3 +61,33 @@
 - 다음 1: 남은 R0 검증 — 분리된 Supabase 환경의 실제 관리자/비관리자/만료 세션과 읽기 DTO를 검증하고, 실행 가능한 환경에서 자동 E2E를 확인한다. 자격 증명은 문서/채팅/저장소에 기록하지 않고 로컬 환경에 설정한다.
 - 다음 2: M4 — 관리자 control/drafts/audit, 공통 트랜잭션·revision/hash·충돌 감지·operation_id 멱등성의 로컬 DB 구현 및 변경 패키지 검토.
 - 다음 3: M5 배치 수정본 보호까지 연결한 뒤 M6 용어 적용 위치 저장을 활성화한다. 보호 통합 전에는 현재 쓰기 차단을 유지한다.
+
+## 2026-10-28 — 실제 연결 사전 점검
+
+사용자 요청으로 실제 연결 검증에 착수했다. Supabase main 메타데이터에서 어댑터 16개 테이블·106개 열의 존재와 전체 public RLS 활성 상태를 확인했다. 별도 검증 브랜치·관리자 환경 설정은 없으며, 대상 환경 선택과 인증 설정이 필요하다. 실제 Auth·관리자 웹 조회 통과로 표시하지 않는다. 상세 결과와 검증 순서는 [CONNECTION_VALIDATION.md](CONNECTION_VALIDATION.md)에 기록했다.
+
+### 연결 환경 결정 변경 — 기존 DB 하나 사용
+
+사용자가 별도 검증 DB 준비를 철회하고 기존 ROOTGIST_DB의 읽기 전용 연결을 선택했다. 별도 DB/컨테이너/테스트 계정은 생성하지 않았다. Auth 사용자 0명 확인 후 사용자 본인이 실제 관리자 계정을 대시보드에서 생성하기로 했다. 로컬 ignored 환경 파일에 URL/공개 키만 준비했다. 실제 HTTPS health 및 공개 RLS 경계, 로컬 production 미로그인/위조 세션 차단을 확인했다. 실제 인증된 관리자 조회와 423은 아직 미검증이다. 상세 조건과 증거를 CONNECTION_VALIDATION.md에 갱신했다.
+
+### 관리자 설정 후 실제 키 검증
+
+사용자가 실제 관리자 UUID·서버 키를 로컬 환경에 설정했다. 계정 일치/이메일 확인 완료, 16개 테이블의 실제 열·HEAD count, 브라우저 전달물의 서버 키 미포함을 확인했다. 27 tests passed / fixture HTTP 1 skipped. localhost:3101 실제 모드 서버와 로그인 화면을 열었으며 실제 인증 후의 6개 화면 검증을 기다린다. 키·비밀번호·세션은 출력하거나 문서에 기록하지 않았다.
+
+### 실제 관리자 연결 검증과 운영 범위 축소
+
+사용자 직접 로그인 후 실제 데이터 여섯 화면을 확인했다. 실제 관리자 조회 200/fixture=false, POST·PUT·PATCH·DELETE 423, 허용 UUID만 다른 임시 서버에서 같은 인증 세션의 403을 확인했다. 임시 검증 페이지를 삭제하고 불일치 서버를 종료했다. 정상 읽기 서버는 localhost:3101에 유지한다. 만료 refresh/별도 비관리자/자동 E2E는 미완료로 남긴다. 상세는 CONNECTION_VALIDATION.md.
+
+사용자는 사람 검수를 용어에 한정하고 논문·뉴스·모델은 기존 자동 처리를 유지하기로 했다. M4~M6은 용어 초안·이력·배치 보호·적용 위치 저장만 우선하고 M7 콘텐츠 수동 승인은 제외한다. 공지 원격 게시와 출처 쓰기도 보류한다. OPERATING_SCOPE.md가 초기 전체 콘텐츠 편집 시안보다 우선한다. 이번 단계에서 관리자 앱 코드·기존 Flutter·워커·DB·마이그레이션은 수정하지 않았다.
+
+## 2026-10-28 — M4 용어 저장 기반 구현·로컬 검증
+
+- 기준 3a76540, 분리 작업 브랜치 codex/term-review-storage에서 구현하고 검증된 새 파일만 원래 체크아웃에 반영한다. 실제 자격 증명은 복사하지 않았다.
+- 추가 파일: migration 20261028125014_admin_term_storage.sql, private control/drafts/audit/runtime 및 서버 전용 RPC 6종, TypeScript term command parser/storage adapter, DB/서버 경계 테스트, TERM_STORAGE_PLAN/PACKAGE. 기존 migration·Flutter·워커·관리자 화면/route는 수정하지 않았다.
+- 저장은 원자적 트랜잭션·DB source hash/revision·draft revision·operation_id 멱등성을 검사한다. 별칭 소유권·span 유효성·승인 상태/이력·후보 동기화 대기를 구분한다.
+- 단일 관리자용 global write protocol lock을 operation/row lock보다 먼저 잡아 공유 source 의존성 교착을 피한다. 향후 워커도 같은 계약이 필요하다.
+- 테스트: 실제 network-none PostgreSQL 17.11에서 18 passed. 원본 8개 migration 적용 후 새 migration을 검증했고 공개 get_paper RPC 회귀도 통과. 관리자 34 passed(기존 localhost fixture HTTP 포함), lint/typecheck/build exit 0.
+- 독립 리뷰 Important 4건(동시 별칭 소유권, 상속 span 검증, 감사 이력의 검토 결정/이유, 공유 source 교착)을 각각 재현 RED→GREEN 후 전체 suite 통과. Minor 보류 없음.
+- 운영 DB 적용·테스트 데이터·클라우드 프로젝트·워크플로 실행·배포 없음. 쓰기 기본값 false, worker contract 0, 관리자 ID null. 기존 실제 읽기 서버와 423 차단 유지.
+- 다음 단계는 M5 용어 수정본 보호의 워커 통합 패키지, 그 뒤 M6 용어 편집·저장 UI다. 이 M4만으로 실사용 저장이나 R1 전체 완료로 표시하지 않는다.
+- 사용자 요청에 따라 수정사항/진행상황을 기록한 뒤 커밋·일반 푸시한다. 상세 변경·적용 전 조건·복구·결정은 TERM_STORAGE_PACKAGE.md에 기록했다.

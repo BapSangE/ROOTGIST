@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. 이 문서는 계획 검토용이며 제품 구현을 시작한 기록이 아니다.
 
-**Goal:** 1인 관리자가 실제 번역문에 적용된 용어를 먼저 검수·교정하고, 논문·공식 소식·공지·출처·운영 상태를 기존 ROOTGIST 구조 위에서 관리할 수 있게 한다.
+**Goal:** 1인 관리자가 용어의 의미·표기·실제 번역문 적용 위치만 사람 검수·교정한다. 논문·뉴스·모델은 기존 워커의 자동 수집·요약·공개를 유지하고 관리자는 문맥·상태·오류를 조회한다.
 
 **Architecture:** 저장소 루트의 별도 `admin/`에 Next.js 웹과 관리자 서버 경로를 둔다. 기존 Supabase 테이블과 공개 앱 RPC는 유지하고, 관리자 쓰기는 인증·충돌 감지·트랜잭션·워커 보호를 갖춘 전용 경로로 추가한다. 구현은 사용자와 Codex가 직접 진행하며 각 단계의 변경·검증·미완료 사항을 `docs/`에 기록한다.
 
@@ -10,7 +10,13 @@
 
 **Spec:** [관리자 웹 구현 명세서 v1.0](admin/ROOTGIST_Admin_Implementation_Spec.md). 같은 폴더의 `screens/`는 앞서 검토한 Ink & Paper V2 가상 시안이다. 사본의 과거 작성 범위 설명은 당시 상태이며, 최신 코드 사실은 이 계획서의 기준점을 함께 읽는다.
 
-작성일: 2026-10-28 · 상태: **사용자 승인 / M0~M3 로컬 구현 / 실제 외부 연동 검증 대기** · 실행 방식: 같은 작업 흐름에서 직접 구현, 단계별 검증 후 기록. 소요 일정은 스테이징·접근 권한·통합 난이도를 M0에서 확인한 뒤 산정하며 날짜를 임의 확약하지 않는다.
+작성일: 2026-10-28 · 상태: **사용자 승인 / R0 실제 읽기 연결 검증 / M4 저장 기반 로컬 검증 / 운영 쓰기 비활성** · 실행 방식: 같은 작업 흐름에서 직접 구현, 단계별 검증 후 기록. 소요 일정은 스테이징·접근 권한·통합 난이도를 M0에서 확인한 뒤 산정하며 날짜를 임의 확약하지 않는다.
+
+## 최신 운영 범위 — 2026-10-28 사용자 결정
+
+**사람 검수는 용어만 한다.** [OPERATING_SCOPE.md](admin/OPERATING_SCOPE.md)가 아래 초기 전체 콘텐츠 편집 계획보다 우선한다. M4~M6은 용어 초안·이력·저장·배치 보호에 집중한다. M7/R2의 논문·뉴스·모델 수동 편집/승인은 현재 범위에서 제외하고, M8 공지 서버 게시·M9 출처 편집/차단 URL 쓰기는 보류한다. 논문·뉴스·모델 자동 공개에 수동 승인 관문을 추가하지 않는다. 기존 여섯 화면은 용어 문맥과 운영 조회 용도로 유지하며 비활성 콘텐츠 승인 버튼은 후속 UI 정리 대상이다.
+
+기존 ROOTGIST_DB 하나에 실제 관리자 읽기 연결을 검증했다. 조회 200, 인증된 쓰기 423, 허용 UUID 불일치 403을 확인했다. 별도 검증 DB·테스트 계정은 만들지 않았다. 기존 기간의 기록과 제안은 아래에 보존한다.
 
 ## Global Constraints — 모든 단계의 공통 제약
 
@@ -166,6 +172,8 @@ type ErrorCode = 'AUTH_REQUIRED' | 'ADMIN_ONLY' | 'ENTITY_NOT_FOUND'
 
 ### M4. 공통 초안·트랜잭션·동시성 기반
 
+**현재 상태:** 용어에 한정한 저장 기반 구현·로컬 검증 완료, 운영 미적용. [검토 패키지](admin/TERM_STORAGE_PACKAGE.md)가 이 단계의 실제 범위·서명·검증 결과다. M5/M6 전에는 route/capability를 활성화하지 않는다. 아래 초기 범용 계획에서 paper/news/model 편집은 최신 운영 범위에 따라 제외한다.
+
 **파일:** 신규 `src/lib/domain/{commands,validation}.ts`, `src/lib/server/{draft-service,command-service,capabilities}.ts`, `src/app/api/admin/v1/{drafts,commands,history}/**`, `supabase/tests/admin/{permissions,commands,concurrency}.sql`, 향후 additive 관리자 migration.
 
 **인터페이스:** `saveDraft(input, actor)`는 draft_revision을, `executeCommand(input, actor)`는 명세 11장의 operation_id·targets·후속 작업을 반환한다. 검증된 actor는 서버가 넣는다. DB는 candidate/sense/paper/news/model/blocked_urls 단위로 revision/hash와 잠금을 공유한다.
@@ -256,7 +264,7 @@ type ErrorCode = 'AUTH_REQUIRED' | 'ADMIN_ONLY' | 'ENTITY_NOT_FOUND'
 
 ## 5. 의존성과 실행 순서
 
-M0 → M1 → M2 → M3(R0) → M4 → M5 → M6(R1) → M7(R2) → M8 → M9(R3) → M10.
+현재 순서: M0 → M1 → M2 → M3(R0 읽기 연결) → M4(용어 저장 기반) → M5(용어 수정본 보호) → M6(R1 용어 검수) → M10(해당 범위 검증·배포 패키지). M7/R2는 현재 제외, M8과 M9의 쓰기 기능은 보류한다.
 
 가장 먼저 검토할 제품 결과는 **가상 데이터가 명시된 용어 워크벤치 R0**다. 가장 먼저 실사용 저장을 제공할 결과는 **보호가 완성된 적용 위치 검수 R1**이다. 개발 편의를 위해 보호 미완성 쓰기 기능을 먼저 출고하지 않는다. R2/R3는 R1을 지연시키지 않도록 후순위로 유지한다.
 
