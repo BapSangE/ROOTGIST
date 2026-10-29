@@ -129,16 +129,27 @@ export function ExternalLink({
 export function HighlightText({
   text,
   highlights = [],
+  focusIdx,
+  names,
 }: {
   text: string;
   highlights?: Highlight[];
+  focusIdx?: number | null; // 있으면 지금 검토 중인 용어만 진하게, 다른 용어는 연하게(붙어 있어도 나뉘어 보이게)
+  names?: Record<number, string>;
 }) {
   let at = 0;
   const nodes: React.ReactNode[] = [];
   for (const h of highlights) {
     nodes.push(text.slice(at, h.start));
+    const role = focusIdx === undefined ? undefined : h.idx === focusIdx ? "current" : "other";
     nodes.push(
-      <mark key={`${h.idx}:${h.start}`}>{text.slice(h.start, h.end)}</mark>,
+      <mark
+        key={`${h.idx}:${h.start}`}
+        className={role}
+        title={names?.[h.idx] ? `${role === "current" ? "검토 중 · " : "다른 용어 · "}${names[h.idx]}` : undefined}
+      >
+        {text.slice(h.start, h.end)}
+      </mark>,
     );
     at = h.end;
   }

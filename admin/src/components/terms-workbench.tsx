@@ -405,7 +405,7 @@ export function TermsWorkbench() {
           <span className="brand-sub">용어 검수</span>
         </a>
         <span className="prototype">
-          {fixture ? "가상 데이터 · 로컬 검토본" : "실제 데이터 · 조회 전용"}
+          {fixture ? "가상 데이터 · 로컬 검토본" : writable ? "실제 데이터 · 저장 가능" : "실제 데이터 · 조회 전용"}
         </span>
         <div className="header-actions">
           <button
@@ -682,9 +682,44 @@ export function TermsWorkbench() {
                         "문맥을 연결하면 앱 예상 표시를 볼 수 있어요"
                       }
                       highlights={ctx.projection?.ko[ctx.sentence?.id ?? ""]}
+                      focusIdx={ctx.glossary?.idx ?? null}
+                      names={Object.fromEntries((ctx.projection?.terms ?? []).map((t) => [t.idx, t.term]))}
                     />
                   </p>
                 </div>
+                {/* 같은 문장에서 함께 강조되는 다른 용어: 붙어 있으면 한 덩어리처럼 보여 따로 적는다. 누르면 그 적용 위치로 */}
+                {(() => {
+                  const others = (ctx.projection?.ko[ctx.sentence?.id ?? ""] ?? []).filter(
+                    (h) => h.idx !== ctx.glossary?.idx,
+                  );
+                  return others.length && ctx.paper ? (
+                    <div className="preview-others">
+                      <span className="micro subtle">
+                        <i className="swatch current" /> 지금 검토 중 · <i className="swatch other" /> 이 문장의 다른 용어
+                      </span>
+                      {others.map((h) => {
+                        const t = ctx.projection!.terms.find((x) => x.idx === h.idx);
+                        return (
+                          <button
+                            key={h.idx}
+                            className="suggestion"
+                            onClick={() =>
+                              navigate({
+                                type: "occurrence",
+                                id: JSON.stringify({ paper_id: ctx.paper!.id, idx: h.idx }),
+                                paper: null,
+                                sentence: null,
+                                filter: "all",
+                              })
+                            }
+                          >
+                            {t?.term} · {h.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : null;
+                })()}
                 <div className="preview-foot">
                   {assume ? "승인 가정 · 실제 검토 상태는 바뀌지 않아요. " : ""}
                   {ctx.matchCount > 1 ? "같은 표기는 첫 일치만 강조해요. " : ""}

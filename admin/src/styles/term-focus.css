@@ -1771,3 +1771,33 @@
   align-items: center;
   gap: 6px;
 }
+/* 앱 표시 예상: 지금 검토 중인 용어는 진하게, 같은 문장의 다른 용어는 연하게. 붙은 강조가 한 덩어리로 보이지 않게 틈을 둔다 */
+.term-admin .app-preview mark.current {
+  background: #ffd84d;
+  box-shadow: inset 0 -2px 0 #b8901a;
+}
+.term-admin .app-preview mark.other {
+  background: #fff4c2;
+  margin: 0 1px;
+}
+.term-admin .preview-others {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+.term-admin .swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  vertical-align: -1px;
+}
+.term-admin .swatch.current {
+  background: #ffd84d;
+}
+.term-admin .swatch.other {
+  background: #fff4c2;
+  border: 1px solid #e6d892;
+}
