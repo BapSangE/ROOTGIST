@@ -106,3 +106,6 @@
 사용자 직접 로그인으로 fixture=false 실제 데이터 조회를 확인했다. 용어 문맥/강조 미리보기·의미/후보, 논문·공식 뉴스, 앱 포함 공지, 출처/운영 표시를 확인했다. 대시보드 capabilities 모두 false이며 저장/게시·DB 변경은 수행하지 않았다. 논문 첫 진입의 일시적 Failed to fetch는 재진입 후 정상화됐지만 원인은 미확정이다.
 
 모델 목록 ID의 슬래시가 상세 경로에서 처리되지 않아 ENTITY_NOT_FOUND가 되는 오류를 재현했다. 모델 리소스에만 분할/인코딩 ID 처리를 추가했다. 실패 회귀 테스트를 먼저 확인했고 Node 24.22.2 lint/typecheck/build와 실제 fixture HTTP 포함 38 tests passed. 운영 자동 배포 후 다시 검증한다. 최신 사용자 배치 예약/Flutter 커밋과 별도 디자인 작업은 유지한다. 상세와 남은 검증은 VERCEL_VERIFICATION.md.
+
+
+수정 a015e45의 Production 배포 dpl_4Y8VQNmeRgUmqy168yc3GWNCLpyP READY 후 실제 모델 상세 API(fixture=false)와 모델 정보 화면의 제목/메타데이터/카드 없음 안내를 재확인했다. 모델 경로 오류 수정·배포 검증 완료. 전체 운영 무오류나 저장 기능 완료를 의미하지 않는다. 최종 검증 기록도 사용자 요청에 따라 커밋·푸시한다.

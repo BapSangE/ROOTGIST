@@ -31,6 +31,7 @@
 - 회귀 테스트 RED: 분할/인코딩 모델 ID 2건 실패 확인 후 수정.
 - Node 24.22.2에서 lint/typecheck/build 성공. 실제 fixture HTTP 포함 38 tests passed.
 - 인코딩 경로/슬래시 경로/카드 없는 모델 HTTP 3건 모두 200. 운영 데이터가 아닌 가상 fixture로 테스트했다.
-- 수정 커밋의 자동 배포 및 운영 재확인은 진행 중이며, 이 문서의 로컬 통과를 운영 수정 완료로 간주하지 않는다.
+- 수정 커밋 a015e45b6e9aae85dceef9520b3b0e3ff9f422cf의 Production 자동 배포 dpl_4Y8VQNmeRgUmqy168yc3GWNCLpyP가 READY이며 rootgist.vercel.app alias 반영을 확인했다.
+- 같은 관리자 세션에서 실제 모델 상세 API가 fixture=false와 정상 ID/card=null을 반환했다. 웹 모델 정보 탭도 상세 제목/메타데이터/제작사 카드 정보 없음 안내가 표시되고 오류 alert가 없었다. 단일 모델의 상세 경로 회귀를 운영에서도 확인한 결과이며 전체 모델 데이터 품질 검증은 아니다.
 
 비관리자/만료 세션의 운영 도메인 검증 및 저장 기능 검증은 미완료다. M5 워커 보호, M6 저장 UI가 다음 단계이며 쓰기는 계속 잠가 둔다.
