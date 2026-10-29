@@ -349,7 +349,7 @@ export function readResource(
       state: "unconnected",
       rows: [],
       label: "실행 이력 연동 필요",
-      scheduled_at: "KST 04:17",
+      scheduled_at: "KST 02:17", // .github/workflows/daily-batch.yml cron "17 17 * * *". 바꾸면 같이 고친다
       digests: s.digests,
     };
   return missing();

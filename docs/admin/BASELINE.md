@@ -21,7 +21,7 @@ Node 26.12.1 / npm 11.20.0, Next 16.4.3, React/React DOM 19.3.1, TypeScript 6.0.
 3. staging: 미구성·미접속. 실제 읽기 연결도 관리자 UUID/환경 확인 후 검증한다.
 4. production: 접근·데이터 수정·DDL 적용·배포 없음. 서버 비밀값은 env example에 넣지 않는다.
 
-현재 확인한 workflow는 daily-batch의 schedule/workflow_dispatch와 batch/official-news 잡이다. README의 main push migration 자동 적용 설명을 입증하는 workflow는 찾지 못했다. 외부 배포 연결은 조회하지 않았으므로 운영 적용 절차는 미확인이다. 현재 예약은 UTC 19:17/KST 04:17.
+현재 확인한 workflow는 daily-batch의 schedule/workflow_dispatch와 batch/official-news 잡이다. README의 main push migration 자동 적용 설명을 입증하는 workflow는 찾지 못했다. 외부 배포 연결은 조회하지 않았으므로 운영 적용 절차는 미확인이다. 현재 예약은 UTC 17:17/KST 02:17(2026-10-29에 04:17에서 앞당김, GitHub 예약 지연 2~4시간).
 
 공개 RPC 계약은 마이그레이션과 기존 SupabaseRepository 회귀 테스트를 기준으로 보존한다. 라이브 응답을 새로 조회한 결과로 주장하지 않는다.
 

@@ -119,7 +119,7 @@ export function DashboardScreen() {
               <div className="summary-content">
                 <div className="info-row">
                   <span>예약된 수집 시각</span>
-                  <strong>KST 04:17</strong>
+                  <strong>KST 02:17</strong>
                 </div>
                 <div className="info-row">
                   <span>마지막 실행</span>
@@ -1013,7 +1013,7 @@ export function OperationsScreen() {
         <div className="metric-card">
           <span>예약된 배치</span>
           <strong className="time">
-            04:17 <small>KST</small>
+            02:17 <small>KST</small>
           </strong>
           <p>실제 실행 시작·종료 시각과 달라요.</p>
         </div>

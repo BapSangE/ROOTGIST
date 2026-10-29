@@ -17,7 +17,7 @@
 - 논문: A문장 근거 클릭 후 번역 탭 유지·원문/번역 위치 이동, 기존 노출/철회/AI 상태를 분리 표시.
 - 뉴스: 출처/유형 필터, thin 소개문·release null 요약·관련 ID, 모델 card=null/제작사 점수 처리.
 - 공지: 현재 앱 번들 snapshot을 읽기 표시. 원격 게시/새 앱 연결 전임을 명시.
-- 운영: 코드 출처 카탈로그와 차단 URL 조회. 전체 배치/출처별 실행 이력은 미연동으로 표시. 예약 KST 04:17과 수집/성공 시각을 혼동하지 않음.
+- 운영: 코드 출처 카탈로그와 차단 URL 조회. 전체 배치/출처별 실행 이력은 미연동으로 표시. 예약 KST 04:17(2026-10-29부터 02:17)과 수집/성공 시각을 혼동하지 않음.
 - 모든 capability=false. 모든 POST/PUT/PATCH/DELETE 요청은 인증 후 423. 실제 콘텐츠 변경 없음.
 
 ### 검증 결과
@@ -95,3 +95,7 @@
 ## 2026-10-29 — Vercel Node 24 호환 조정
 
 사용자 요청으로 관리자 engines를 24.x, .node-version을 24.22.2, @types/node를 24.19.2로 조정했다. lock 변경은 루트와 Node/undici 타입 entry 3개뿐이다. 공식 Node 바이너리를 별도 공간에 설치해 기존 Node 26 요구의 EBADENGINE을 재현한 뒤 Node 24 clean install(engine-strict)/lint/typecheck/test/build 및 Node 24 fixture HTTP를 검증했다. 총 34 tests passed. 기존 Next/React/Supabase·앱 로직·Flutter·워커·DB/migration 변경 없음. VERCEL_DEPLOYMENT.md에 단일 admin 프로젝트/환경변수/읽기 전용 한계를 기록했다. 커밋·푸시는 기존 사용자 요청에 따라 진행하며 실제 Vercel 배포·DB 적용은 하지 않는다.
+
+## 2026-10-29 — 사용자 Vercel 재배포 검증
+
+사용자가 환경변수 2개 추가 후 재배포했다. rootgist Production이 READY이며 커밋 5acc85d/main임을 확인했다. https://rootgist.vercel.app/login 200과 실제 로그인 form, 미로그인 관리자 307/API 401, private/no-store를 확인했다. 초기 응답 지연은 후속 요청에서 정상 표시로 재확인했으며 원인을 단정하지 않는다. 실제 로그인 후 데이터 조회는 사용자 로그인 완료 대기 중이다. VERCEL_VERIFICATION.md에 증거·한계를 남겼고 코드/DB/원격 설정/재배포는 변경하지 않았다.
