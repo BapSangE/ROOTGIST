@@ -99,3 +99,10 @@
 ## 2026-10-29 — 사용자 Vercel 재배포 검증
 
 사용자가 환경변수 2개 추가 후 재배포했다. rootgist Production이 READY이며 커밋 5acc85d/main임을 확인했다. https://rootgist.vercel.app/login 200과 실제 로그인 form, 미로그인 관리자 307/API 401, private/no-store를 확인했다. 초기 응답 지연은 후속 요청에서 정상 표시로 재확인했으며 원인을 단정하지 않는다. 실제 로그인 후 데이터 조회는 사용자 로그인 완료 대기 중이다. VERCEL_VERIFICATION.md에 증거·한계를 남겼고 코드/DB/원격 설정/재배포는 변경하지 않았다.
+
+
+### 배포 관리자 로그인 후 확인과 모델 상세 수정
+
+사용자 직접 로그인으로 fixture=false 실제 데이터 조회를 확인했다. 용어 문맥/강조 미리보기·의미/후보, 논문·공식 뉴스, 앱 포함 공지, 출처/운영 표시를 확인했다. 대시보드 capabilities 모두 false이며 저장/게시·DB 변경은 수행하지 않았다. 논문 첫 진입의 일시적 Failed to fetch는 재진입 후 정상화됐지만 원인은 미확정이다.
+
+모델 목록 ID의 슬래시가 상세 경로에서 처리되지 않아 ENTITY_NOT_FOUND가 되는 오류를 재현했다. 모델 리소스에만 분할/인코딩 ID 처리를 추가했다. 실패 회귀 테스트를 먼저 확인했고 Node 24.22.2 lint/typecheck/build와 실제 fixture HTTP 포함 38 tests passed. 운영 자동 배포 후 다시 검증한다. 최신 사용자 배치 예약/Flutter 커밋과 별도 디자인 작업은 유지한다. 상세와 남은 검증은 VERCEL_VERIFICATION.md.

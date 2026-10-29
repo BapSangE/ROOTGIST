@@ -5,6 +5,7 @@ import {
   termDetail,
   dashboard,
   paginate,
+  readResource,
 } from "@/lib/server/read-models";
 import { readOnlyFetch } from "@/lib/supabase/read-only-transport";
 
@@ -99,4 +100,33 @@ it("supports a smaller validated page size without dropping the next cursor", ()
   expect(page.rows.map((r) => r.id)).toEqual(["a"]);
   expect(page.next_cursor).not.toBeNull();
   expect(() => paginate(rows, new URLSearchParams("limit=0"))).toThrow();
+});
+
+it.each([
+  { path: ["models", "demo/Small-Model"] },
+  { path: ["models", "demo", "Small-Model"] },
+  { path: ["models", "demo%2FSmall-Model"] },
+])(
+  "resolves a model identifier across route adapter representations: $path",
+  ({ path }) => {
+    const result = readResource(
+      fixtureSnapshot(),
+      path,
+      new URLSearchParams(),
+    ) as { value: { id: string }; fixture: boolean };
+    expect(result.value.id).toBe("demo/Small-Model");
+    expect(result.fixture).toBe(true);
+  },
+);
+
+it("keeps multi-part identifiers scoped to models and rejects unknown or malformed keys", () => {
+  for (const path of [
+    ["papers", "0000", "00001"],
+    ["news", "demo", "unknown"],
+    ["models", "%ZZ"],
+    ["models", "demo", "missing"],
+  ])
+    expect(() =>
+      readResource(fixtureSnapshot(), path, new URLSearchParams()),
+    ).toThrow("항목이 없거나 목록이 변경되었습니다.");
 });

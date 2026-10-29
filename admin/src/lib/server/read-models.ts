@@ -300,8 +300,20 @@ export function readResource(
   };
   if (path[0] in collections) {
     const values = collections[path[0] as keyof typeof collections];
-    if (path.length === 2) {
-      const value = values.find((x) => x.id === path[1]) ?? missing();
+    if (path.length === 2 || (path[0] === "models" && path.length > 2)) {
+      // Model IDs contain a slash (author/name). Preserve exact matching first;
+      // catch-all route adapters may split it or leave the separator encoded.
+      let key = path[0] === "models" ? path.slice(1).join("/") : path[1];
+      let value = values.find((x) => x.id === key);
+      if (!value && path[0] === "models") {
+        try {
+          key = decodeURIComponent(key);
+        } catch {
+          missing();
+        }
+        value = values.find((x) => x.id === key);
+      }
+      if (!value) missing();
       return {
         ...envelope(s),
         ...revisioned(value),
