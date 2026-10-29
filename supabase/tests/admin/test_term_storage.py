@@ -57,10 +57,11 @@ class TermStorage(unittest.TestCase):
             sql(migration.read_text())
         sql("grant usage on schema public to anon, authenticated, service_role; grant select,insert,update,delete on all tables in schema public to service_role;")
         status=json.loads(sql("set role service_role; select public.admin_term_storage_status();"))
-        assert status==dict(schema_version=1,worker_contract_version=0,writes_enabled=False,administrator_configured=False)
+        # 20261029150000: 워커 보호가 DB 트리거로 들어가 쓰기 준비는 켜져 있고, 관리자 UUID는 서버가 처음 저장할 때 등록한다
+        assert status==dict(schema_version=1,worker_contract_version=1,writes_enabled=True,administrator_configured=False)
 
     def setUp(self):
-        sql("truncate rootgist_admin.audit, rootgist_admin.drafts, rootgist_admin.control; "
+        sql("truncate rootgist_admin.audit, rootgist_admin.drafts, rootgist_admin.control, rootgist_admin.occurrence_review; "
             f"update rootgist_admin.runtime set admin_user_id='{ACTOR}', writes_enabled=true, worker_contract_version=1; "
             "truncate public.papers,public.terms,public.term_candidates cascade; "
             "insert into public.papers(paper_id,title_en,abstract_en,abstract_sha256,published_at) values('P1','Synthetic paper','Alpha term.','synthetic-sha',now()); "
@@ -72,6 +73,52 @@ class TermStorage(unittest.TestCase):
             "insert into public.term_aliases(alias_id,sense_id,surface_form,relation_type,review_status,auto_match_allowed) values('A1','S1','alpha','canonical','approved',true),('A2','S2','beta','canonical','approved',true); "
             "insert into public.paper_glossary(paper_id,idx,term,definition_ko,context_ko,sentence_ids,highlight,sense_id,ko_span) values('P1',0,'alpha','가상 정의','가상 문맥',array['A01'],true,'S1','알파'); "
             "insert into public.term_candidates(normalized_form,surface_form,definition_ko,first_paper_id) values('gamma','gamma','가상 정의','P1');")
+
+    def test_worker_cannot_overwrite_reviewed_sense_or_alias(self):
+        command([target({"canonical_ko": "사람 표기"})], action="approve")
+        # 배치 워커(서비스 키 REST): 검수한 의미의 표기·상태는 그대로, 검수 안 한 의미는 바뀐다
+        sql("set role service_role; update public.term_senses set canonical_ko='배치 값', review_status='pending' where sense_id in ('S1','S2');")
+        self.assertEqual(sql("select canonical_ko||'/'||review_status from public.term_senses where sense_id='S1';"), "사람 표기/approved")
+        self.assertEqual(sql("select canonical_ko from public.term_senses where sense_id='S2';"), "배치 값")
+        sql("set role service_role; insert into public.term_aliases(alias_id,sense_id,surface_form,relation_type,review_status,auto_match_allowed) values('A9','S1','alfa','alias','approved',true);")
+        sql("set role service_role; delete from public.term_aliases where alias_id='A1';")
+        self.assertEqual(sql("select string_agg(alias_id, ',' order by alias_id) from public.term_aliases where sense_id='S1';"), "A1")
+        # 사람이 SQL 편집기로 고치는 것(서비스 키가 아닌 역할)은 막지 않는다
+        sql("update public.term_senses set canonical_ko='수동 수정' where sense_id='S1';")
+        self.assertEqual(sql("select canonical_ko from public.term_senses where sense_id='S1';"), "수동 수정")
+
+    def test_worker_keeps_reviewed_candidate_but_can_promote(self):
+        command([target({"canonical_ko": "감마", "definition_ko": "사람 정의"}, "candidate", "gamma")], action="approve")
+        sql("set role service_role; update public.term_candidates set definition_ko='배치 정의', review_status='pending', seen_count=9 where normalized_form='gamma';")
+        self.assertEqual(sql("select definition_ko||'/'||review_status||'/'||seen_count from public.term_candidates where normalized_form='gamma';"), "사람 정의/approved/9")
+        sql("set role service_role; delete from public.term_candidates where normalized_form='gamma';")  # 안 보이는 후보 정리
+        self.assertEqual(sql("select count(*) from public.term_candidates where normalized_form='gamma';"), "1")
+        sql("set role service_role; update public.term_candidates set sense_id='S2' where normalized_form='gamma';")  # 사전 승격 연결
+        self.assertEqual(sql("select sense_id from public.term_candidates where normalized_form='gamma';"), "S2")
+
+    def test_reviewed_occurrence_survives_worker_but_regeneration_resets_it(self):
+        base = dict(idx=0, expected_term="alpha", ko_span="알파 용어")
+        command([target({"glossary": [base]}, "paper", "P1")])
+        marks = json.loads(sql("set role service_role; select public.admin_term_review_marks();"))
+        self.assertEqual([(m["paper_id"], m["idx"]) for m in marks["occurrences"]], [("P1", 0)])
+        sql("set role service_role; update public.paper_glossary set ko_span='배치 표기', sense_id=null where paper_id='P1';")
+        self.assertEqual(sql("select ko_span||'/'||sense_id from public.paper_glossary where paper_id='P1';"), "알파 용어/S1")
+        # 논문을 다시 만들면(지우고 다시 넣기) 막지 않고, 검수 표시만 지워 다시 검수 대상으로
+        sql("set role service_role; delete from public.paper_glossary where paper_id='P1'; "
+            "insert into public.paper_glossary(paper_id,idx,term,definition_ko,context_ko,sentence_ids,highlight) values('P1',0,'alpha','새 정의','새 문맥',array['A01'],true);")
+        self.assertEqual(sql("select count(*) from rootgist_admin.occurrence_review;"), "0")
+        sql("set role service_role; update public.paper_glossary set ko_span='알파' where paper_id='P1';")
+        self.assertEqual(sql("select ko_span from public.paper_glossary where paper_id='P1';"), "알파")
+
+    def test_writer_claim_is_one_time(self):
+        sql("update rootgist_admin.runtime set admin_user_id=null;")
+        other = str(uuid.uuid4())
+        self.assertEqual(sql(f"set role service_role; select public.admin_claim_term_writer('{ACTOR}');"), "t")
+        self.assertEqual(sql(f"set role service_role; select public.admin_claim_term_writer('{other}');"), "f")
+        self.assertEqual(sql("select admin_user_id from rootgist_admin.runtime;"), ACTOR)
+        for role in ["anon", "authenticated"]:
+            self.assertIn("permission denied", sql(f"set role {role}; select public.admin_claim_term_writer('{other}');", ok=False))
+            self.assertIn("permission denied", sql(f"set role {role}; select public.admin_term_review_marks();", ok=False))
 
     def test_private_permissions_and_false_readiness(self):
         for role in ["anon", "authenticated"]:

@@ -1,6 +1,8 @@
 import { it, expect } from "vitest";
 import {
   projectPaperForPreview,
+  findTerm,
+  countTerm,
   latexDisplay,
   normalizeTerm,
   termVariants,
@@ -87,25 +89,41 @@ it("highlight false only suppresses English, and source translation verbatim is 
     showAiReviewedTerms: true,
     assumeApproved: true,
   });
-  expect(forbidden.ko).toEqual({});
+  // 대응어(기계 번역 원문)는 숨기지만, 우리 번역문 속 표기(ko_span)는 앱이 강조한다(get_paper 2026-10-29)
   expect(forbidden.terms[0].term_ko).toBeNull();
+  expect(forbidden.ko.A01.map((x) => x.label)).toEqual(["동결된 디코더"]);
 });
-it("pending AI terms follow app_config, not an admin assumption of approval", () => {
+it("pending AI terms follow app_config for the dictionary label only", () => {
   const pending = { ...sense, review_status: "pending" };
+  const bare = { ...paper, glossary: [{ ...row, ko_span: null }], sentences: [{ ...paper.sentences[0], translation: "고정 디코더를 쓴다." }] };
+  const hidden = projectPaperForPreview({ paper: bare, senses: [pending], showAiReviewedTerms: false });
+  expect(hidden.terms[0].term_ko).toBeNull();
+  expect(hidden.ko).toEqual({});
   expect(
-    projectPaperForPreview({
-      paper,
-      senses: [pending],
-      showAiReviewedTerms: false,
-    }).ko,
-  ).toEqual({});
-  expect(
-    projectPaperForPreview({
-      paper,
-      senses: [pending],
-      showAiReviewedTerms: true,
-    }).ko.A01,
+    projectPaperForPreview({ paper: bare, senses: [pending], showAiReviewedTerms: true }).ko.A01,
   ).toHaveLength(1);
+});
+it("matches the app: unlinked terms by span or English left in the translation, word boundaries", () => {
+  const p = projectPaperForPreview({
+    paper: {
+      sentences: [
+        { id: "A01", kind: "text", start_offset: 0, text: "We apply SFT and RAG.", translation: "RAGAS로 평가하고 SFT를 적용한다." },
+      ],
+      glossary: [
+        { idx: 0, term: "SFT", definition_ko: "정의", sentence_ids: ["A01"], highlight: true, sense_id: null, ko_span: null },
+        { idx: 1, term: "RAG", definition_ko: "정의", sentence_ids: ["A01"], highlight: true, sense_id: null, ko_span: null },
+      ],
+    },
+    senses: [],
+    showAiReviewedTerms: false,
+  });
+  expect(p.ko.A01.map((x) => [x.label, x.start])).toEqual([["SFT", "RAGAS로 평가하고 ".length]]);
+  expect(p.en.A01.map((x) => x.label)).toEqual(["SFT", "RAG"]);
+});
+it("finds Korean labels only at a word start and counts with the same rule", () => {
+  expect(findTerm("멀티에이전트 구조", "에이전트")).toBe(-1);
+  expect(findTerm("에이전트용 모델", "에이전트")).toBe(0);
+  expect(countTerm("RAG와 RAG, RAGAS", "RAG")).toBe(2);
 });
 it("strips parenthetical suffix and uses UTF-16 ranges after emoji like Dart", () => {
   const p = projectPaperForPreview({

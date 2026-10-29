@@ -11,11 +11,14 @@ import type {
 import { capabilityNames } from "@/lib/domain/contracts";
 import { normalizeTerm } from "@/lib/domain/display";
 import { AdminError } from "./errors";
-export function capabilities(): Capabilities {
+import { controlNote, reviewedAt } from "./term-review-marks";
+export function capabilities(termWrites = false): Capabilities {
   return Object.fromEntries(
     capabilityNames.map((name) => [
       name,
-      {
+      termWrites && (name === "term_writes" || name === "occurrence_writes")
+        ? { enabled: true, reason: null }
+        : {
         enabled: false,
         reason:
           name === "notice_app_integration"
@@ -23,14 +26,14 @@ export function capabilities(): Capabilities {
             : name === "operations_history"
               ? "실행별 계측이 아직 연결되지 않았습니다."
               : "수정본 보호·초안·저장 경로 검증 후 사용할 수 있습니다.",
-      },
+          },
     ]),
   ) as Capabilities;
 }
 export function envelope(s: Snapshot): Envelope {
   return {
     fixture: s.fixture,
-    capabilities: capabilities(),
+    capabilities: capabilities(s.review?.writable ?? false),
     refreshed_at: new Date().toISOString(),
   };
 }
@@ -122,7 +125,9 @@ export function termRows(s: Snapshot): TermRow[] {
         type: "occurrence",
         term: g.term,
         canonical_ko: sense?.canonical_ko ?? null,
-        status: "unreviewed",
+        status: reviewedAt(s.review, paper.id, g.idx, g.term) ? "checked" : "unreviewed",
+        reviewed_at: reviewedAt(s.review, paper.id, g.idx, g.term),
+        review_note: controlNote(s.review, "paper", paper.id)?.note ?? null,
         risk_count: risks.length,
         risk_labels: risks,
         paper_id: paper.id,
@@ -141,6 +146,8 @@ export function termRows(s: Snapshot): TermRow[] {
       term: sense.canonical_en,
       canonical_ko: sense.canonical_ko,
       status: sense.review_status,
+      reviewed_at: controlNote(s.review, "sense", sense.sense_id)?.updated_at ?? null,
+      review_note: controlNote(s.review, "sense", sense.sense_id)?.note ?? null,
       risk_count: related.reduce((n, r) => n + r.risk_count, 0),
       risk_labels: [...new Set(related.flatMap((r) => r.risk_labels))],
       paper_id: null,
@@ -163,6 +170,8 @@ export function termRows(s: Snapshot): TermRow[] {
       term: candidate.surface_form,
       canonical_ko: candidate.canonical_ko ?? candidate.canonical_ko_draft,
       status: candidate.review_status,
+      reviewed_at: controlNote(s.review, "candidate", candidate.normalized_form)?.updated_at ?? null,
+      review_note: controlNote(s.review, "candidate", candidate.normalized_form)?.note ?? null,
       risk_count: related.reduce((n, r) => n + r.risk_count, 0),
       risk_labels: [...new Set(related.flatMap((r) => r.risk_labels))],
       paper_id: candidate.first_paper_id,
@@ -176,10 +185,10 @@ export function termRows(s: Snapshot): TermRow[] {
   return rows.sort(
     (a, b) =>
       (b.risk_count > 0 ? 1 : 0) - (a.risk_count > 0 ? 1 : 0) ||
-      ({ deferred: 0, pending: 1, unreviewed: 1, approved: 2, rejected: 3 }[
+      ({ deferred: 0, pending: 1, unreviewed: 1, approved: 2, checked: 2, rejected: 3 }[
         a.status
       ] ?? 4) -
-        ({ deferred: 0, pending: 1, unreviewed: 1, approved: 2, rejected: 3 }[
+        ({ deferred: 0, pending: 1, unreviewed: 1, approved: 2, checked: 2, rejected: 3 }[
           b.status
         ] ?? 4) ||
       a.id.localeCompare(b.id),
@@ -210,7 +219,9 @@ export function listTerms(s: Snapshot, params: URLSearchParams) {
           ? r.risk_count > 0
           : status === "pending"
             ? ["pending", "unreviewed"].includes(r.status)
-            : r.status === status)),
+            : status === "approved"
+              ? ["approved", "checked"].includes(r.status)
+              : r.status === status)),
   );
   return { ...envelope(s), ...paginate(rows, params) };
 }

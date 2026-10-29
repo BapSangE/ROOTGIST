@@ -1,6 +1,6 @@
 # ROOTGIST Admin — R0 로컬 검토본
 
-Next.js + React + TypeScript로 만든 별도 관리자 웹입니다. Flutter 앱의 `web/`를 사용하지 않습니다. 현재 용어 검수 전용 화면에서 목록·문맥·사전 의미·앱 강조 미리보기를 제공합니다. `/admin`과 예전 논문/뉴스/공지/운영 화면 URL은 `/admin/terms`로 모입니다. 관련 읽기 API는 유지합니다. **초안 저장·승인·게시는 지원하지 않으며 모든 쓰기 API는 차단합니다.**
+Next.js + React + TypeScript로 만든 별도 관리자 웹입니다. Flutter 앱의 `web/`를 사용하지 않습니다. 현재 용어 검수 전용 화면에서 목록·문맥·사전 의미·앱 강조 미리보기를 제공합니다. `/admin`과 예전 논문/뉴스/공지/운영 화면 URL은 `/admin/terms`로 모입니다. 관련 읽기 API는 유지합니다. **용어 검수 저장(승인·수정 필요·반려·적용 위치 확인)만 `POST /api/admin/v1/term-commands`로 열고, 다른 쓰기 API는 차단합니다.** 배치 보호·저장 규칙은 [TERM_REVIEW_WRITES.md](../docs/admin/TERM_REVIEW_WRITES.md).
 
 ## 실행
 

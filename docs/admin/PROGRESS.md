@@ -133,3 +133,7 @@
 
 
 용어 집중 UI 0310099를 main에 통합·푸시했고 Production 배포 dpl_FE32VEJ8e1AuvwFw2fiHjNrZKnqQ READY/bom1을 확인했다. 실제 관리자 세션에서 적용 위치476개와 문맥/사전/앱표시를 조회했다. 1280×720 및 기존767×724 창에서 페이지 overflow 없음. 저장 관련 동작disabled/다음항목enabled, 미로그인API401/no-store 유지. 운영 쓰기 호출·DB 적용 없음. 최근15분 런타임 오류 보고0건. 구현/검증 상세와 자동 E2E 미실행 한계는 TERM_REVIEW_FOCUS_IMPLEMENTATION.md에 갱신했다.
+
+## 2026-10-29 — 용어 검수 저장 켜기(M5·M6)
+
+M4 저장 기반이 이미 운영 DB에 적용돼 있음을 확인했다(문서의 「미적용」 정정). 워커 보호를 DB 트리거로 넣는 마이그레이션 20261029150000과 관리자 저장 경로·검수 UI를 추가했다. 미리보기 규칙을 앱 ed02106과 맞췄다. DB 22·관리자 68 tests passed, lint/typecheck/build 성공, 가상 데이터 브라우저 확인. 운영 쓰기는 푸시·배포 뒤 첫 저장으로 확인한다. 상세는 TERM_REVIEW_WRITES.md.

@@ -5,9 +5,11 @@ import type {
   PageResult,
   TermDetail,
   TermRow,
+  TermTargetState,
 } from "@/lib/domain/contracts";
+import { useReviewSave, type ReviewAction } from "./term-review-save";
 import { listQuery } from "@/lib/domain/query";
-import { latexDisplay, normalizeTerm } from "@/lib/domain/display";
+import { findTerm, latexDisplay, normalizeTerm } from "@/lib/domain/display";
 import { reviewContext } from "@/lib/domain/review-context";
 import { logout } from "@/lib/server/login-actions";
 import { useAdminFixture } from "./admin-shell";
@@ -31,6 +33,8 @@ export function TermsWorkbench() {
   const type = params.get("type") ?? "occurrence";
   const query = new URLSearchParams(listQuery(params.toString()));
   if (!query.has("type")) query.set("type", "occurrence");
+  // 기본은 「검토 필요」만: 끝낸 항목은 목록에서 빠져 다음 할 일만 남는다
+  if (!query.has("filter")) query.set("filter", "pending");
   const list = useResource<TermList>(`/api/admin/v1/terms?${query}`);
   const selected =
     list.data?.rows.find((r) => r.id === params.get("id")) ??
@@ -83,13 +87,43 @@ export function TermsWorkbench() {
       })
     : null;
   const dirty = override !== undefined && override !== (base?.span ?? null);
+  // ---- 사전 의미·후보 편집(항목마다 메모리에 보관, 저장하면 지운다) ----
+  const row0 = detail.data?.value.row;
+  const review = useReviewSave();
+  const writable = !!detail.data?.capabilities.term_writes?.enabled;
+  const meaningKey = JSON.stringify([row0?.type, row0?.id]);
+  const [meaning, setMeaning] = useState<
+    Record<string, { canonical_ko?: string; definition_ko?: string; note?: string }>
+  >({});
+  const senseValue = detail.data?.value.sense ?? null;
+  const candidateValue = detail.data?.value.candidate ?? null;
+  const baseKo =
+    row0?.type === "candidate"
+      ? (candidateValue?.canonical_ko ?? candidateValue?.canonical_ko_draft ?? "")
+      : (senseValue?.canonical_ko ?? "");
+  const baseDef =
+    row0?.type === "candidate"
+      ? (candidateValue?.definition_ko ?? "")
+      : (senseValue?.definition_ko ?? "");
+  const baseNote = row0?.type === "sense" ? (senseValue?.review_note_ko ?? "") : "";
+  const edits = meaning[meaningKey] ?? {};
+  const ko = edits.canonical_ko ?? baseKo,
+    def = edits.definition_ko ?? baseDef,
+    note = edits.note ?? baseNote;
+  const meaningDirty =
+    row0?.type !== "occurrence" && (ko !== baseKo || def !== baseDef || note !== baseNote);
+  function editMeaning(field: "canonical_ko" | "definition_ko" | "note", value: string) {
+    setMeaning((prev) => ({ ...prev, [meaningKey]: { ...prev[meaningKey], [field]: value } }));
+  }
+  const unsaved = dirty || meaningDirty;
   function navigate(v: Changes) {
-    if (dirty) {
+    if (unsaved) {
       setIntent(v);
       return;
     }
     setAssume(false);
     setDrawer(null);
+    review.reset(); // 직접 다른 항목으로 가면 지난 저장 알림은 지운다(저장 뒤 자동 이동 때는 남긴다)
     change(v);
   }
   const index = list.data?.rows.findIndex((r) => r.id === requestedId) ?? -1;
@@ -110,8 +144,192 @@ export function TermsWorkbench() {
   }
   const step = useEffectEvent(move);
   useEffect(() => {
+    if (drawer === "queue" && pendingFocus.current) {
+      pendingFocus.current = null;
+      requestAnimationFrame(() =>
+        document
+          .querySelector<HTMLDialogElement>("dialog[open]")
+          ?.querySelector<HTMLInputElement>("input")
+          ?.focus(),
+      );
+    }
+  }, [drawer]);
+  const hasDraft = Object.keys(drafts).length > 0 || meaningDirty;
+  useEffect(() => {
+    if (!hasDraft) return;
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [hasDraft]);
+  function finishNavigation(discard: boolean) {
+    if (!intent) return;
+    if (discard) {
+      setDrafts((prev) => {
+        const next = { ...prev };
+        delete next[draftKey];
+        return next;
+      });
+      setMeaning((prev) => {
+        const next = { ...prev };
+        delete next[meaningKey];
+        return next;
+      });
+    }
+    change(intent);
+    setIntent(null);
+    setAssume(false);
+    setDrawer(null);
+  }
+  const queue = (
+    <Queue
+      list={list}
+      searchReset={searchReset}
+      params={params}
+      type={type}
+      selectedId={requestedId}
+      onNavigate={navigate}
+    />
+  );
+  const inspector = detail.data ? (
+    <Inspector
+      detail={detail.data}
+      context={ctx}
+      onRelated={() => setRelated(true)}
+      editable={!!writable && detail.data.value.row.type !== "occurrence"}
+      values={{ ko, def, note }}
+      onEdit={editMeaning}
+      onOpenSense={(type, id) => navigate({ type, id, paper: null, sentence: null, filter: "all" })}
+    />
+  ) : (
+    <StatePanel
+      loading={detail.loading || list.loading}
+      error={detail.error}
+      empty="항목을 선택해 주세요"
+      retry={detail.error ? detail.retry : undefined}
+    />
+  );
+  const row = detail.data?.value.row;
+  const linkedSentence = !!ctx?.glossary?.sentence_ids.includes(
+    ctx.sentence?.id ?? "",
+  );
+  // ---- 검수 저장 ----
+  const entity =
+    row?.type === "occurrence"
+      ? { entity_type: "paper" as const, entity_key: row.paper_id ?? "" }
+      : row?.type === "sense"
+        ? { entity_type: "sense" as const, entity_key: row.sense_id ?? row.id }
+        : row
+          ? { entity_type: "candidate" as const, entity_key: row.id }
+          : null;
+  const target = useResource<TermTargetState>(
+    entity && writable
+      ? `/api/admin/v1/term-target/${entity.entity_type}/${encodeURIComponent(entity.entity_key)}`
+      : null,
+  );
+  const [doneCount, setDoneCount] = useState(0);
+  const [problem, setProblem] = useState<{ key: string; message: string } | null>(null);
+  const [armed, setArmed] = useState<string | null>(null); // 반려는 두 번 눌러야 한다
+  const [lastAction, setLastAction] = useState<ReviewAction>("apply_patch");
+  const itemProblem = problem?.key === meaningKey ? problem.message : null;
+  const spanInLinked =
+    !ctx?.span ||
+    !!ctx?.texts.some(
+      (t) => ctx.glossary?.sentence_ids.includes(t.id) && (t.translation ?? "").includes(ctx.span!),
+    );
+  function patchFor(): Record<string, unknown> {
+    if (!row || !ctx) return {};
+    if (row.type === "occurrence")
+      return {
+        glossary: [{ idx: ctx.glossary!.idx, expected_term: ctx.glossary!.term, ko_span: ctx.span || null }],
+      };
+    const patch: Record<string, unknown> = {};
+    if (row.type === "candidate") {
+      if (ko !== (candidateValue?.canonical_ko ?? "")) patch.canonical_ko = ko.trim() || null;
+      if (def !== baseDef) patch.definition_ko = def;
+    } else {
+      if (ko !== baseKo) patch.canonical_ko = ko.trim() || null;
+      if (def !== baseDef) patch.definition_ko = def.trim() || null;
+      if (note !== baseNote) patch.review_note_ko = note.trim() || null;
+    }
+    return patch;
+  }
+  function blocker(action: ReviewAction): string | null {
+    if (!writable) return "저장 연결이 꺼져 있어요.";
+    if (!target.data) return "원본 상태를 불러오는 중이에요. 잠시 후 다시 눌러 주세요.";
+    if (row?.type === "occurrence") {
+      if (!ctx?.glossary) return "이 논문에서 용어 행을 찾지 못했어요.";
+      if (!spanInLinked) return "강조할 표기가 연결 문장 번역문에 없어요. 번역문에 있는 글자로 바꿔 주세요.";
+    } else if (action === "approve") {
+      if (!ko.trim()) return "한국어 표기를 채워야 승인할 수 있어요.";
+      if (row?.type === "sense" && !def.trim()) return "일반 정의를 채워야 승인할 수 있어요.";
+    }
+    if (action === "needs_changes" && !note.trim() && row?.type !== "occurrence")
+      return "무엇을 고쳐야 하는지 메모를 남겨 주세요.";
+    return null;
+  }
+  const actionLabel: Record<ReviewAction, string> = {
+    apply_patch: row?.type === "occurrence" ? "적용 위치를 확인했어요" : "변경을 저장했어요",
+    approve: row?.type === "candidate" ? "후보를 승인했어요" : "의미를 승인했어요",
+    reject: "반려했어요",
+    needs_changes: "수정 필요로 표시했어요",
+  };
+  async function submit(action: ReviewAction, advance = true) {
+    if (!row || !entity || review.state.kind === "saving") return;
+    const why = blocker(action);
+    if (why) {
+      setProblem({ key: meaningKey, message: why });
+      return;
+    }
+    if (action === "reject" && armed !== meaningKey) {
+      setArmed(meaningKey);
+      return;
+    }
+    setProblem(null);
+    setArmed(null);
+    setLastAction(action);
+    const nextId = list.data?.rows[index + 1]?.id ?? null;
+    const result = await review.save(action, { ...entity, patch: patchFor() }, target.data!, note.trim(), actionLabel[action]);
+    target.retry();
+    if (!result) {
+      detail.retry();
+      return;
+    }
+    setDrafts((prev) => {
+      const next = { ...prev };
+      delete next[draftKey];
+      return next;
+    });
+    setMeaning((prev) => {
+      const next = { ...prev };
+      delete next[meaningKey];
+      return next;
+    });
+    setDoneCount((n) => n + 1);
+    list.retry();
+    detail.retry();
+    if (advance) {
+      setAssume(false);
+      setDrawer(null);
+      change({ id: nextId, paper: null, sentence: null });
+      requestAnimationFrame(() => document.getElementById("content")?.focus());
+    }
+  }
+  function submitPrimary() {
+    if (!row) return;
+    submit(row.type === "occurrence" ? "apply_patch" : "approve");
+  }
+  const primary = useEffectEvent(() => submitPrimary());
+  useEffect(() => {
     function key(e: KeyboardEvent) {
       if (document.querySelector("dialog[open]")) return;
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        e.preventDefault();
+        primary();
+        return;
+      }
       const target = e.target as HTMLElement;
       const editing = target.matches(
         "input,textarea,select,[contenteditable=true]",
@@ -137,74 +355,43 @@ export function TermsWorkbench() {
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
   }, []);
-  useEffect(() => {
-    if (drawer === "queue" && pendingFocus.current) {
-      pendingFocus.current = null;
-      requestAnimationFrame(() =>
-        document
-          .querySelector<HTMLDialogElement>("dialog[open]")
-          ?.querySelector<HTMLInputElement>("input")
-          ?.focus(),
-      );
-    }
-  }, [drawer]);
-  const hasDraft = Object.keys(drafts).length > 0;
-  useEffect(() => {
-    if (!hasDraft) return;
-    const warn = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [hasDraft]);
-  function finishNavigation(discard: boolean) {
-    if (!intent) return;
-    if (discard)
-      setDrafts((prev) => {
-        const next = { ...prev };
-        delete next[draftKey];
-        return next;
-      });
-    change(intent);
-    setIntent(null);
-    setAssume(false);
-    setDrawer(null);
+  function setSpan(value: string) {
+    setDrafts((prev) => {
+      const next = { ...prev };
+      if (value === (base?.span ?? "")) delete next[draftKey];
+      else next[draftKey] = value;
+      return next;
+    });
   }
-  const queue = (
-    <Queue
-      list={list}
-      searchReset={searchReset}
-      params={params}
-      type={type}
-      selectedId={requestedId}
-      onNavigate={navigate}
-    />
+  const [picked, setPicked] = useState<{ key: string; text: string } | null>(null);
+  const pickedText = picked?.key === draftKey ? picked.text : null;
+  function pickFromTranslation() {
+    const text = window.getSelection()?.toString().trim() ?? "";
+    const translation = ctx?.sentence?.translation ?? "";
+    setPicked(text && text.length <= 60 && translation.includes(text) ? { key: draftKey, text } : null);
+  }
+  const suggestions = (ctx?.labels ?? []).filter(
+    (l) => l !== (ctx?.span ?? "") && findTerm(ctx?.sentence?.translation ?? "", l) >= 0,
   );
-  const inspector = detail.data ? (
-    <Inspector
-      detail={detail.data}
-      context={ctx}
-      onRelated={() => setRelated(true)}
-    />
-  ) : (
-    <StatePanel
-      loading={detail.loading || list.loading}
-      error={detail.error}
-      empty="항목을 선택해 주세요"
-      retry={detail.error ? detail.retry : undefined}
-    />
-  );
-  const row = detail.data?.value.row;
-  const footerLabel =
-    row?.type === "sense"
-      ? "의미 승인"
-      : row?.type === "candidate"
-        ? "후보 검토 승인"
-        : "적용 위치 저장";
-  const linkedSentence = !!ctx?.glossary?.sentence_ids.includes(
-    ctx.sentence?.id ?? "",
-  );
+  const busy = review.state.kind === "saving";
+  const tone =
+    review.state.kind === "error" ? "bad" : review.state.kind === "saved" ? "good" : unsaved ? "warn" : "";
+  const statusText =
+    review.state.kind === "saving"
+      ? "저장 중…"
+      : review.state.kind === "saved"
+        ? `${review.state.label} · ${new Date(review.state.at).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}${
+            review.state.syncPending ? " · 사전에는 다음 배치(02:17)에 들어가요" : ""
+          }`
+        : review.state.kind === "error"
+          ? review.state.message
+          : unsaved
+            ? "저장하지 않은 변경이 있어요"
+            : !detail.data
+              ? "불러오는 중이에요"
+              : writable
+                ? `이번에 ${doneCount}개 검수했어요`
+                : "조회 전용 · 저장 연결을 확인해 주세요";
   return (
     <>
       <header className="app-header">
@@ -270,7 +457,11 @@ export function TermsWorkbench() {
                 empty={
                   list.data?.rows.length
                     ? "목록에서 항목을 선택해 주세요"
-                    : "검색 결과가 없어요"
+                    : params.get("query")
+                      ? "검색 결과가 없어요"
+                      : (params.get("filter") ?? "pending") === "pending"
+                        ? "이 칸은 모두 검수했어요. 다른 칸이나 「수정 필요」를 확인해 보세요."
+                        : "해당하는 항목이 없어요"
                 }
                 retry={
                   detail.error
@@ -387,7 +578,9 @@ export function TermsWorkbench() {
                   <div
                     className="reading-scroll"
                     tabIndex={0}
-                    aria-label="한국어 번역 문장"
+                    aria-label="한국어 번역 문장 · 글자를 드래그해 강조 표기로 고를 수 있어요"
+                    onMouseUp={pickFromTranslation}
+                    onKeyUp={pickFromTranslation}
                   >
                     <p>
                       <HighlightText
@@ -405,19 +598,11 @@ export function TermsWorkbench() {
                     <input
                       id="span"
                       value={ctx.span ?? ""}
-                      disabled={!ctx.glossary}
-                      placeholder="미지정 · 사전 한국어 표기 사용"
+                      disabled={!ctx.glossary || row?.type !== "occurrence"}
+                      title={row?.type !== "occurrence" ? "강조 표기는 「적용 위치」 칸에서 고쳐요" : undefined}
+                      placeholder="미지정 · 사전 대응어 또는 영문 표기로 찾아요"
                       aria-describedby="matchInfo"
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setDrafts((prev) => {
-                          const next = { ...prev };
-                          if (value === (base?.span ?? ""))
-                            delete next[draftKey];
-                          else next[draftKey] = value;
-                          return next;
-                        });
-                      }}
+                      onChange={(e) => setSpan(e.target.value)}
                     />
                     {dirty && (
                       <button
@@ -435,6 +620,21 @@ export function TermsWorkbench() {
                     )}
                   </div>
                 </div>
+                {row?.type === "occurrence" && (suggestions.length > 0 || pickedText) && (
+                  <div className="span-suggestions" aria-label="번역문에서 고르기">
+                    <span className="micro subtle">번역문에 있는 표기</span>
+                    {pickedText && (
+                      <button className="suggestion picked" onClick={() => { setSpan(pickedText); setPicked(null); }}>
+                        선택한 「{pickedText}」
+                      </button>
+                    )}
+                    {suggestions.map((l) => (
+                      <button key={l} className="suggestion" onClick={() => setSpan(l)}>
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <div
                   id="matchInfo"
                   className={`match-result ${!ctx.matchCount ? "invalid" : ""}`}
@@ -488,7 +688,7 @@ export function TermsWorkbench() {
                 <div className="preview-foot">
                   {assume ? "승인 가정 · 실제 검토 상태는 바뀌지 않아요. " : ""}
                   {ctx.matchCount > 1 ? "같은 표기는 첫 일치만 강조해요. " : ""}
-                  {!ctx.span ? "빈 표기는 사전 한국어 표기를 사용해요. " : ""}
+                  {!ctx.span ? "빈 표기는 사전 대응어, 그다음 번역문에 남은 영문 표기로 찾아요. " : ""}
                   문장 순서·겹침·승인·앱 설정을 함께 반영합니다.
                 </div>
               </section>
@@ -500,39 +700,57 @@ export function TermsWorkbench() {
         </aside>
       </div>
       <footer className="action-bar">
-        <div className="action-note">
-          <span className="dot" />
-          <span>
-            {dirty
-              ? "입력값으로 미리보기 · DB 저장 안 됨"
-              : "조회 · 로컬 미리보기"}
-          </span>
+        <div className="action-note" role="status" aria-live="polite">
+          <span className={`dot ${tone}`} />
+          <span>{itemProblem ?? statusText}</span>
+          {review.state.kind === "error" && review.state.retryable && (
+            <button className="text-button" onClick={() => submit(lastAction)} disabled={busy}>
+              다시 시도
+            </button>
+          )}
         </div>
         <div className="actions">
-          <button
-            className="quiet"
-            disabled
-            title="수정본 보호와 저장 연결 후 사용할 수 있어요"
-          >
-            수정 필요
-          </button>
-          <button className="button secondary" disabled>
-            임시 저장
-          </button>
-          <button
-            className="button secondary"
-            disabled
-            title="저장 경로 연결 전에는 변경할 수 없어요"
-          >
-            {footerLabel}
-          </button>
-          <button
-            className="button primary"
-            onClick={() => move(1)}
-            disabled={!canNext}
-          >
-            다음 항목 <Icon name="arrow" size={16} />
-          </button>
+          {row?.type === "occurrence" || !row ? (
+            <>
+              <button className="button secondary" onClick={() => move(1)} disabled={!canNext || busy}>
+                건너뛰기
+              </button>
+              <button
+                className="button primary"
+                onClick={() => submit("apply_patch")}
+                disabled={!writable || busy || !ctx?.glossary}
+                title={writable ? "이 표기로 확인하고 다음 항목으로 (⌘/Ctrl+Enter)" : "저장 연결을 확인해 주세요"}
+              >
+                {busy ? "저장 중…" : "확인하고 다음"} <kbd>⌘↵</kbd>
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                className={`quiet ${armed === meaningKey ? "danger" : ""}`}
+                onClick={() => submit("reject")}
+                disabled={!writable || busy}
+              >
+                {armed === meaningKey ? "한 번 더 누르면 반려" : "반려"}
+              </button>
+              <button className="button secondary" onClick={() => submit("needs_changes")} disabled={!writable || busy}>
+                수정 필요
+              </button>
+              {meaningDirty && (
+                <button className="button secondary" onClick={() => submit("apply_patch", false)} disabled={!writable || busy}>
+                  저장만
+                </button>
+              )}
+              <button
+                className="button primary"
+                onClick={() => submit("approve")}
+                disabled={!writable || busy}
+                title={writable ? "승인하고 다음 항목으로 (⌘/Ctrl+Enter)" : "저장 연결을 확인해 주세요"}
+              >
+                {busy ? "저장 중…" : "승인하고 다음"} <kbd>⌘↵</kbd>
+              </button>
+            </>
+          )}
         </div>
       </footer>
       <ReviewDialog
@@ -558,23 +776,20 @@ export function TermsWorkbench() {
       >
         <div className="dialog-copy">
           <p>
-            번역 문맥 → 사전 의미 → 강조 위치 → 앱 표시를 확인하고 다음 항목으로
-            이동하세요.
+            <b>적용 위치</b>: 번역문에서 강조할 표기를 고르고(칩을 누르거나 번역문을 드래그) 「확인하고 다음」.
+            앱 표시 예상의 노란 강조가 실제 앱과 같은 규칙이에요.
           </p>
           <p>
-            <kbd>/</kbd> 검색 · <kbd>J</kbd>/<kbd>K</kbd> 다음/이전. 입력
-            중이거나 대화상자가 열려 있으면 이동 단축키를 사용하지 않습니다.
+            <b>사전 의미·후보</b>: 한국어 표기와 일반 정의를 다듬고 「승인하고 다음」. 고칠 점이 있으면 메모를 남기고
+            「수정 필요」, 쓰지 않을 용어는 「반려」(두 번 눌러요). 후보를 승인하면 다음 배치(02:17)에 사전에 들어가요.
           </p>
           <p>
-            회색 밑줄은 검토할 표기의 위치이고, 아래 앱 표시 예상의 노란 강조는
-            실제 표시 규칙을 반영합니다. 현재는 조회와 로컬 강조 미리보기만
-            가능합니다. 임시 저장·승인·별칭·메모 수정은 아직 연결되지
-            않았습니다.
+            <kbd>⌘</kbd>/<kbd>Ctrl</kbd>+<kbd>Enter</kbd> 확인·승인하고 다음 · <kbd>J</kbd>/<kbd>K</kbd> 다음/이전 ·{" "}
+            <kbd>/</kbd> 검색. 입력 중에는 J/K가 글자로 들어가요.
           </p>
           <p>
-            사전 의미 승인과 논문별 적용 확인은 별개입니다. ‘승인 가정’은 실제
-            승인 상태를 바꾸지 않으며, 표시 제외 정의도 승인 가정에서
-            제외됩니다.
+            저장한 값은 배치가 덮어쓰지 않아요. 논문이 다시 만들어지면 그 적용 위치만 「검토 필요」로 돌아와요.
+            「승인 가정」은 미리보기일 뿐 실제 상태를 바꾸지 않아요.
           </p>
         </div>
       </ReviewDialog>
@@ -700,7 +915,7 @@ function Queue({
         <label className="filter">
           <span>상태</span>
           <select
-            value={params.get("filter") ?? "all"}
+            value={params.get("filter") ?? "pending"}
             onChange={(e) =>
               onNavigate({
                 filter: e.target.value,
@@ -710,11 +925,11 @@ function Queue({
               })
             }
           >
-            <option value="all">전체 상태</option>
+            <option value="pending">검토 필요</option>
             <option value="risks">적용 위험 우선</option>
-            <option value="pending">검토 대기</option>
-            <option value="approved">의미 승인</option>
             <option value="deferred">수정 필요</option>
+            <option value="approved">검수 완료</option>
+            <option value="all">전체</option>
           </select>
         </label>
       </div>
@@ -726,7 +941,15 @@ function Queue({
             retry={list.retry}
           />
         ) : !list.data?.rows.length ? (
-          <StatePanel empty="검색 결과가 없어요" />
+          <StatePanel
+            empty={
+              params.get("query")
+                ? "검색 결과가 없어요"
+                : (params.get("filter") ?? "pending") === "pending"
+                  ? "모두 검수했어요"
+                  : "해당하는 항목이 없어요"
+            }
+          />
         ) : (
           list.data.rows.map((row) => (
             <button
@@ -794,17 +1017,32 @@ function Inspector({
   detail,
   context,
   onRelated,
+  editable,
+  values,
+  onEdit,
+  onOpenSense,
 }: {
   detail: TermDetail;
   context: ReturnType<typeof reviewContext> | null;
   onRelated: () => void;
+  editable: boolean;
+  values: { ko: string; def: string; note: string };
+  onEdit: (field: "canonical_ko" | "definition_ko" | "note", value: string) => void;
+  onOpenSense: (type: "sense" | "candidate", id: string) => void;
 }) {
   const { row, sense, candidate, aliases } = detail.value;
+  const occurrence = row.type === "occurrence";
   return (
     <>
       <div className="inspector-heading">
-        <h2>사전 의미</h2>
-        <span className="scope-label">여러 논문에 적용 · 조회</span>
+        <h2>{candidate ? "후보" : "사전 의미"}</h2>
+        <span className="scope-label">
+          {occurrence
+            ? "여러 논문에 적용 · 여기서는 보기만"
+            : editable
+              ? "여러 논문에 적용 · 고치면 다시 승인해야 해요"
+              : "여러 논문에 적용 · 조회"}
+        </span>
       </div>
       <div className="inspector-scroll">
         <div className="meaning-meta">
@@ -817,33 +1055,38 @@ function Inspector({
             {sense?.sense_id ?? "의미 미연결"}
           </span>
         </div>
+        {occurrence && (
+          <button
+            className="related-row open-sense"
+            onClick={() => (sense ? onOpenSense("sense", sense.sense_id) : onOpenSense("candidate", normalizeTerm(row.term)))}
+          >
+            <span>{sense ? "이 의미 검수하러 가기" : "사전에 없는 용어 · 후보 검수하러 가기"}</span>
+            <Icon name="arrow" size={14} />
+          </button>
+        )}
         <label className="field">
-          {candidate ? "AI 제안 한국어 표기" : "한국어 표기"}
+          {candidate && !candidate.canonical_ko ? "한국어 표기 · AI 제안으로 채웠어요" : "한국어 표기"}
           <input
-            readOnly
-            value={
-              candidate?.canonical_ko_draft ??
-              sense?.canonical_ko ??
-              row.canonical_ko ??
-              ""
-            }
+            readOnly={!editable}
+            value={occurrence ? (sense?.canonical_ko ?? row.canonical_ko ?? "") : values.ko}
+            onChange={(e) => onEdit("canonical_ko", e.target.value)}
+            placeholder={occurrence ? "사전 의미에 연결되지 않았어요" : "예: 동결된 디코더"}
           />
         </label>
         <label className="field definition-field">
           일반 정의
           <textarea
-            readOnly
+            readOnly={!editable}
             rows={4}
-            value={
-              sense?.definition_ko ?? candidate?.definition_ko ?? row.definition
-            }
+            value={occurrence ? (sense?.definition_ko ?? row.definition) : values.def}
+            onChange={(e) => onEdit("definition_ko", e.target.value)}
           />
           <span className="field-help">
-            사전 정의와 이 논문에서의 뜻은 별개예요.
+            앱의 공식 소식·모델 상세 용어 설명에 쓰여요. 이 논문에서의 뜻은 아래에 따로 있어요.
           </span>
           {candidate && (
             <span className="field-help">
-              관측 {candidate.seen_count}회 · 연결 논문 {row.paper_count}편
+              관측 {candidate.seen_count}회 · 연결 논문 {row.paper_count}편 · 승인하면 다음 배치에 사전에 들어가요
             </span>
           )}
         </label>
@@ -891,13 +1134,15 @@ function Inspector({
           </button>
         </section>
         <label className="field note-field">
-          현재 사전 검수 메모
+          검수 메모
           <textarea
-            readOnly
+            readOnly={!editable}
             rows={2}
-            value={sense?.review_note_ko ?? ""}
-            placeholder="등록된 메모 없음"
+            value={occurrence ? (sense?.review_note_ko ?? "") : values.note}
+            onChange={(e) => onEdit("note", e.target.value)}
+            placeholder={editable ? "「수정 필요」에는 고칠 점을 적어 주세요" : "등록된 메모 없음"}
           />
+          {row.review_note && <span className="field-help">마지막 검수 사유: {row.review_note}</span>}
         </label>
       </div>
     </>

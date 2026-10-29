@@ -143,6 +143,27 @@ export type Snapshot = {
     paper_count: number;
     last_success_at: string | null;
   }[];
+  /** 용어 검수 기록(rootgist_admin). 용어 화면에서만 읽는다. 없으면 검수 기록 없음 */
+  review?: ReviewMarks;
+};
+export type ReviewMarks = {
+  writable: boolean;
+  occurrences: { paper_id: string; idx: number; term: string; reviewed_at: string }[];
+  controls: {
+    entity_type: "sense" | "candidate" | "paper";
+    entity_key: string;
+    revision: number;
+    review_state: string;
+    note: string | null;
+    updated_at: string;
+  }[];
+};
+export type TermTargetState = { value: unknown; revision: number; base_sha256: string };
+export type TermCommandResult = {
+  operation_id: string;
+  committed_at: string;
+  targets: { entity_type: string; entity_key: string; revision: number; base_sha256: string }[];
+  dictionary_sync_pending: boolean;
 };
 export type TermRow = {
   id: string;
@@ -150,6 +171,8 @@ export type TermRow = {
   term: string;
   canonical_ko: string | null;
   status: string;
+  reviewed_at?: string | null; // 마지막 검수 저장 시각(검수 기록이 있을 때)
+  review_note?: string | null; // 마지막 검수 메모·사유
   risk_count: number;
   risk_labels: string[];
   paper_id: string | null;

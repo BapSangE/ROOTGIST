@@ -10,9 +10,11 @@ it.skipIf(!origin)(
     expect(response.headers.get("cache-control")).toContain("no-store");
     const data = await response.json();
     expect(data.fixture).toBe(true);
-    expect(data.rows[0].term).toBe("frozen decoder");
+    // 같은 개발 서버에서 검수 저장 시험을 먼저 했으면 순서가 바뀐다: 이름으로 찾는다
+    const first = data.rows.find((r: { term: string }) => r.term === "frozen decoder");
+    expect(first).toBeTruthy();
     const detail = await fetch(
-      `${origin}/api/admin/v1/terms/occurrence/${encodeURIComponent(data.rows[0].id)}`,
+      `${origin}/api/admin/v1/terms/occurrence/${encodeURIComponent(first.id)}`,
     );
     expect((await detail.json()).value.papers[0].id).toBe("0000.00001");
     for (const method of ["POST", "PUT", "PATCH", "DELETE"]) {
@@ -43,5 +45,39 @@ it.skipIf(!origin)(
       expect(r.status, path).toBe(307);
       expect(r.headers.get("location")).toBe("/admin/terms");
     }
+  },
+);
+
+it.skipIf(!origin)(
+  "term review writes: same-origin JSON only, revision checked, idempotent, list status updated",
+  async () => {
+    const list = await (await fetch(`${origin}/api/admin/v1/terms?type=occurrence&filter=all`)).json();
+    const row = list.rows.find((r: { term: string }) => r.term === "frozen decoder");
+    const target = await (await fetch(`${origin}/api/admin/v1/term-target/paper/${row.paper_id}`)).json();
+    expect(target.base_sha256).toMatch(/^[0-9a-f]{64}$/);
+    const body = (operation_id: string, base = target) => ({
+      operation_id,
+      action: "apply_patch",
+      reason: "",
+      targets: [{ entity_type: "paper", entity_key: row.paper_id, expected_revision: base.revision, base_sha256: base.base_sha256,
+        patch: { glossary: [{ idx: row.idx, expected_term: row.term, ko_span: "동결된 디코더" }] } }],
+    });
+    const post = (b: unknown, headers: Record<string, string> = {}) =>
+      fetch(`${origin}/api/admin/v1/term-commands`, {
+        method: "POST",
+        headers: { "content-type": "application/json", origin: origin!, ...headers },
+        body: JSON.stringify(b),
+      });
+    const id = crypto.randomUUID();
+    expect((await post(body(id), { origin: "https://evil.example" })).status).toBe(403);
+    const first = await post(body(id));
+    expect(first.status).toBe(200);
+    const saved = await first.json();
+    expect(saved.targets[0].revision).toBe(target.revision + 1);
+    expect(await (await post(body(id))).json()).toEqual(saved); // 같은 작업 ID는 한 번만
+    expect((await post(body(crypto.randomUUID()))).status).toBe(409); // 옛 revision
+    const done = await (await fetch(`${origin}/api/admin/v1/terms?type=occurrence&filter=approved`)).json();
+    expect(done.rows.some((r: { id: string; status: string }) => r.id === row.id && r.status === "checked")).toBe(true);
+    expect((await fetch(`${origin}/api/admin/v1/papers`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" })).status).toBe(423);
   },
 );

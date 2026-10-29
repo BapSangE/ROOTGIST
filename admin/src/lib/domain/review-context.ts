@@ -1,5 +1,12 @@
 import type { TermDetail } from "./contracts";
-import { normalizeTerm, projectPaperForPreview, latexDisplay } from "./display";
+import {
+  normalizeTerm,
+  projectPaperForPreview,
+  latexDisplay,
+  findTerm,
+  countTerm,
+  koreanLabels,
+} from "./display";
 export type ReviewOptions = {
   paperId?: string | null;
   sentenceId?: string | null;
@@ -44,14 +51,22 @@ export function reviewContext(
         assumeApproved: options.assumeApproved,
       })
     : null;
-  const label = (span || sense?.canonical_ko || row.canonical_ko || "").replace(
-    /\s*\(.*\)$/,
-    "",
-  );
-  const matchCount =
-    label && sentence?.translation
-      ? sentence.translation.split(label).length - 1
-      : 0;
+  // 앱과 같은 순서의 후보 표기(번역문 표기 → 보이는 대응어 → 영문) 중 이 문장에 실제로 있는 첫 표기.
+  // 하나도 없으면 첫 후보를 보여 「표기 일치 없음」으로 알린다.
+  const projectedTerm = projection?.terms.find((t) => t.idx === glossary?.idx);
+  // 검토용 찾기는 앱에 아직 안 보이는 사전 표기(미승인 대응어)도 뒤에 붙여 찾는다(앱 표시는 projection이 따로 판단)
+  const labels = [
+    ...new Set([
+      ...(projectedTerm ? koreanLabels(projectedTerm) : []),
+      ...[span, sense?.canonical_ko, row.canonical_ko, row.term]
+        .filter((l): l is string => !!l)
+        .map((l) => l.replace(/\s*\(.*\)$/, "")),
+    ]),
+  ];
+  const translation = sentence?.translation ?? "";
+  const label =
+    labels.find((l) => findTerm(translation, l) >= 0) ?? labels[0] ?? "";
+  const matchCount = label && translation ? countTerm(translation, label) : 0;
   const appliedCount =
     sentence && glossary
       ? (projection?.ko[sentence.id] ?? []).filter(
@@ -59,7 +74,7 @@ export function reviewContext(
         ).length
       : 0;
   function locate(text: string, term: string) {
-    const start = term ? text.indexOf(term) : -1;
+    const start = term ? findTerm(text, term) : -1;
     return start < 0
       ? []
       : [
@@ -82,6 +97,7 @@ export function reviewContext(
     texts,
     span,
     label,
+    labels,
     projection,
     matchCount,
     appliedCount,

@@ -79,8 +79,10 @@ it("uses the real AI display setting and never assumes forbidden definitions are
     },
   ];
   d.papers[0].glossary[0].sentence_ids = ["A02"];
-  d.papers[0].glossary[0].ko_span = "고정 디코더";
+  // 번역문 표기가 없으면 사전 대응어로 찾는데, 대응어는 승인·표시 설정을 따른다
+  d.papers[0].glossary[0].ko_span = null;
   const sense = d.all_senses.find((s) => s.sense_id === d.sense?.sense_id)!;
+  sense.canonical_ko = "고정 디코더";
   sense.review_status = "pending";
   sense.ai_review_status = "first_pass_complete";
   d.show_ai_reviewed_terms = false;
@@ -90,6 +92,8 @@ it("uses the real AI display setting and never assumes forbidden definitions are
   expect(reviewContext(d, {}).appliedCount).toBe(1);
   sense.definition_kind = "source_machine_translation_verbatim";
   expect(reviewContext(d, { assumeApproved: true }).appliedCount).toBe(0);
+  // 번역문 표기(ko_span)는 우리 번역문의 글자라 승인과 상관없이 강조된다(앱 ed02106)
+  expect(reviewContext(d, { span: "고정 디코더" }).appliedCount).toBe(1);
 });
 it("handles no linked paper and no translation without manufacturing context", () => {
   const d = input();

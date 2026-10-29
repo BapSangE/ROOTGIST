@@ -1,5 +1,7 @@
 # 용어 저장 기반 M4 — 검토 패키지
 
+> 2026-10-29 정정: 이 마이그레이션은 main 푸시 때 운영 DB에 적용돼 있었다(쓰기 준비값 false). M5·M6는 [TERM_REVIEW_WRITES.md](TERM_REVIEW_WRITES.md).
+
 2026-10-28 · 기준 3a76540 · 작업 브랜치 codex/term-review-storage
 
 ## 결과와 범위

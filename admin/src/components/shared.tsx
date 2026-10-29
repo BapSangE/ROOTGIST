@@ -85,6 +85,7 @@ const labels: Record<string, string> = {
   rejected: "× 반려",
   deferred: "수정 필요",
   unreviewed: "적용 위치 확인",
+  checked: "✓ 확인 완료",
   ready: "AI 처리 완료",
   failed: "AI 처리 실패",
   post: "공식 발표",
@@ -148,9 +149,10 @@ export function useResource<T>(url: string | null) {
   const [retryVersion, setRetryVersion] = useState(0);
   const [result, setResult] = useState<{
     key: string;
+    url: string | null;
     data: T | null;
     error: string | null;
-  }>({ key: "", data: null, error: null });
+  }>({ key: "", url: null, data: null, error: null });
   const key = `${url}:${retryVersion}`;
   useEffect(() => {
     if (!url) return;
@@ -161,12 +163,13 @@ export function useResource<T>(url: string | null) {
         if (!response.ok)
           throw new Error(body.error?.message ?? "데이터를 불러오지 못했어요.");
         if (!controller.signal.aborted)
-          setResult({ key, data: body, error: null });
+          setResult({ key, url, data: body, error: null });
       })
       .catch((error) => {
         if (!controller.signal.aborted)
           setResult({
             key,
+            url,
             data: null,
             error:
               error instanceof Error
@@ -177,10 +180,13 @@ export function useResource<T>(url: string | null) {
     return () => controller.abort();
   }, [url, key]);
   const current = result.key === key;
+  // 같은 주소를 다시 불러올 때(저장 뒤 새로 고침)는 이전 내용을 그대로 보여 목록이 깜빡이지 않게 한다
+  const stale = !current && result.url === url && result.data !== null;
   return {
-    data: current ? result.data : null,
+    data: current || stale ? result.data : null,
     error: current ? result.error : null,
-    loading: !!url && !current,
+    loading: !!url && !current && !stale,
+    refreshing: !!url && stale,
     retry: () => setRetryVersion((v) => v + 1),
   };
 }
