@@ -4,7 +4,7 @@ Next.js + React + TypeScript로 만든 별도 관리자 웹입니다. Flutter �
 
 ## 실행
 
-Node 26.12.1 / npm 11.20.0 기준으로 확인했습니다.
+Vercel 지원 버전에 맞춰 Node **24.x**를 사용합니다. 로컬 검증 버전은 Node **24.22.2** / npm **11.19.1**이며, `.node-version`과 `package.json`의 engines를 함께 맞췄습니다. 로컬 Node를 24 계열로 전환한 뒤 `npm ci`를 실행하세요.
 
 ```sh
 cd admin
@@ -47,3 +47,7 @@ npm run start
 - [디자인·데이터 계약](../docs/admin/ROOTGIST_Admin_Implementation_Spec.md)
 
 기존 Flutter/워커/DB/마이그레이션/배포 빌드는 수정하지 않았습니다. 다음 R1은 DB 트랜잭션·초안·변경 이력과 배치 수정본 보호를 갖춘 뒤 쓰기를 활성화하는 단계입니다. source-catalog.json과 notices-snapshot.json은 기준 커밋 b8e5c6a의 공개 코드/번들 문서에서 만든 버전 있는 참조본이며 자동 최신 데이터나 원격 공지 게시가 아닙니다. 변경할 때 원본·기준 커밋과 함께 갱신해야 합니다.
+
+## Vercel 배포 설정
+
+Root Directory는 `admin`, Framework/Application Preset은 Next.js, Node.js는 24.x, Install은 `npm ci`, Build는 `npm run build`, Output Directory는 기본값을 사용합니다. worker를 Services로 함께 배포하지 않습니다. [배포 준비/환경변수/현재 제한](../docs/admin/VERCEL_DEPLOYMENT.md)을 참고하세요.

@@ -91,3 +91,7 @@
 - 운영 DB 적용·테스트 데이터·클라우드 프로젝트·워크플로 실행·배포 없음. 쓰기 기본값 false, worker contract 0, 관리자 ID null. 기존 실제 읽기 서버와 423 차단 유지.
 - 다음 단계는 M5 용어 수정본 보호의 워커 통합 패키지, 그 뒤 M6 용어 편집·저장 UI다. 이 M4만으로 실사용 저장이나 R1 전체 완료로 표시하지 않는다.
 - 사용자 요청에 따라 수정사항/진행상황을 기록한 뒤 커밋·일반 푸시한다. 상세 변경·적용 전 조건·복구·결정은 TERM_STORAGE_PACKAGE.md에 기록했다.
+
+## 2026-10-29 — Vercel Node 24 호환 조정
+
+사용자 요청으로 관리자 engines를 24.x, .node-version을 24.22.2, @types/node를 24.19.2로 조정했다. lock 변경은 루트와 Node/undici 타입 entry 3개뿐이다. 공식 Node 바이너리를 별도 공간에 설치해 기존 Node 26 요구의 EBADENGINE을 재현한 뒤 Node 24 clean install(engine-strict)/lint/typecheck/test/build 및 Node 24 fixture HTTP를 검증했다. 총 34 tests passed. 기존 Next/React/Supabase·앱 로직·Flutter·워커·DB/migration 변경 없음. VERCEL_DEPLOYMENT.md에 단일 admin 프로젝트/환경변수/읽기 전용 한계를 기록했다. 커밋·푸시는 기존 사용자 요청에 따라 진행하며 실제 Vercel 배포·DB 적용은 하지 않는다.
