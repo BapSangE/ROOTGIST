@@ -1,0 +1,14 @@
+{
+  "pins" : [
+    {
+      "identity" : "posthog-ios",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/PostHog/posthog-ios",
+      "state" : {
+        "revision" : "2b6b6b4301c14c3b51cb1a7827c954bb17d1b083",
+        "version" : "3.92.7"
+      }
+    }
+  ],
+  "version" : 2
+}

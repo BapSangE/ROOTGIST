@@ -300,7 +300,10 @@ class _RadioRow extends StatelessWidget {
     checked: selected,
     button: true,
     child: RgPressable(
-      onTap: onTap,
+      onTap: () {
+        if (!selected) HapticFeedback.selectionClick();
+        onTap();
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: RgSpace.s14),
         decoration: BoxDecoration(border: divider ? Border(top: BorderSide(color: RgColors.dividerCard)) : null),

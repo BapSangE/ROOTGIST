@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../tokens.dart';
 import '../typography.dart';
@@ -168,7 +169,9 @@ class RgBackButton extends StatelessWidget {
 }
 
 // 북마크 버튼 공통: 저장 상태에 따라 아이콘·변형·라벨이 바뀐다.
-class RgBookmarkButton extends StatelessWidget {
+// 누르면 가벼운 진동 + 원이 0.85 → 1.12 → 1로 톡 튀었다 돌아온다(260ms). 상태가 바뀔 때만, 처음 그릴 때는 가만히.
+// 보관함에서 빼는 버튼은 진동을 조금 더 또렷하게(strongHaptic). 「동작 줄이기」면 튀지 않는다.
+class RgBookmarkButton extends StatefulWidget {
   const RgBookmarkButton({
     super.key,
     required this.saved,
@@ -176,26 +179,62 @@ class RgBookmarkButton extends StatelessWidget {
     this.variant = RgCircleVariant.outline,
     this.size = 44,
     this.visualSize,
+    this.strongHaptic = false,
   });
   final bool saved;
   final VoidCallback? onTap;
   final RgCircleVariant variant; // neutral(목록 행·카드, 보이는 원 36) 또는 outline(상단 바). plain은 예전 목록 행
   final double size;
   final double? visualSize;
+  final bool strongHaptic;
+
+  @override
+  State<RgBookmarkButton> createState() => _RgBookmarkButtonState();
+}
+
+class _RgBookmarkButtonState extends State<RgBookmarkButton> with SingleTickerProviderStateMixin {
+  late final _pop = AnimationController(vsync: this, duration: const Duration(milliseconds: 260), value: 1);
+  static final _scale = TweenSequence([
+    TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.85).chain(CurveTween(curve: Curves.easeOut)), weight: 30),
+    TweenSequenceItem(tween: Tween(begin: 0.85, end: 1.12).chain(CurveTween(curve: Curves.easeOut)), weight: 40),
+    TweenSequenceItem(tween: Tween(begin: 1.12, end: 1.0).chain(CurveTween(curve: Curves.easeIn)), weight: 30),
+  ]);
+
+  @override
+  void didUpdateWidget(RgBookmarkButton old) {
+    super.didUpdateWidget(old);
+    if (old.saved != widget.saved && !MediaQuery.disableAnimationsOf(context)) _pop.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _pop.dispose();
+    super.dispose();
+  }
+
+  void _tap() {
+    widget.strongHaptic ? HapticFeedback.mediumImpact() : HapticFeedback.lightImpact();
+    widget.onTap?.call();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final saved = widget.saved;
+    final variant = widget.variant;
     final plain = variant == RgCircleVariant.plain;
     final glass = variant == RgCircleVariant.glass; // 다크 카드 위: 저장되면 채운 아이콘만 바뀐다
-    return RgCircleButton(
-      semanticLabel: saved ? '저장됨, 북마크 해제' : '북마크에 저장',
-      selected: saved,
-      onTap: onTap,
-      icon: saved ? 'bookmark-filled' : 'bookmark',
-      size: size,
-      visualSize: visualSize,
-      variant: plain || glass ? variant : (saved ? RgCircleVariant.filled : variant),
-      iconColor: plain ? (saved ? RgColors.textPrimary : RgColors.textTertiary) : null,
+    return ScaleTransition(
+      scale: _scale.animate(_pop),
+      child: RgCircleButton(
+        semanticLabel: saved ? '저장됨, 북마크 해제' : '북마크에 저장',
+        selected: saved,
+        onTap: widget.onTap == null ? null : _tap,
+        icon: saved ? 'bookmark-filled' : 'bookmark',
+        size: widget.size,
+        visualSize: widget.visualSize,
+        variant: plain || glass ? variant : (saved ? RgCircleVariant.filled : variant),
+        iconColor: plain ? (saved ? RgColors.textPrimary : RgColors.textTertiary) : null,
+      ),
     );
   }
 }

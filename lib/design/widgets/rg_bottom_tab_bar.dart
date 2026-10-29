@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../tokens.dart';
 import '../typography.dart';
@@ -35,11 +36,17 @@ class RgBottomTabBar extends StatelessWidget {
           height: RgSpace.tabBar,
           child: Row(children: [
             for (var i = 0; i < tabs.length; i++)
-              Expanded(child: _tab(tabs[i], i == currentIndex, () => onTap(i), dots.contains(i))),
+              Expanded(child: _tab(tabs[i], i == currentIndex, () => _select(i), dots.contains(i))),
           ]),
         ),
       ),
     );
+  }
+
+  // 진동(선택 틱): 다른 칸으로 바꿀 때만. iOS 설정(시스템 햅틱)을 따른다.
+  void _select(int i) {
+    if (i != currentIndex) HapticFeedback.selectionClick();
+    onTap(i);
   }
 
   Widget _tab(RgTab tab, bool selected, VoidCallback onTap, bool dot) {

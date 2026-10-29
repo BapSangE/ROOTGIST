@@ -26,6 +26,7 @@ import 'package:rootgist/design/widgets/rg_buttons.dart';
 import 'package:rootgist/design/widgets/rg_card.dart';
 import 'package:rootgist/design/widgets/rg_pressable.dart';
 import 'package:rootgist/design/widgets/rg_segmented.dart';
+import 'package:rootgist/design/widgets/rg_underline_tabs.dart';
 import 'package:flutter/semantics.dart';
 import 'package:rootgist/features/explore/explore_screen.dart';
 import 'package:rootgist/features/explore/official_news.dart';
@@ -1151,6 +1152,47 @@ void main() {
     await swipe(-300);
     expect(router.routerDelegate.currentConfiguration.uri.path, '/explore/2026-10-18');
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('마이크로인터랙션: 북마크·탭·칸 진동, 밑줄이 고른 칸 아래로 미끄러진다', (tester) async {
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final haptics = <String>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'HapticFeedback.vibrate') haptics.add(call.arguments as String);
+      return null;
+    });
+    addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
+    await pumpApp(tester);
+
+    // 북마크: 가벼운 톡, 저장되면 원이 톡 튀었다 돌아온다
+    await tester.tap(find.bySemanticsLabel('북마크에 저장').first);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(haptics, ['HapticFeedbackType.lightImpact']);
+    expect(find.byWidgetPredicate((w) => w is ScaleTransition && w.scale.value != 1), findsOneWidget);
+    await tester.pumpAndSettle();
+
+    // 탭바: 다른 칸을 누르면 선택 틱, 지금 칸을 다시 누르면 없음
+    haptics.clear();
+    await tester.tap(find.text('홈'));
+    await tester.pumpAndSettle();
+    expect(haptics, isEmpty);
+    await tester.tap(find.text('탐색'));
+    await settle(tester);
+    expect(haptics, ['HapticFeedbackType.selectionClick']);
+
+    // 공식 소식 안 밑줄 탭: 선택 틱, 밑줄이 「업데이트」 아래로
+    await tester.tap(find.text('공식 소식'));
+    await slide(tester);
+    await settle(tester);
+    haptics.clear();
+    Rect bar() => tester.getRect(find.descendant(of: find.byType(RgUnderlineTabs), matching: find.byType(ColoredBox)));
+    expect(bar().center.dx, closeTo(tester.getCenter(find.text('발표')).dx, 2));
+    await tester.tap(find.text('업데이트'));
+    await tester.pumpAndSettle();
+    expect(haptics, ['HapticFeedbackType.selectionClick']);
+    expect(bar().center.dx, closeTo(tester.getCenter(find.text('업데이트')).dx, 2));
   });
 
   testWidgets('S1: 글자 크기 4단계가 S02 AI 요약·핵심 내용에도 적용된다', (tester) async {

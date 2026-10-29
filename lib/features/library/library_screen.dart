@@ -83,6 +83,7 @@ class LibraryScreen extends StatelessWidget {
                         saved: true,
                         variant: RgCircleVariant.neutral,
                         visualSize: 36,
+                        strongHaptic: true, // 보관함에서 빼는 건 조금 더 또렷한 진동
                         onTap: () => _remove(context, b),
                       ),
                       // 위에 종류·출처 머리말, 아래에 저장일

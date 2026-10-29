@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../data/settings.dart';
 import '../../design/tokens.dart';
@@ -89,7 +90,12 @@ class _StepSlider extends StatelessWidget {
   Widget build(BuildContext context) {
     final n = readerScales.length;
     final i = readerScales.indexWhere((e) => e.$1 == value).clamp(0, n - 1);
-    void pick(int k) => onChanged(readerScales[k.clamp(0, n - 1)].$1);
+    // 단계가 바뀔 때마다 선택 틱(끌어서 여러 단계를 지나도 단계마다 한 번)
+    void pick(int k) {
+      final v = readerScales[k.clamp(0, n - 1)].$1;
+      if (v != value) HapticFeedback.selectionClick();
+      onChanged(v);
+    }
     return Semantics(
       slider: true,
       label: '글자 크기',

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../tokens.dart';
 import '../typography.dart';
@@ -66,7 +67,10 @@ class RgSegmented<T> extends StatelessWidget {
                       button: true,
                       selected: v == value,
                       child: RgPressable(
-                        onTap: () => onChanged(v),
+                        onTap: () {
+                          if (v != value) HapticFeedback.selectionClick();
+                          onChanged(v);
+                        },
                         // 칸이 좁으면(4등분 「아주 크게」) 줄바꿈 대신 칸 안으로 줄인다.
                         child: Center(
                           child: FittedBox(

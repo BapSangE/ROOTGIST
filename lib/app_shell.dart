@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import 'design/tokens.dart';
@@ -198,9 +199,13 @@ class _TabSwipe extends StatefulWidget {
   State<_TabSwipe> createState() => _TabSwipeState();
 }
 
-class _TabSwipeState extends State<_TabSwipe> {
+// 다른 탭으로 넘어갈 때는 민 방향에서 살짝 밀려 들어온다(40pt, 220ms). 어디로 갔는지 감이 잡히게.
+// 탐색 안의 칸은 PageView가 미끄러지고, 탭바를 눌러 바꿀 때는 지금처럼 바로 바뀐다. 「동작 줄이기」면 움직이지 않는다.
+class _TabSwipeState extends State<_TabSwipe> with SingleTickerProviderStateMixin {
   double _dx = 0;
   GoRouterDelegate? _router;
+  late final _enter = AnimationController(vsync: this, duration: const Duration(milliseconds: 220), value: 1);
+  double _from = 0; // 들어오기 시작하는 x(다음이면 오른쪽 +, 이전이면 왼쪽 −)
 
   // 화면을 옮길 때마다 탭 첫 화면인지 다시 본다
   void _changed() => setState(() {});
@@ -218,6 +223,7 @@ class _TabSwipeState extends State<_TabSwipe> {
   @override
   void dispose() {
     _router?.removeListener(_changed);
+    _enter.dispose();
     super.dispose();
   }
 
@@ -232,8 +238,15 @@ class _TabSwipeState extends State<_TabSwipe> {
     final next = at + ((dx != 0 ? dx : v) < 0 ? 1 : -1);
     if (at < 0 || next < 0 || next >= tabStops.length) return;
     final (branch, tab, updates) = tabStops[next];
+    HapticFeedback.selectionClick();
     if (branch == 1) exploreJump.value = ExploreJump(tab, updates: updates, animate: shell.currentIndex == 1);
-    if (branch != shell.currentIndex) shell.goBranch(branch);
+    if (branch != shell.currentIndex) {
+      shell.goBranch(branch);
+      if (!MediaQuery.disableAnimationsOf(context)) {
+        _from = next > at ? 40 : -40;
+        _enter.forward(from: 0);
+      }
+    }
   }
 
   // 탭 첫 화면이 아니면 끌기를 아예 받지 않는다: 받기만 해도 하위 화면의 가장자리 뒤로 가기와 다툰다.
@@ -246,7 +259,15 @@ class _TabSwipeState extends State<_TabSwipe> {
       onHorizontalDragStart: root ? (_) => _dx = 0 : null,
       onHorizontalDragUpdate: root ? (d) => _dx += d.delta.dx : null,
       onHorizontalDragEnd: root ? _end : null,
-      child: widget.child,
+      child: AnimatedBuilder(
+        animation: _enter,
+        child: widget.child,
+        builder: (context, child) {
+          // 모양은 늘 같게(끝나면 투명도 1·이동 0): 위젯 모양이 바뀌면 탭 화면 상태가 새로 만들어진다
+          final t = Curves.easeOutCubic.transform(_enter.value);
+          return Opacity(opacity: 0.4 + 0.6 * t, child: Transform.translate(offset: Offset(_from * (1 - t), 0), child: child));
+        },
+      ),
     );
   }
 }
