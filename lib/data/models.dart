@@ -67,14 +67,43 @@ class GlossaryTerm {
         highlight = j['highlight'] == true,
         termKo = j['term_ko'],
         termKoSpan = j['term_ko_span'],
-        fullForm = (j['full_form_en'] as String?)?.isEmpty ?? true ? null : j['full_form_en'];
+        fullForm = (j['full_form_en'] as String?)?.isEmpty ?? true ? null : j['full_form_en'],
+        aliases = const [],
+        papers = null;
+
+  // 공용 용어 사전(list_terms): 공식 소식·모델 상세에서 쓴다. 뜻은 논문 하나가 아니라 사전의 뜻.
+  GlossaryTerm.dictionary(Map<String, dynamic> j)
+      : term = j['term'],
+        definition = j['definition_ko'] ?? '',
+        sentenceIds = const [],
+        highlight = true,
+        termKo = j['term_ko'],
+        termKoSpan = null,
+        fullForm = (j['full_form_en'] as String?)?.isEmpty ?? true ? null : j['full_form_en'],
+        aliases = [for (final a in j['aliases'] ?? const []) a as String],
+        papers = j['papers'];
+
   final String term;
+  final List<String> aliases; // 사전 용어의 다른 영문 표기(복수형·약어)
+  final int? papers; // 사전 용어: 이 용어가 쓰인 논문 수. 논문 용어는 null
   final String? termKo; // 사전에 연결된 한국어 대응어(G1·G2). 없거나 앱에 보일 수 없는 의미면 null
   final String? termKoSpan; // 이 논문 번역문에서 실제로 쓴 표기(동결된 디코더 ↔ 대응어 고정 디코더). 하이라이트는 이것 우선
   final String? fullForm; // 약어의 영문 정식 명칭(초록 풀이 또는 승인된 사전). 없으면 null
   final String definition; // G3: C02 본문은 definition_ko. context_ko는 MVP 미표시
   final List<String> sentenceIds;
   final bool highlight; // 서버 검증 결과(8.4). false면 강조하지 않는다
+
+  // 시트 제목 아래 한국어: 승인된 대응어, 없으면 번역문에서 쓴 표기
+  String? get koLabel {
+    final ko = (termKo ?? termKoSpan)?.replaceFirst(RegExp(r'\s*\(.*\)$'), '');
+    return ko == null || ko.isEmpty || ko.toLowerCase() == term.toLowerCase() ? null : ko;
+  }
+
+  // 한국어 글에서 찾을 표기, 먼저 찾을 것부터: 번역문 표기 → 사전 대응어 → 영문 그대로(SFT·VLM은 번역문에 남는다) → 별칭
+  List<String> get koreanLabels => {
+    for (final l in [termKoSpan, termKo, term, ...aliases])
+      if (l != null) l.replaceFirst(RegExp(r'\s*\(.*\)$'), ''),
+  }.where((l) => l.length >= 2).toList();
 }
 
 class PaperDetail {
@@ -213,6 +242,8 @@ class OfficialNews {
     'News' => '소식',
     'Announcement' => '공지',
     'Release' => '릴리스',
+    'AI Research' || 'NVIDIA Research' => '연구', // Meta 엔지니어링 블로그·NVIDIA
+    'Hugging Face Blog' => 'Hugging Face 블로그', // HF 블로그에 회사 계정이 쓴 글(칩은 그 회사)
     _ => null,
   };
 }
@@ -246,7 +277,8 @@ class TrendingModel {
         url = j['url'],
         strengths = [for (final s in j['card']?['strengths'] ?? const []) s as String],
         benchmarks = [for (final b in j['card']?['benchmarks'] ?? const []) (b['name'] as String, b['score'] as String)],
-        limitation = j['card']?['limitation'];
+        limitation = j['card']?['limitation'],
+        variants = [for (final v in j['variants'] ?? const []) ModelVariant.fromJson(v)];
 
   final String id; // 만든곳/이름
   final String author, name;
@@ -261,6 +293,13 @@ class TrendingModel {
   final List<String> strengths; // 비면 「제작사가 밝히지 않았어요」
   final List<(String, String)> benchmarks; // (이름, 점수) 제작사 측정
   final String? limitation;
+  final List<ModelVariant> variants; // 같은 모델의 양자화판·형제 모델(수집기가 묶는다)
+
+  // 발표한 곳(칩). HF 계정 이름을 알려진 회사 이름으로, 모르면 계정 이름 그대로
+  String get maker => makerName(author);
+
+  // 「새로 나옴」 칸: 최근 14일 안에 공개(worker NEW_DAYS)
+  bool isNew(DateTime now) => createdAt != null && now.difference(createdAt!).inDays < 14;
 
   String get taskKo => switch (task) {
     'text-generation' => '텍스트 생성',
@@ -289,6 +328,28 @@ class TrendingModel {
     'other' => '개별 라이선스',
     final l => l.toUpperCase() == 'MIT' ? 'MIT' : l.replaceFirstMapped(RegExp(r'^apache'), (_) => 'Apache'),
   };
+}
+
+// Hugging Face 계정 → 회사 이름(모델 칩). 목록에 없는 계정은 그대로 보인다.
+const _makers = {
+  'deepseek-ai': 'DeepSeek', 'Qwen': 'Qwen', 'google': 'Google', 'facebook': 'Meta', 'meta-llama': 'Meta',
+  'mistralai': 'Mistral AI', 'nvidia': 'NVIDIA', 'tencent': 'Tencent', 'baidu': 'Baidu', 'MiniMaxAI': 'MiniMax',
+  'LiquidAI': 'Liquid AI', 'black-forest-labs': 'Black Forest Labs', 'openbmb': 'OpenBMB', 'inclusionAI': 'inclusionAI',
+  'microsoft': 'Microsoft', 'openai': 'OpenAI', 'anthropic': 'Anthropic', 'ibm-granite': 'IBM', 'allenai': 'Ai2',
+  'HuggingFaceTB': 'Hugging Face', 'HuggingFaceBio': 'Hugging Face', 'moonshotai': 'Moonshot AI', 'zai-org': 'Z.ai',
+  'OpenMOSS-Team': 'OpenMOSS', 'KRAFTON': 'KRAFTON', 'kyutai': 'Kyutai', 'Lightricks': 'Lightricks', 'fishaudio': 'Fish Audio',
+};
+String makerName(String author) => _makers[author] ?? author;
+
+class ModelVariant {
+  ModelVariant.fromJson(Map<String, dynamic> j)
+      : id = j['id'],
+        name = j['name'],
+        author = j['author'],
+        quantized = j['quantized'] == true;
+  final String id, name, author;
+  final bool quantized; // GGUF·FP8 같은 양자화판
+  String get url => 'https://huggingface.co/$id';
 }
 
 // 숫자: 1,234 / 8.5만 / 776만

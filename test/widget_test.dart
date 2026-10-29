@@ -24,12 +24,14 @@ import 'package:rootgist/design/theme.dart';
 import 'package:rootgist/design/tokens.dart';
 import 'package:rootgist/design/widgets/rg_buttons.dart';
 import 'package:rootgist/design/widgets/rg_card.dart';
+import 'package:rootgist/design/widgets/rg_row_head.dart';
 import 'package:rootgist/design/widgets/rg_pressable.dart';
 import 'package:rootgist/design/widgets/rg_segmented.dart';
 import 'package:rootgist/design/widgets/rg_underline_tabs.dart';
 import 'package:flutter/semantics.dart';
 import 'package:rootgist/features/explore/explore_screen.dart';
 import 'package:rootgist/features/explore/official_news.dart';
+import 'package:rootgist/features/common/term_text.dart';
 import 'package:rootgist/features/home/home_screen.dart';
 import 'package:rootgist/features/paper/paper_screen.dart';
 import 'package:rootgist/features/reader/reader_screen.dart';
@@ -47,11 +49,13 @@ Future<void> pumpApp(WidgetTester tester) async {
   backdrop.value = Backdrop.white;
   exploreTab.value = 0;
   newsUpdates.value = false;
+  modelsFresh.value = false;
   fixtureMode.value = FixtureMode.normal;
   exploreJump.value = null;
   // 새 글 점은 기본으로 끈다(따로 확인하는 테스트에서 켠다)
   newSince = DateTime.utc(2100);
   readItems.value = {};
+  modelsSeen.value = {};
   clock = DateTime.now;
   await tester.runAsync(() async {
     await tester.pumpWidget(const RootgistApp());
@@ -269,11 +273,26 @@ void main() {
     expect(h['A01']!.single.$2.term, 'inference-time compute');
     expect(h['A01']!.single.$1, 'For large language models, '.length);
 
-    // G2: 한국어 대응어가 있는 용어만 번역문에서 찾는다
+    // G2: 번역문에서 찾는다. 사전 대응어가 없어도 이 논문 번역문의 표기(term_ko_span)가 있으면 강조한다
     final ko = firstHighlights(p, korean: true);
-    expect(ko.keys, ['A01']);
+    expect(ko.keys, unorderedEquals(['A01', 'A03', 'A04']));
     expect(ko['A01']!.single.$3, '추론 시점 연산');
     expect(ko['A01']!.single.$1, '대규모 언어 모델에서 '.length);
+    expect(ko['A03']!.single.$3, '연산 예산');
+
+    // 번역문에 영문 표기가 그대로 남은 용어(SFT)는 표기 없이도 찾는다. 낱말 안(RAGAS의 RAG)은 아니다
+    final p3 = PaperDetail.fromJson({
+      'paper_id': 'y', 'title_en': 'T', 'authors': ['A'], 'published_at': '2026-10-18', 'hf_url': '', 'arxiv_url': '',
+      'ai_status': 'ready',
+      'sentences': [{'sentence_id': 'A01', 'kind': 'text', 'text': 'We apply SFT and RAG.', 'translation_ko': 'RAGAS로 평가하고 SFT를 적용한다.'}],
+      'glossary': [
+        {'term': 'SFT', 'definition_ko': '정의.', 'sentence_ids': ['A01'], 'highlight': true},
+        {'term': 'RAG', 'definition_ko': '정의.', 'sentence_ids': ['A01'], 'highlight': true},
+      ],
+    });
+    final ko3 = firstHighlights(p3, korean: true)['A01']!;
+    expect(ko3.map((h) => h.$3), ['SFT']);
+    expect(ko3.single.$1, 'RAGAS로 평가하고 '.length);
 
     // 번역문 표기가 대응어와 다르면 논문별 표기(term_ko_span)로 찾는다(동결된 디코더 ↔ 고정 디코더)
     final p2 = PaperDetail.fromJson({
@@ -362,29 +381,46 @@ void main() {
     await tester.fling(find.byType(PageView), const Offset(-300, 0), 1000);
     await slide(tester); // 칸 넘김 애니메이션
     await settle(tester);
-    expect(find.text('OpenAI · 제품 · 10월 18일'), findsOneWidget); // UTC 17시 = KST 다음 날
+    // 통일 머리 줄: 출처 칩 + 분류 · 날짜(출처는 칩이 보여 준다)
+    expect(find.text('OpenAI'), findsWidgets);
+    expect(find.text(keepAll('제품 · 10월 18일')), findsWidgets); // UTC 17시 = KST 다음 날
     expect(find.text(keepAll('가상의 예시 API를 소개합니다')), findsOneWidget);
     expect(find.text('Introducing a fictional example API'), findsNothing); // 발표 목록은 논문처럼 짧게(제목만)
     expect(find.text(keepAll('가상의 예시 API를 소개하는 가상 글이에요. 실제 내용이 아니에요.')), findsNothing);
-    expect(find.text('Google Research · 10월 16일'), findsOneWidget); // 한국어로 옮기지 않는 분류는 숨김
+    expect(find.text(keepAll('10월 16일')), findsWidgets); // 한국어로 옮기지 않는 분류는 숨김(날짜만)
     expect(find.text(keepAll('Fictional screening research for tests')), findsOneWidget); // 번역 없으면 원문만
-    expect(find.text('Claude Code · 릴리스 · 10월 18일'), findsNothing); // 릴리스는 「업데이트」에
+    expect(find.text('Claude Code'), findsNothing); // 릴리스는 「업데이트」에
 
     // 누르면 상세: 원제·AI 요약·핵심 내용과 근거
     await tester.tap(find.text(keepAll('가상의 예시 API를 소개합니다')));
     await settle(tester);
     expect(find.text('Introducing a fictional example API'), findsOneWidget);
-    expect(find.text(keepAll(byLine('가상의 예시 API를 소개하는 가상 글이에요. 실제 내용이 아니에요.'))), findsOneWidget); // AI 요약
+    // AI 요약: 공용 용어 사전의 용어(API)가 강조되고, 누르면 사전의 뜻
+    expect(find.textContaining(keepAll('실제 내용이 아니에요.'), findRichText: true), findsOneWidget);
+    await tester.tap(find.bySemanticsLabel('용어 설명: API'));
+    await tester.pumpAndSettle();
+    expect(find.text('뜻'), findsOneWidget);
+    expect(find.text('용어 사전 · 논문 3편에서 쓰임'), findsOneWidget);
+    await tester.tap(find.bySemanticsLabel('닫기'));
+    await tester.pumpAndSettle();
     expect(find.text('근거 · 원문 소개문'), findsNWidgets(2)); // OpenAI는 피드 소개문이 근거
     router.pop();
     await settle(tester);
 
     await tester.tap(find.text('업데이트'));
     await tester.pumpAndSettle();
-    expect(find.text('Claude Code · 릴리스 · 10월 18일'), findsOneWidget);
+    expect(find.text(keepAll('릴리스 · 10월 18일')), findsOneWidget);
     expect(find.text(keepAll('가상의 예시 도구가 추가됐어요')), findsOneWidget);
     expect(find.text('릴리스 노트 전체 보기'), findsOneWidget);
-    expect(find.text('근거 · 원문 1번째 문단'), findsOneWidget); // 커뮤니티 공지
+    // 업데이트는 목록에서 간추린다: 근거 알약 없이, 릴리스는 주요 변경 2개 + 「외 N개」(전체는 상세에서)
+    expect(find.text('근거 · 원문 1번째 문단'), findsNothing);
+    expect(find.text('외 1개 · 눌러서 모두 보기'), findsOneWidget);
+    // 출처 칩 색: SDK 릴리스도 회사 색(보관함 저장 이름도 같은 색)
+    expect(brandOf('openai_sdk'), brandOf('openai'));
+    expect(brandOf('Anthropic Python SDK'), brandOf('anthropic'));
+    expect(brandOf('nvidia_dev'), (RgBrand.nvidia, RgColors.textPrimary)); // 초록 위는 검정 글자
+    expect(brandOf('Meta'), (RgBrand.meta, RgColors.onAction));
+    expect(brandOf('xai_sdk'), brandOf('xAI'));
 
     // 오른쪽으로 밀면 발표, 한 번 더 밀면 논문(공식 소식 안의 발표 | 업데이트도 밀기 순서에 들어간다)
     await tester.fling(find.byType(PageView), const Offset(300, 0), 1000);
@@ -411,13 +447,20 @@ void main() {
     } // 칸 넘김이 끝나야 모델 칸이 그려지고 불러오기를 시작한다
     await settle(tester);
     expect(find.text('example-coder'), findsOneWidget);
-    expect(find.text(keepAll('example-lab 공개 · 400억 파라미터 텍스트 생성 모델')), findsOneWidget);
+    // 칩은 발표한 곳(Hugging Face는 정보 출처: 「Hugging Face 트렌딩 1위」), 한 줄 설명에는 만든 곳을 되풀이하지 않는다
+    expect(find.text(keepAll('400억 파라미터 텍스트 생성 모델')), findsOneWidget);
+    expect(find.widgetWithText(RgChip, 'example-lab'), findsWidgets);
+    expect(find.text(keepAll('Hugging Face 트렌딩 1위')), findsOneWidget);
 
     await tester.tap(find.text('example-coder'));
     await settle(tester);
-    expect(find.text('트렌딩 1위'), findsOneWidget);
+    expect(find.text(keepAll('Hugging Face 트렌딩 1위')), findsOneWidget);
+    expect(find.text(keepAll('example-lab 공개 · 400억 파라미터 텍스트 생성 모델')), findsOneWidget); // 상세 「한눈에」는 그대로
     expect(find.text('제작사가 내세운 강점'), findsOneWidget);
-    expect(find.text(keepAll('가상의 코딩 에이전트용 모델이에요.')), findsOneWidget);
+    expect(find.textContaining(keepAll('가상의 코딩'), findRichText: true), findsOneWidget);
+    expect(find.bySemanticsLabel('용어 설명: agent'), findsOneWidget); // 강점 문장에도 사전 용어 강조
+    expect(find.text('함께 오른 변형 1개'), findsOneWidget);
+    expect(find.text('example-coder-GGUF'), findsOneWidget);
     // 「한눈에」 하는 일·크기·라이선스 3칸(리디자인). 칸들은 같은 줄 위에 나란히
     final tops = [
       for (final v in ['텍스트 생성', '400억 파라미터', 'Apache-2.0'])
@@ -443,21 +486,20 @@ void main() {
     await settle(tester);
     expect(find.text('오늘의 주요 논문'), findsOneWidget);
     // 묶음 제목 문구 ①(피드백 3차), 연구소 소식만 출처 머리말
-    expect(find.text('OPENAI · ANTHROPIC · GOOGLE'), findsOneWidget); // 영문 대문자 머리말
+    expect(find.text('OPENAI · ANTHROPIC · GOOGLE 외'), findsOneWidget); // 영문 대문자 머리말
     expect(find.text('연구소 소식'), findsOneWidget);
     expect(find.text('이번 주 바뀐 도구'), findsOneWidget);
     expect(find.text('요즘 많이 쓰는 모델'), findsOneWidget);
     expect(find.byType(FeaturedNews), findsOneWidget); // 대표 소식 1 + 한 줄 1
     expect(find.byType(NewsRow), findsOneWidget);
-    expect(find.text(keepAll('v0.0.3 · 3건')), findsOneWidget); // 바뀐 도구 버전 태그
-    // 태그는 행 오른쪽 끝(카드 안쪽 390 − 16 − 16 = 358 부근)에 붙는다
-    expect(tester.getTopRight(find.text(keepAll('v0.0.3 · 3건'))).dx, greaterThan(340));
-    expect(find.text(keepAll('공지')), findsOneWidget);
+    // 바뀐 도구도 통일 머리 줄: 출처 칩 + 버전·건수 · 날짜(공지는 「공지」)
+    expect(find.text(keepAll('v0.0.3 · 3건 · 10월 18일')), findsOneWidget);
+    expect(find.text(keepAll('공지 · 10월 17일')), findsOneWidget);
     expect(find.text('example-coder'), findsOneWidget);
     // 홈 논문은 추천 1 + 행 2 = 3편
     // 목록·카드에는 북마크만(공유는 상세 화면에서). 논문 3 + 발표 2 + 업데이트 2 + 모델 2
     expect(find.bySemanticsLabel('공유'), findsNothing);
-    expect(find.bySemanticsLabel('북마크에 저장'), findsNWidgets(3 + 2 + 2)); // 논문 3 + 소식 2 + 모델 2(바뀐 도구 행은 버전 태그)
+    expect(find.bySemanticsLabel('북마크에 저장'), findsNWidgets(3 + 2 + 2 + 2)); // 논문 3 + 소식 2 + 바뀐 도구 2 + 모델 2(통일 행: 모든 행 오른쪽에 북마크)
 
     // 공식 발표를 저장하면 보관함에 「공식 소식」으로
     await tester.tap(find.descendant(of: find.byType(NewsRow).first, matching: find.bySemanticsLabel('북마크에 저장')));
@@ -493,7 +535,7 @@ void main() {
 
     router.go('/library');
     await settle(tester);
-    expect(find.textContaining('공식 소식 · '), findsOneWidget);
+    expect(find.textContaining(keepAll('공식 소식 · ')), findsOneWidget); // 보관함 머리 줄: 출처 칩 + 「공식 소식 · 저장일」
   });
 
   testWidgets('새 글 점: 안 연 공지·소식에만, 열면 사라진다(설정 공지 행·탐색 칸·소식 행, 탭바에는 없음)', (tester) async {
@@ -525,7 +567,8 @@ void main() {
     await settle(tester);
 
     // 홈의 공식 발표 행: 7일 안의 안 연 글에 「새 글」 글자(출처 배지가 회사 색이라 점 대신), 상세를 열면 그 글만 사라진다
-    final dots = find.descendant(of: find.byType(NewsRow), matching: find.byType(RgNewLabel));
+    // 읽으면 「새 글」은 작아지며 사라진다(위젯은 남고 visible만 꺼진다)
+    final dots = find.descendant(of: find.byType(NewsRow), matching: find.byWidgetPredicate((w) => w is RgNewLabel && w.visible));
     final before = dots.evaluate().length;
     expect(before, greaterThan(0));
     await tester.tap(find.byType(NewsRow).first);
@@ -603,7 +646,7 @@ void main() {
     expect(find.text(ko), findsOneWidget);
     expect(find.text('Benchmark'), findsNothing);
 
-    await tester.tap(find.bySemanticsLabel('용어 설명: compute budget'));
+    await tester.tap(find.bySemanticsLabel('용어 설명: compute budget').first); // 영문·번역문 양쪽
     await tester.pumpAndSettle();
     expect(find.text('이 논문에서의 뜻'), findsOneWidget);
     expect(find.text(keepAll('학습이나 추론에 쓸 수 있도록 미리 정해 둔 계산량의 한도.')), findsOneWidget);
@@ -673,15 +716,18 @@ void main() {
     router.go('/library');
     await tester.pumpAndSettle();
     expect(find.text('이 기기에 저장한 항목 2개'), findsOneWidget);
-    expect(find.text('논문 · arXiv'), findsNWidgets(2)); // 종류·출처 머리말
-    expect(find.text('10월 19일 저장'), findsOneWidget);
+    // 통일 머리 줄: 종류 칩(논문) + 출처 · 저장일
+    expect(find.text('논문'), findsNWidgets(2));
+    expect(find.text(keepAll('arXiv · 10월 19일 저장')), findsOneWidget);
 
     await tester.tap(find.bySemanticsLabel('저장됨, 북마크 해제').first); // 최신순 첫 행 = 10월 19일
+    await tester.pump(const Duration(milliseconds: 100)); // 행이 접히는 중(220ms)에는 아직 지우지 않는다
+    expect(find.text('이 기기에 저장한 항목 2개'), findsOneWidget);
     await tester.pumpAndSettle();
     expect(find.text('이 기기에 저장한 항목 1개'), findsOneWidget);
     await tester.tap(find.text('되돌리기'));
     await tester.pumpAndSettle();
-    expect(find.text('10월 19일 저장'), findsOneWidget); // 저장일 그대로 복원
+    expect(find.text(keepAll('arXiv · 10월 19일 저장')), findsOneWidget); // 저장일 그대로 복원
 
     await tester.tap(find.text('전체 비우기'));
     await tester.pumpAndSettle();
@@ -810,7 +856,8 @@ void main() {
     expect(llm.contains('"deepseek-v4-pro"'), isFalse); // Pro는 쓰지 않는다(비용)
     expect(md, allOf(contains('DeepSeek 공식 API'), contains('DeepSeek V4.1 Flash')));
     expect(md.contains('Pro'), isFalse);
-    expect(md.contains('NVIDIA'), isFalse); // 외부에 보여 주는 결과는 NVIDIA 무료 등급으로 만들지 않는다
+    // 외부에 보여 주는 결과는 NVIDIA 무료 등급으로 만들지 않는다(NVIDIA는 공식 소식 출처로만 나온다)
+    expect(md.contains(RegExp(r'NVIDIA (무료|NIM|API|Build)|build\.nvidia')), isFalse);
     expect(md.contains('본문 전체를 읽'), isFalse); // C03과 같은 원칙
   });
 
@@ -1111,14 +1158,19 @@ void main() {
     expect(scaffoldBg(), const Color(0xFFFFFFFF));
   });
 
-  testWidgets('옆으로 밀기: 홈 → 탐색 칸들 → 공식 소식 발표·업데이트 → 보관함 → 설정, 반대로 밀면 거꾸로', (tester) async {
+  testWidgets('옆으로 밀기: 홈 → 탐색 칸들 → 공식 소식 발표·업데이트 → 모델 트렌딩·새로 나옴 → 보관함 → 설정, 반대로 밀면 거꾸로', (tester) async {
     tester.view.physicalSize = const Size(390, 2400);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await pumpApp(tester);
     String where() {
       final path = router.routerDelegate.currentConfiguration.uri.path;
-      return path == '/explore' ? 'explore ${exploreTab.value}${exploreTab.value == 1 ? (newsUpdates.value ? ' 업데이트' : ' 발표') : ''}' : path;
+      final sub = switch (exploreTab.value) {
+        1 => newsUpdates.value ? ' 업데이트' : ' 발표',
+        2 => modelsFresh.value ? ' 새로 나옴' : ' 트렌딩',
+        _ => '',
+      };
+      return path == '/explore' ? 'explore ${exploreTab.value}$sub' : path;
     }
 
 
@@ -1128,7 +1180,7 @@ void main() {
       await settle(tester);
     }
 
-    const forward = ['explore 0', 'explore 1 발표', 'explore 1 업데이트', 'explore 2', '/library', '/settings'];
+    const forward = ['explore 0', 'explore 1 발표', 'explore 1 업데이트', 'explore 2 트렌딩', 'explore 2 새로 나옴', '/library', '/settings'];
     for (final w in forward) {
       await swipe(-300);
       expect(where(), w);
@@ -1195,7 +1247,7 @@ void main() {
     expect(bar().center.dx, closeTo(tester.getCenter(find.text('업데이트')).dx, 2));
   });
 
-  testWidgets('출처 배지: 회사 대표 색 한 가지(같은 회사는 같은 색), 대표 색 없는 출처는 회색', (tester) async {
+  testWidgets('출처 칩: 회사 대표 색 한 가지(같은 회사는 같은 색), 노랑 위는 검정 글자', (tester) async {
     tester.view.physicalSize = const Size(390, 2400);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -1205,15 +1257,103 @@ void main() {
     await tester.tap(find.text('공식 소식'));
     await slide(tester);
     await settle(tester);
-    Color? colorOf(String initials) => tester
-        .widget<RgSquareBadge>(find.ancestor(of: find.text(initials).first, matching: find.byType(RgSquareBadge)))
-        .color;
-    expect(colorOf('An'), RgBrand.anthropic);
-    expect(colorOf('OA'), RgBrand.openai);
-    expect(colorOf('GD'), RgBrand.google);
-    expect(colorOf('GR'), RgBrand.google); // Google은 4색 조합 대신 파랑 하나
-    expect(colorOf('HF'), RgBrand.huggingface);
-    expect(tester.widget<Text>(find.text('HF').first).style!.color, RgColors.textPrimary); // 노랑 위는 검정 글자
+    final colors = <String, Color?>{}, text = <String, Color?>{};
+    for (final e in find.byType(RgChip).evaluate()) {
+      final chip = e.widget as RgChip;
+      final box = tester.widget<Container>(find.descendant(of: find.byWidget(chip), matching: find.byType(Container)).first);
+      colors[chip.label] = (box.decoration as BoxDecoration).color;
+      text[chip.label] = tester.widget<Text>(find.descendant(of: find.byWidget(chip), matching: find.byType(Text))).style!.color;
+    }
+    expect(colors['Anthropic'], RgBrand.anthropic);
+    expect(colors['OpenAI'], RgBrand.openai);
+    expect(colors['Google DeepMind'], RgBrand.google);
+    expect(colors['Google Research'], RgBrand.google); // Google은 4색 조합 대신 파랑 하나
+    expect(colors['Hugging Face'], RgBrand.huggingface);
+    expect(text['Hugging Face'], RgColors.textPrimary);
+    expect(text['Anthropic'], RgColors.onAction);
+  });
+
+  testWidgets('다크 카드: 차콜 면 위 주제 칩은 흰 알약 + 잉크 글자', (tester) async {
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+    final card = find.byType(RgDarkCard).first;
+    final face = tester.widget<Container>(find.descendant(of: card, matching: find.byType(Container)).first);
+    expect((face.decoration as BoxDecoration).color, RgColors.surfaceInk);
+    final chip = find.descendant(of: card, matching: find.byType(RgChip)).first;
+    final box = tester.widget<Container>(find.descendant(of: chip, matching: find.byType(Container)).first);
+    expect((box.decoration as BoxDecoration).color, RgColors.chipOnInk);
+    expect(tester.widget<Text>(find.descendant(of: chip, matching: find.byType(Text))).style!.color, RgColors.textPrimary);
+  });
+
+  testWidgets('논문 상세 카드: AI 요약·핵심 내용에도 용어 강조, 카드 안에서 용어당 처음 1번, 누르면 진동과 시트', (tester) async {
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final haptics = <String>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'HapticFeedback.vibrate') haptics.add('${call.arguments}');
+      return null;
+    });
+    addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
+    await pumpApp(tester);
+    router.push('/paper/0000.00001');
+    await settle(tester);
+    // 요약에 「연산 예산」(번역문 표기)·「벤치마크」, 핵심 내용 2번에도 「연산 예산」이 있지만 카드 안에서는 1번만
+    expect(find.bySemanticsLabel('용어 설명: compute budget'), findsOneWidget);
+    expect(find.bySemanticsLabel('용어 설명: Benchmark'), findsOneWidget);
+    await tester.tap(find.bySemanticsLabel('용어 설명: compute budget'));
+    await tester.pumpAndSettle();
+    expect(haptics, ['HapticFeedbackType.selectionClick']);
+    expect(find.text('이 논문에서의 뜻'), findsOneWidget);
+    expect(find.text('연산 예산'), findsWidgets); // 사전 대응어가 없으면 번역문 표기를 제목 아래에
+  });
+
+  test('용어 찾기: 영문은 낱말 단위, 한글은 앞이 한글이 아닐 때만(뒤에는 조사가 붙는다)', () {
+    expect(findTerm('RAGAS와 RAG를 쓴다', 'RAG'), 'RAGAS와 '.length);
+    expect(findTerm('VLMs are', 'VLM'), -1);
+    expect(findTerm('공간 VLM이', 'VLM'), '공간 '.length);
+    expect(findTerm('에이전트용 모델', '에이전트'), 0);
+    expect(findTerm('멀티에이전트 구조', '에이전트'), -1);
+  });
+
+  testWidgets('모델: 「트렌딩 | 새로 나옴」, 변형 묶음 펼치기, 처음 보는 모델은 「새로 진입」', (tester) async {
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+    clock = () => DateTime.utc(2026, 10, 29);
+    modelsSeen.value = {'example-lab/example-coder': 'base', 'example-lab/example-video': 'base'};
+    router.go('/explore');
+    await settle(tester);
+    await tester.tap(find.text('모델'));
+    await slide(tester);
+    await settle(tester);
+    // 트렌딩: 10위 안만(example-tiny는 11위라 없다). 1위 변형은 한 줄로 묶인다
+    expect(find.text('example-coder'), findsOneWidget);
+    expect(find.text('example-tiny'), findsNothing);
+    expect(find.text('변형 1개 · GGUF'), findsOneWidget);
+    expect(find.text(keepAll('example-coder-GGUF · example-quant · 양자화판')), findsNothing);
+    await tester.tap(find.bySemanticsLabel('변형 1개'));
+    await tester.pumpAndSettle();
+    expect(find.text(keepAll('example-coder-GGUF · example-quant · 양자화판')), findsOneWidget);
+
+    // 새로 나옴: 최근 14일 안에 공개된 모델만, 공개일이 머리 줄에. 처음 보는 모델은 「새로 진입」
+    await tester.tap(find.text('새로 나옴'));
+    await tester.pumpAndSettle();
+    expect(find.text('example-tiny'), findsOneWidget);
+    expect(find.text('example-video'), findsNothing);
+    expect(find.text('example-coder'), findsNothing); // 10월 15일 공개 → 14일 지남
+    expect(find.text(keepAll('2일 전 공개 · 텍스트 생성')), findsOneWidget);
+    expect(find.text('새로 진입'), findsOneWidget);
+    await tester.tap(find.text('example-tiny'));
+    await settle(tester);
+    expect(find.text(keepAll('Hugging Face 최근 공개')), findsOneWidget); // 트렌딩 10위 밖
+    router.pop();
+    await settle(tester);
+    expect(find.text('새로 진입'), findsNothing); // 열어 봤으니 뗀다
+    clock = DateTime.now;
   });
 
   testWidgets('S1: 글자 크기 4단계가 S02 AI 요약·핵심 내용에도 적용된다', (tester) async {

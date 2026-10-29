@@ -54,8 +54,9 @@ PER_SOURCE = 5  # 출처마다 최신 몇 개
 ANTHROPIC_SEEN = OUT / "anthropic_seen.json"
 DIGEST_CACHE = OUT / "digest_cache.json"  # 주소(릴리스는 제목) → 번역·요약
 
-HF_TRENDING = "https://huggingface.co/api/models?sort=trendingScore&limit=40"
-TRENDING_TOP = 10
+HF_TRENDING = "https://huggingface.co/api/models?sort=trendingScore&limit=100"
+TRENDING_TOP = 10  # 「트렌딩」 칸
+NEW_DAYS, NEW_TOP = 14, 20  # 「새로 나옴」 칸 후보: 트렌딩 100위 안에서 최근 14일 안에 공개된 모델 20개까지(앱이 최신순 10개를 보인다)
 # 앱에 보일 과제만(위에서부터 많이 쓰이는 것). 나머지 과제와 아래 낱말이 이름·태그에 있는 모델은 뺀다.
 MODEL_TASKS = {"text-generation", "image-text-to-text", "text-to-image", "image-to-image", "image-to-video", "text-to-video",
                "text-to-speech", "automatic-speech-recognition", "any-to-any", "feature-extraction", "sentence-similarity"}
@@ -64,12 +65,33 @@ CARD_CHARS = 20000
 
 # OpenAI 피드에는 회사 소식·사례·정책 글이 섞여 있다. 개발 소식에 가까운 분류만.
 OPENAI_CATEGORIES = {"Research", "Product", "Safety", "Safety & Alignment", "Publication"}
+# 출처마다 받을 분류(하나라도 있으면)와 뺄 분류. 없는 출처는 모두 받는다.
+KEEP_CATEGORIES = {
+    "openai": OPENAI_CATEGORIES,
+    "meta": {"AI Research"},  # Meta 엔지니어링 블로그: 광고·데이터센터·문화 글은 뺀다
+    "nvidia": {"Open Source", "NVIDIA Research", "Research"},  # 회사 블로그: 제품 홍보·행사 글이 많아 오픈소스·연구만
+    "nvidia_dev": {"Agentic AI / Generative AI", "NVIDIA Research"},  # 개발자 블로그: 하루 몇 편, AI 쪽만
+}
+DROP_CATEGORIES = {"nvidia": {"Gaming", "GeForce NOW", "Cloud Gaming"}}
+# HF 블로그의 /blog/<계정>/<글>은 누구나 쓸 수 있는 커뮤니티 글이라, 알려진 회사 계정만 그 회사 소식으로 받는다.
+# 칩은 그 회사, 분류 자리에 「Hugging Face 블로그」. 계정 → (출처 id, 표시 이름)
+HF_BLOG_ORGS = {
+    "nvidia": ("nvidia", "NVIDIA"), "meta-llama": ("meta", "Meta"), "facebook": ("meta", "Meta"),
+    "google": ("google", "Google"), "microsoft": ("microsoft", "Microsoft"), "ibm-granite": ("ibm", "IBM"),
+    "ibm-research": ("ibm", "IBM"), "ibm": ("ibm", "IBM"), "allenai": ("ai2", "Ai2"), "LiquidAI": ("liquidai", "Liquid AI"),
+    "Qwen": ("qwen", "Qwen"), "mistralai": ("mistral", "Mistral AI"), "amazon": ("amazon", "Amazon"),
+    "deepseek-ai": ("deepseek", "DeepSeek"), "xai-org": ("xai", "xAI"), "openai": ("openai", "OpenAI"),
+}
 RSS_SOURCES = [
     # (id, 표시 이름, 피드)
     ("openai", "OpenAI", "https://openai.com/news/rss.xml"),
     ("deepmind", "Google DeepMind", "https://deepmind.google/blog/rss.xml"),
     ("google_research", "Google Research", "https://research.google/blog/rss/"),
     ("huggingface", "Hugging Face", "https://huggingface.co/blog/feed.xml"),
+    # ai.meta.com은 RSS가 없고 robots.txt가 자동 수집을 금지한다. 엔지니어링 블로그는 RSS를 공개하고 robots.txt가 막지 않는다
+    ("meta", "Meta", "https://engineering.fb.com/feed/"),
+    ("nvidia", "NVIDIA", "https://blogs.nvidia.com/feed/"),
+    ("nvidia_dev", "NVIDIA 개발자", "https://developer.nvidia.com/blog/feed"),
     # 공지 게시판만(직원 글). 일반 게시판은 하루 30개 넘는 사용자 질문이라 넣지 않는다.
     ("openai_community", "OpenAI 커뮤니티", "https://community.openai.com/c/announcements/6.rss"),
 ]
@@ -80,6 +102,8 @@ RELEASE_SOURCES = [
     ("anthropic_sdk", "Anthropic Python SDK", "https://github.com/anthropics/anthropic-sdk-python/releases.atom",
      "https://github.com/anthropics/anthropic-sdk-python/releases"),
     ("openai_sdk", "OpenAI Python SDK", "https://github.com/openai/openai-python/releases.atom", "https://github.com/openai/openai-python/releases"),
+    # x.ai 뉴스는 자동 접근을 막는다(403, 우회하지 않는다). 개발자에게 바로 쓸모 있는 SDK 릴리스만
+    ("xai_sdk", "xAI Python SDK", "https://github.com/xai-org/xai-sdk-python/releases.atom", "https://github.com/xai-org/xai-sdk-python/releases"),
 ]
 CLAUDE_API_NOTES = "https://docs.claude.com/en/release-notes/overview"
 NOTES_CHARS = 8000  # 요약에 넘길 릴리스 노트 길이 상한
@@ -116,19 +140,26 @@ def from_rss(source: str, label: str, url: str) -> list[dict]:
         if item.tag.split("}")[-1] not in ("item", "entry"):
             continue
         k = _children(item)
-        cats = [c.text for c in item if c.tag.split("}")[-1] == "category" and c.text]
+        # RSS는 <category>글자</category>, Atom은 <category term="…"/>
+        cats = [html.unescape(t) for c in item if c.tag.split("}")[-1] == "category" and (t := (c.text or c.get("term") or "").strip())]
         link = k.get("link", "")
-        if source == "openai" and not set(cats) & OPENAI_CATEGORIES:
+        if source in KEEP_CATEGORIES and not set(cats) & KEEP_CATEGORIES[source]:
             continue
-        # HF 블로그의 /blog/<조직>/<글>은 커뮤니티 글이다. HF가 직접 쓴 /blog/<글>만.
-        if source == "huggingface" and len(link.split("/blog/", 1)[-1].strip("/").split("/")) != 1:
-            continue
+        if set(cats) & DROP_CATEGORIES.get(source, set()) or (source == "nvidia" and any(c.startswith("GTC") for c in cats)):
+            continue  # NVIDIA 행사(GTC) 기간 글은 지역 사례·홍보가 대부분
+        src, lab, cat = source, label, (cats[0] if cats else None)
+        if source == "huggingface":
+            path = link.split("/blog/", 1)[-1].strip("/").split("/")
+            if len(path) == 2 and path[0] in HF_BLOG_ORGS:
+                (src, lab), cat = HF_BLOG_ORGS[path[0]], "Hugging Face Blog"
+            elif len(path) != 1:  # 모르는 계정의 커뮤니티 글
+                continue
         when = _date(k.get("pubDate") or k.get("published") or k.get("updated") or "")
         if not when:
             continue
         notice = source.endswith("_community")
-        out.append({"source": source, "source_label": label, "kind": "notice" if notice else "post",
-                    "category": "Announcement" if notice else (cats[0] if cats else None),
+        out.append({"source": src, "source_label": lab, "kind": "notice" if notice else "post",
+                    "category": "Announcement" if notice else cat,
                     "title_en": html.unescape(k.get("title", "")).strip(), "url": link, "published_at": when,
                     "_desc": k.get("description") or k.get("summary") or ""})  # 공지 본문·OpenAI 소개문
     return out
@@ -250,7 +281,7 @@ def save_state(db, key: str, path: Path, value: dict):
 NEWS_COLUMNS = ("id", "source", "source_label", "kind", "category", "title_en", "title_ko", "url", "published_at",
                 "summary_ko", "key_points", "thin", "related")
 MODEL_COLUMNS = ("id", "rank", "author", "name", "task", "params", "license", "likes", "downloads", "created_at",
-                 "arxiv", "url", "card")
+                 "arxiv", "url", "card", "variants")
 
 
 # 관련 소식: 같은 실행에서 모은 공식 자료끼리, 모델·제품 이름처럼 확실한 이름이 겹칠 때만 잇는다
@@ -289,14 +320,25 @@ def save_db(db, items: list[dict], models: list[dict], now: datetime):
     db.upsert("official_news", [{**{k: i.get(k) for k in NEWS_COLUMNS}, "key_points": i.get("key_points") or [],
                                  "collected_at": stamp} for i in items], "id")
     if models:  # 트렌딩을 못 받은 날은 어제 순위를 그대로 둔다
-        db.upsert("trending_models", [{**{k: m.get(k) for k in MODEL_COLUMNS}, "collected_at": stamp} for m in models], "id")
+        rows = [{**{k: m.get(k) for k in MODEL_COLUMNS}, "collected_at": stamp} for m in models]
+        try:
+            db.upsert("trending_models", rows, "id")
+        except Exception:  # variants 열을 더하는 마이그레이션 전이면 그 열만 빼고 저장한다
+            db.upsert("trending_models", [{k: v for k, v in r.items() if k != "variants"} for r in rows], "id")
         db._req("DELETE", f"trending_models?collected_at=lt.{urllib.parse.quote(stamp)}", prefer="return=minimal")
 
 
 def pick(items: list[dict], now: datetime) -> list[dict]:
+    """출처마다 기간 안의 최신 PER_SOURCE개. HF 블로그 피드 하나에서 여러 회사 출처가 나와 출처별로 센다."""
     recent = [i for i in items if now - i["published_at"] <= timedelta(days=WINDOW_DAYS)]
     recent.sort(key=lambda i: i["published_at"], reverse=True)
-    return recent[:PER_SOURCE]
+    count: dict[str, int] = {}
+    out = []
+    for i in recent:
+        if count.get(i["source"], 0) < PER_SOURCE:
+            count[i["source"]] = count.get(i["source"], 0) + 1
+            out.append(i)
+    return out
 
 
 TRANSLATE_SYSTEM = (
@@ -454,22 +496,62 @@ def summarize_post(title: str, paras: list[str], api_key: str, log, title_ko: st
     return out["summary"].strip(), drop_repeats(out["summary"], points)
 
 
-def from_hf_trending() -> list[dict]:
+def _parent(tags: list[str]) -> tuple[str | None, bool]:
+    """HF 태그의 원래 모델(base_model:quantized:X·finetune:X…)과 양자화판인지."""
+    for kind in ("quantized", "finetune", "adapter", "merge"):
+        x = next((t.split(":", 2)[2] for t in tags if t.startswith(f"base_model:{kind}:")), None)
+        if x:
+            return x, kind == "quantized"
+    return next((t.split(":", 1)[1] for t in tags if t.startswith("base_model:") and t.count(":") == 1), None), False
+
+
+def group_variants(models: list[dict]) -> list[tuple[dict, list[dict]]]:
+    """트렌딩 순 목록 → [(대표, 변형들)]. 양자화판(GGUF·FP8…)은 원래 모델 쪽으로, 같은 회사가 같은 바탕 모델에서
+    만든 것(LFM3-1.7B · LFM3-VL-2B)은 한 묶음으로. 다른 회사의 미세 조정은 따로 둔다. 대표는 묶음에서 가장 높은 순위."""
+    ids = {m["id"] for m in models}
+    parent = {m["id"]: _parent(m.get("tags") or []) for m in models}
+
+    def key(mid: str, seen=()) -> str:
+        base, quant = parent.get(mid, (None, False))
+        if not base or mid in seen:
+            return mid
+        if quant or base.split("/")[0] == mid.split("/")[0]:
+            return key(base, seen + (mid,)) if base in ids else base
+        return mid
+
+    groups: dict[str, list[dict]] = {}
+    for m in models:
+        groups.setdefault(key(m["id"]), []).append(m)
+    return [(g[0], g[1:]) for g in groups.values()]
+
+
+def from_hf_trending(now: datetime | None = None) -> list[dict]:
+    now = now or datetime.now(timezone.utc)
+    listing = [m for m in json.loads(fetch(HF_TRENDING))
+               if m.get("pipeline_tag") in MODEL_TASKS and not MODEL_BLOCK.search(m["id"] + " " + " ".join(m.get("tags") or []))]
     out = []
-    for m in json.loads(fetch(HF_TRENDING)):
-        tags = m.get("tags") or []
-        if m.get("pipeline_tag") not in MODEL_TASKS or MODEL_BLOCK.search(m["id"] + " " + " ".join(tags)):
+    for m, variants in group_variants(listing):
+        created = m.get("createdAt")
+        fresh = bool(created) and now - datetime.fromisoformat(created.replace("Z", "+00:00")) <= timedelta(days=NEW_DAYS)
+        fresh_count = sum(1 for o in out if o["_fresh"])
+        if len(out) >= TRENDING_TOP and not (fresh and fresh_count < NEW_TOP):
+            if fresh_count >= NEW_TOP:
+                break
             continue
+        tags = m.get("tags") or []
         info = json.loads(fetch(f"https://huggingface.co/api/models/{m['id']}"))
         lic = next((t.split(":", 1)[1] for t in tags if t.startswith("license:")), None)
         out.append({"id": m["id"], "author": info.get("author") or m["id"].split("/")[0], "name": m["id"].split("/")[-1],
                     "task": m.get("pipeline_tag"), "params": (info.get("safetensors") or {}).get("total"),
                     "license": lic, "likes": info.get("likes"), "downloads": info.get("downloads"),
-                    "created_at": info.get("createdAt"), "rank": len(out) + 1,
+                    "created_at": info.get("createdAt") or created, "rank": len(out) + 1,
                     "arxiv": [t.split(":", 1)[1] for t in tags if t.startswith("arxiv:")][:1] or None,
-                    "url": f"https://huggingface.co/{m['id']}"})
-        if len(out) == TRENDING_TOP:
-            break
+                    "url": f"https://huggingface.co/{m['id']}",
+                    "variants": [{"id": v["id"], "name": v["id"].split("/")[-1], "author": v["id"].split("/")[0],
+                                  "quantized": _parent(v.get("tags") or [])[1]} for v in variants[:5]],
+                    "_fresh": fresh})
+    for o in out:
+        del o["_fresh"]
     return out
 
 

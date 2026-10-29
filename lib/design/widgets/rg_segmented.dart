@@ -47,8 +47,8 @@ class RgSegmented<T> extends StatelessWidget {
             // 정렬 x = -1 + 2i/(n-1) 이면 왼쪽 = i × (segW + gap) 로 정확히 맞는다.
             AnimatedAlign(
               alignment: Alignment(n == 1 ? 0 : -1 + 2 * index / (n - 1), 0),
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOut,
+              duration: RgMotion.of(context, RgMotion.base),
+              curve: RgMotion.curve,
               child: Container(
                 width: segW,
                 decoration: BoxDecoration(

@@ -1,0 +1,167 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<!-- 통일 행 구조 + 모션 예상 시안(2026-10-29). 흰 바탕(기본) 팔레트. 검토안(출처 이름 칩)을 보완한 방향.
+     행 하나의 모양: [칩] 보조 글자 · 날짜 [새 글] → 제목 → 오른쪽 북마크. 칩만 내용에 따라 바뀐다. -->
+<style>
+  @font-face { font-family: P; font-weight: 400; src: url(../../assets/fonts/Pretendard-Regular.otf); }
+  @font-face { font-family: P; font-weight: 500; src: url(../../assets/fonts/Pretendard-Medium.otf); }
+  @font-face { font-family: P; font-weight: 600; src: url(../../assets/fonts/Pretendard-SemiBold.otf); }
+  @font-face { font-family: P; font-weight: 700; src: url(../../assets/fonts/Pretendard-Bold.otf); }
+  @font-face { font-family: P; font-weight: 800; src: url(../../assets/fonts/Pretendard-Bold.otf); }
+  :root { --bg:#FFFFFF; --card:#F4F4F2; --fill:#E7E7E3; --line:#E6E6E3; --div:#E3E3E0; --ink:#0E0E0D; --ink2:#33332F; --mute:#6B6B65; --faint:#9B9B94; --newt:#D42A20;
+          --an:#B5522B; --oa:#0E0E0D; --gg:#1A66D9; --hf:#FFD21E; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { width: 2620px; background: #E9E9E6; font-family: P, sans-serif; color: var(--ink); padding: 44px 44px 56px; word-break: keep-all; }
+  h1 { font: 800 34px/1.2 P; letter-spacing: -0.8px; }
+  .lead { margin-top: 10px; font: 400 17px/1.55 P; color: var(--mute); max-width: 1500px; }
+  .grid { display: flex; gap: 26px; margin-top: 30px; }
+  .col { width: 402px; }
+  .label { font: 700 18px/1 P; } .sub { margin-top: 6px; font: 400 14px/1.4 P; color: var(--mute); }
+  .phone { margin-top: 12px; height: 874px; background: var(--bg); border-radius: 44px; border: 6px solid #141413; overflow: hidden; position: relative; }
+  .status { height: 54px; }
+  .top { padding: 4px 20px 0; }
+  .display { font: 800 34px/40px P; letter-spacing: -1px; }
+  .seg { margin: 12px 20px 0; height: 46px; padding: 4px; border-radius: 999px; background: var(--fill); display: flex; gap: 2px; }
+  .seg span { flex: 1; border-radius: 999px; display: flex; align-items: center; justify-content: center; font: 500 14.5px/1 P; color: var(--mute); }
+  .seg span.on { background: #fff; color: var(--ink); font-weight: 700; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+  .utabs { margin: 12px 20px 0; display: flex; gap: 20px; border-bottom: 1px solid var(--line); }
+  .utabs span { padding: 12px 0; font: 500 16px/1 P; color: var(--mute); }
+  .utabs span.on { font-weight: 700; color: var(--ink); border-bottom: 2px solid var(--ink); margin-bottom: -1px; }
+  .filters { display: flex; gap: 8px; padding: 14px 20px 0; overflow: hidden; }
+  .f { height: 36px; padding: 0 15px; border-radius: 999px; border: 1px solid var(--line); display: inline-flex; align-items: center; font: 500 14px/1 P; color: var(--ink2); white-space: nowrap; }
+  .f.on { background: var(--ink); border-color: var(--ink); color: #fff; font-weight: 600; }
+  .sec { padding: 26px 20px 10px; display: flex; align-items: baseline; gap: 6px; }
+  .sec b { font: 700 18px/25px P; letter-spacing: -0.3px; } .sec small { font: 500 14px/1 P; color: var(--mute); }
+  .card { margin: 12px 16px 0; background: var(--card); border-radius: 22px; }
+  .dark { margin: 18px 16px 0; background: var(--ink); color: #fff; border-radius: 26px; padding: 22px; }
+  .dark .m { font: 400 14px/20px P; color: #B9B9B2; }
+  .row { display: flex; gap: 12px; padding: 15px 12px 15px 20px; border-top: 1px solid var(--div); align-items: flex-start; }
+  .card .row:first-child { border-top: 0; }
+  .bare .row { margin: 0 20px; padding: 15px 0; }
+  .bare .row:first-child { border-top: 0; }
+  .grow { flex: 1; min-width: 0; }
+  .head { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; font: 400 13.5px/19px P; color: var(--mute); }
+  .new { font: 700 12px/1 P; color: var(--newt); }
+  .t { margin-top: 6px; font: 600 16.5px/24px P; letter-spacing: -0.3px; }
+  .s { margin-top: 4px; font: 400 14.5px/22px P; color: var(--ink2); }
+  /* 칩: 높이 24, 알약, 12.5 600. 출처는 회사 대표 색, 주제·종류는 중립 */
+  .chip { height: 24px; padding: 0 9px; border-radius: 999px; display: inline-flex; align-items: center; font: 600 12.5px/1 P; white-space: nowrap; background: var(--fill); color: var(--ink2); }
+  .chip.an { background: var(--an); color: #fff; } .chip.oa { background: var(--oa); color: #fff; }
+  .chip.gg { background: var(--gg); color: #fff; } .chip.hf { background: var(--hf); color: var(--ink); }
+  .chip.ink { background: rgba(255,255,255,.14); color: #fff; }
+  .tag { height: 24px; padding: 0 9px; border-radius: 999px; display: inline-flex; align-items: center; font: 500 12.5px/1 P; background: var(--fill); color: var(--ink2); }
+  .bm { width: 44px; height: 44px; flex: none; display: flex; align-items: center; justify-content: center; margin-top: -4px; }
+  .bm i { width: 36px; height: 36px; border-radius: 50%; background: var(--fill); display: flex; align-items: center; justify-content: center; }
+  .bm.on i { background: var(--ink); }
+  .bm svg { width: 16px; height: 16px; stroke: var(--ink); fill: none; stroke-width: 2; stroke-linejoin: round; }
+  .bm.on svg { stroke: #fff; fill: #fff; }
+  .rank { width: 30px; flex: none; font: 800 28px/30px P; letter-spacing: -1px; color: var(--faint); }
+  .tabbar { position: absolute; left: 0; right: 0; bottom: 0; height: 86px; background: #fff; border-top: 1px solid var(--line); display: flex; padding-top: 8px; }
+  .tabbar span { flex: 1; text-align: center; font: 500 13px/1 P; color: var(--mute); }
+  .tabbar span.on { color: var(--ink); font-weight: 700; }
+  .tabbar span::before { content: ''; display: block; width: 22px; height: 22px; margin: 0 auto 6px; border-radius: 6px; border: 1.8px solid currentColor; }
+  .toast { position: absolute; left: 16px; right: 16px; bottom: 100px; height: 52px; border-radius: 16px; background: var(--ink); color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; font: 500 14.5px/1 P; }
+  .toast b { font-weight: 700; }
+  .more { display: flex; justify-content: flex-end; padding: 8px 20px 0; }
+  .pill { height: 34px; padding: 0 14px; border-radius: 999px; background: var(--fill); display: inline-flex; align-items: center; gap: 4px; font: 600 14px/1 P; }
+  /* 모션 판 */
+  .motion { margin-top: 36px; background: #fff; border-radius: 28px; padding: 28px 30px 30px; }
+  .motion h2 { font: 700 22px/1.2 P; }
+  .mgrid { margin-top: 18px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px 26px; }
+  .m h3 { font: 700 16px/1.3 P; } .m p { margin-top: 4px; font: 400 14px/1.5 P; color: var(--mute); }
+  .frames { margin-top: 10px; display: flex; gap: 10px; align-items: center; }
+  .fr { width: 236px; background: var(--card); border-radius: 16px; padding: 10px 6px; position: relative; }
+  .fr .cap { position: absolute; top: -9px; left: 10px; background: #fff; padding: 0 6px; font: 600 11.5px/18px P; color: var(--mute); border-radius: 6px; }
+  .arrow { color: var(--faint); font: 700 18px/1 P; }
+  .rules { margin-top: 20px; font: 400 14.5px/1.6 P; color: var(--ink2); }
+  .rules b { font-weight: 700; }
+</style></head><body>
+<h1>통일 행 구조 + 모션 · 예상 시안</h1>
+<div class="lead">모든 목록 행을 한 가지 모양으로: <b>[칩] 보조 글자 · 날짜 [새 글] → 제목 → 오른쪽 북마크</b>. 칩만 내용에 따라 바뀌어요 — 공식 소식은 회사 대표 색 칩(흰 글자 대비 4.5:1 이상), 논문 주제·보관함 종류는 중립 회색 칩. 분류·날짜는 칩이 아니라 보조 글자, 새 글은 「새 글」 글자, 저장은 북마크(저장되면 검정 원). 흰 바탕(기본) 기준이에요.</div>
+<div class="grid" id="grid"></div>
+
+<div class="motion">
+  <h2>인터랙션·모션 (모두 150~260ms, 「동작 줄이기」면 움직임 없이 바로)</h2>
+  <div class="mgrid" id="mgrid"></div>
+  <div class="rules"><b>이미 있는 것</b> 탭 옆으로 밀기(민 방향 40pt·220ms), 진동(선택 틱·가벼운 톡), 북마크 톡 반응, 밑줄·세그먼트 미끄러짐. <b>새로 넣는 것</b> 아래 ①~⑥. 목록이 하나씩 차례로 나타나는 효과·튀는 화면 전환은 넣지 않아요.</div>
+</div>
+
+<script>
+const BM = (on) => `<span class="bm ${on ? 'on' : ''}"><i><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg></i></span>`;
+const row = ({chip, cls = '', head = '', isNew, title, sub, on, lead = ''}) => `
+  <div class="row">${lead}<div class="grow">
+    <div class="head">${chip ? `<span class="chip ${cls}">${chip}</span>` : ''}<span>${head}</span>${isNew ? '<span class="new">새 글</span>' : ''}</div>
+    <div class="t">${title}</div>${sub ? `<div class="s">${sub}</div>` : ''}</div>${on === undefined ? '' : BM(on)}</div>`;
+const tab = (i) => `<div class="tabbar">${['홈','탐색','보관함','설정'].map((t, k) => `<span class="${k === i ? 'on' : ''}">${t}</span>`).join('')}</div>`;
+const phone = (inner, t) => `<div class="phone"><div class="status"></div>${inner}${tab(t)}</div>`;
+
+const screens = [
+  ['홈', '논문은 주제 칩, 연구소 소식은 회사 색 칩', phone(`
+    <div class="top"><div style="font:800 15px/1 P;letter-spacing:.22em">ROOTGIST</div>
+    <div style="margin-top:20px;font:500 15px/1 P;color:var(--mute)">10월 19일 월요일</div><div class="display" style="margin-top:8px">새 논문 6편이<br>올라왔어요</div></div>
+    <div class="dark"><div style="display:flex;gap:8px;align-items:center"><span class="chip ink">언어 모델</span><span class="m">오늘의 주요 논문</span></div>
+      <div style="margin-top:12px;font:700 21px/29px P;letter-spacing:-.4px">추론 시점 연산의 효율적 확장</div><div class="m" style="margin-top:6px">Author 01 외 · 2026.10.18</div></div>
+    <div class="bare" style="margin-top:6px">${row({chip:'검색·검색 증강', head:'2026.10.18', title:'Benchmarking Long-Context Retrieval', on:false})}${row({chip:'멀티모달', head:'2026.10.18', title:'소수 예시 기반 영상 분할의 일반화 성능 분석', on:true})}</div>
+    <div class="more"><span class="pill">논문 6편 모두 보기 ›</span></div>
+    <div class="sec" style="padding-top:22px"><b>연구소 소식</b></div>
+    <div class="card">${row({chip:'Anthropic', cls:'an', head:'연구 · 10월 18일', isNew:true, title:'예시 에이전트에 관한 가상 연구', sub:'가상의 에이전트가 여러 단계를 거쳐 과제를 해결하는 과정을 살펴봐요.', on:false})}</div>`, 0)],
+  ['탐색 · 논문', '논문 행도 같은 모양: 주제 칩 + 날짜·저자', phone(`
+    <div class="top"><div class="display">탐색</div></div>
+    <div class="seg"><span class="on">논문</span><span>공식 소식</span><span>모델</span></div>
+    <div class="sec"><b>오늘의 논문</b><small>6편</small></div>
+    <div class="filters" style="padding-top:0"><span class="f on">전체</span><span class="f">언어 모델</span><span class="f">에이전트</span><span class="f">멀티모달</span></div>
+    <div class="card" style="margin-top:14px">${row({chip:'언어 모델', head:'2026.10.18 · Author 01 외', title:'추론 시점 연산의 효율적 확장', on:false})}${row({chip:'언어 모델', head:'2026.10.18 · Author 01 외', title:'보상 모델 없이 선호를 학습하는 정책 최적화', on:true})}${row({chip:'에이전트', head:'2026.10.18 · Author 01', title:'스프레드시트 편집을 위한 도구 사용 에이전트', on:false})}${row({chip:'멀티모달', head:'2026.10.18 · Author 01 외', title:'소수 예시 기반 영상 분할의 일반화 성능 분석', on:false})}</div>`, 1)],
+  ['탐색 · 공식 소식 · 발표', '검토안 보완: 출처 칩만 색, 나머지는 글자', phone(`
+    <div class="top"><div class="display">탐색</div></div>
+    <div class="seg"><span>논문</span><span class="on">공식 소식</span><span>모델</span></div>
+    <div class="utabs"><span class="on">발표</span><span>업데이트</span></div>
+    <div class="filters"><span class="f on">전체</span><span class="f">Anthropic</span><span class="f">Google DeepMind</span></div>
+    <div class="card">${row({chip:'Anthropic', cls:'an', head:'연구 · 10월 18일', isNew:true, title:'예시 에이전트에 관한 가상 연구', on:false})}${row({chip:'OpenAI', cls:'oa', head:'제품 · 10월 18일', title:'가상의 예시 API를 소개합니다', on:true})}${row({chip:'Google DeepMind', cls:'gg', head:'10월 16일', title:'fixture용으로 만든 예시 지도', on:false})}${row({chip:'Google Research', cls:'gg', head:'10월 16일', title:'Fictional screening research for tests', on:false})}${row({chip:'Hugging Face', cls:'hf', head:'10월 15일', title:'예시 하드웨어에서 예시 모델 실행하기', on:false})}</div>`, 1)],
+  ['탐색 · 공식 소식 · 업데이트', '카드도 같은 머리 줄, 버전은 보조 글자', phone(`
+    <div class="top"><div class="display">탐색</div></div>
+    <div class="seg"><span>논문</span><span class="on">공식 소식</span><span>모델</span></div>
+    <div class="utabs"><span>발표</span><span class="on">업데이트</span></div>
+    <div class="filters"><span class="f on">전체</span><span class="f">Claude Code</span><span class="f">OpenAI 커뮤니티</span></div>
+    <div class="card"><div class="row" style="padding-bottom:18px"><div class="grow">
+      <div class="head"><span class="chip an">Claude Code</span><span>릴리스 · v0.0.3 · 3건 · 10월 18일</span><span class="new">새 글</span></div>
+      <div class="t">Claude Code 업데이트 3건</div>
+      <div class="s" style="margin-top:10px">1  가상의 예시 도구가 추가됐어요<br>2  예시 오류를 고쳤어요</div>
+      <div class="head" style="margin-top:10px"><span class="tag">릴리스 노트 전체 보기 ↗</span></div></div>${BM(false)}</div></div>
+    <div class="card"><div class="row" style="padding-bottom:18px"><div class="grow">
+      <div class="head"><span class="chip oa">OpenAI 커뮤니티</span><span>공지 · 10월 17일</span></div>
+      <div class="t">가상의 예시 기능을 이제 쓸 수 있어요</div>
+      <div class="s" style="margin-top:8px">가상의 예시 기능을 알리는 가상 공지예요.</div></div>${BM(false)}</div></div>`, 1)],
+  ['탐색 · 모델', '순위 숫자 + 출처 칩(Hugging Face)', phone(`
+    <div class="top"><div class="display">탐색</div></div>
+    <div class="seg"><span>논문</span><span>공식 소식</span><span class="on">모델</span></div>
+    <div class="dark" style="margin-top:20px"><div style="display:flex;gap:8px;align-items:center"><span class="chip hf">Hugging Face</span><span class="m">트렌딩 1위</span></div>
+      <div style="margin-top:12px;font:700 21px/29px P">example-coder</div><div class="m" style="margin-top:4px">example-lab · 400억 파라미터 텍스트 생성 모델</div>
+      <div style="display:flex;margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.14)">${[['라이선스','Apache-2.0'],['좋아요','1,234'],['다운로드','5.7만']].map(([a,b],i)=>`<div style="flex:1;${i?'border-left:1px solid rgba(255,255,255,.14);padding-left:12px':''}"><div class="m" style="font-size:12.5px">${a}</div><div style="font:600 16px/24px P">${b}</div></div>`).join('')}</div></div>
+    <div class="card">${row({lead:'<span class="rank">2</span>', chip:'Hugging Face', cls:'hf', head:'개별 라이선스 · 좋아요 99', title:'example-video', sub:'example-lab · 이미지 → 영상 생성 모델', on:false})}${row({lead:'<span class="rank">3</span>', chip:'Hugging Face', cls:'hf', head:'MIT · 좋아요 512', title:'example-vision-lite', sub:'example-lab · 80억 파라미터 이미지·텍스트 이해 모델', on:false})}</div>`, 1)],
+  ['보관함', '종류는 중립 칩, 공식 소식은 출처 색 칩 · 빼면 접히며 사라짐', phone(`
+    <div class="top" style="display:flex;justify-content:space-between;align-items:center"><div class="display">보관함</div><span class="f" style="height:34px">전체 비우기</span></div>
+    <div style="padding:10px 20px 0;font:400 15px/1 P;color:var(--mute)">이 기기에 저장한 항목 4개</div>
+    <div class="card" style="margin-top:18px">${row({chip:'논문', head:'arXiv · 10월 27일 저장', title:'보상 모델 없이 선호를 학습하는 정책 최적화', on:true})}${row({chip:'Anthropic', cls:'an', head:'공식 소식 · 10월 26일 저장', title:'예시 에이전트에 관한 가상 연구', on:true})}${row({chip:'Hugging Face', cls:'hf', head:'모델 · 10월 27일 저장', title:'example-coder', on:true})}
+      <div class="row" style="opacity:.35;padding-top:6px;padding-bottom:6px"><div class="grow"><div class="head"><span class="chip">논문</span><span>arXiv · 10월 19일 저장</span></div></div></div></div>
+    <div class="toast"><span>보관함에서 뺐어요</span><b>되돌리기</b></div>`, 2)],
+];
+document.getElementById('grid').innerHTML = screens.map(([l, s, p]) => `<div class="col"><div class="label">${l}</div><div class="sub">${s}</div>${p}</div>`).join('');
+
+const mini = (chip, cls, isNew, on, extra = '') => `<div class="row" style="border:0;padding:6px 6px 6px 12px;${extra}"><div class="grow"><div class="head">${chip ? `<span class="chip ${cls}">${chip}</span>` : ''}<span>연구 · 10월 18일</span>${isNew ? `<span class="new" style="${isNew === 'fade' ? 'opacity:.4;font-size:10px' : ''}">새 글</span>` : ''}</div><div class="t" style="font-size:15px;line-height:21px;margin-top:4px">예시 에이전트에 관한 가상 연구</div></div>${on === undefined ? '' : BM(on)}</div>`;
+const fr = (cap, inner, style = '') => `<div class="fr" style="${style}"><span class="cap">${cap}</span>${inner}</div>`;
+const motions = [
+  ['① 행·카드 눌림', '누르는 동안 98%로 작아지고 바탕이 4% 어두워져요(100ms). 떼면 살짝 튀며 돌아와요(160ms, 스프링). 지금의 흐려지기만보다 「눌리는 것」이 분명해져요.',
+    fr('기본', mini('Anthropic','an',true,false)) + '<span class="arrow">→</span>' + fr('누름 · 98%', mini('Anthropic','an',true,false), 'transform:scale(.96);background:#ECECE9')],
+  ['② 북마크 저장', '원이 0.85 → 1.12 → 1로 톡(260ms) + 가벼운 진동. 빈 아이콘이 채워진 아이콘으로 바뀌고 원이 검정으로 120ms 동안 물들어요.',
+    fr('저장 전', mini('','',false,false)) + '<span class="arrow">→</span>' + fr('톡 · 1.12', mini('','',false,true), 'outline:0') ],
+  ['③ 「새 글」 사라짐', '상세를 읽고 돌아오면 「새 글」이 작아지며 흐려져 사라져요(180ms). 남은 글자는 옆으로 밀려 자리를 메워요.',
+    fr('돌아온 직후', mini('Anthropic','an','fade',undefined)) + '<span class="arrow">→</span>' + fr('사라진 뒤', mini('Anthropic','an',false,undefined))],
+  ['④ 출처·주제 칩 고르기', '고른 칩이 검정으로 채워지고(150ms), 목록은 위로 8pt 떠오르며 바뀌어요(160ms 페이드). 없는 결과로 점프하지 않게 높이를 부드럽게 맞춰요.',
+    fr('전체', '<div class="filters" style="padding:6px 6px 4px"><span class="f on">전체</span><span class="f">Anthropic</span></div>') + '<span class="arrow">→</span>' + fr('Anthropic', '<div class="filters" style="padding:6px 6px 4px"><span class="f">전체</span><span class="f on">Anthropic</span></div>')],
+  ['⑤ 보관함에서 빼기', '행이 흐려지며 높이가 접혀(220ms) 아래 행이 올라오고, 되돌리기 알림이 아래에서 올라와요(200ms). 되돌리면 같은 자리에 다시 펼쳐져요.',
+    fr('누름', mini('Anthropic','an',false,true)) + '<span class="arrow">→</span>' + fr('접히는 중', mini('Anthropic','an',false,false,'opacity:.35;transform:scaleY(.6);transform-origin:top'))],
+  ['⑥ 칸 넘김·탭 이동', '지금처럼: 탐색 칸은 미끄러지고, 다른 탭은 민 방향에서 40pt 밀려 들어와요(220ms). 칩·밑줄·세그먼트도 같은 220ms 곡선으로 맞춰 앱 전체 속도를 하나로.',
+    fr('발표', '<div class="utabs" style="margin:6px 8px"><span class="on">발표</span><span>업데이트</span></div>') + '<span class="arrow">→</span>' + fr('업데이트', '<div class="utabs" style="margin:6px 8px"><span>발표</span><span class="on">업데이트</span></div>')],
+];
+document.getElementById('mgrid').innerHTML = motions.map(([h, p, f]) => `<div class="m"><h3>${h}</h3><p>${p}</p><div class="frames">${f}</div></div>`).join('');
+</script>
+</body></html>

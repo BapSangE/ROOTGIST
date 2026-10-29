@@ -30,6 +30,7 @@ Future<void> initStorage() async {
   analyticsCollectionEnabled.value = prefs.getBool('settings.analyticsConsent.v1') ?? false;
   analyticsCollectionEnabled.addListener(() => prefs.setBool('settings.analyticsConsent.v1', analyticsCollectionEnabled.value));
   readItems.value = {...?prefs.getStringList('unread.read')};
+  modelsSeen.value = {...?(jsonDecode(prefs.getString('unread.modelsSeen') ?? 'null') as Map?)?.cast<String, String>()};
   readerDefaultMode.value = ReaderMode.values.asNameMap()[prefs.getString('settings.readerMode')] ?? ReaderMode.together;
   backdrop.value = Backdrop.values.asNameMap()[prefs.getString('settings.backdrop')] ?? Backdrop.white;
   final scale = prefs.getDouble('settings.readerScale');
@@ -38,6 +39,7 @@ Future<void> initStorage() async {
   bookmarks.addListener(
       () => prefs.setString('bookmarks', jsonEncode([for (final b in bookmarks.value.values) b.toJson()])));
   readItems.addListener(() => prefs.setStringList('unread.read', readItems.value.toList()));
+  modelsSeen.addListener(() => prefs.setString('unread.modelsSeen', jsonEncode(modelsSeen.value)));
   readerDefaultMode.addListener(() => prefs.setString('settings.readerMode', readerDefaultMode.value.name));
   readerScale.addListener(() => prefs.setDouble('settings.readerScale', readerScale.value));
   backdrop.addListener(() => prefs.setString('settings.backdrop', backdrop.value.name));

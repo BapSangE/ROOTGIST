@@ -79,8 +79,8 @@ class _RgUnderlineTabsState extends State<RgUnderlineTabs> {
           ]),
           if (_bar case (final left, final width))
             AnimatedPositioned(
-              duration: still ? Duration.zero : const Duration(milliseconds: 220),
-              curve: Curves.easeOutCubic,
+              duration: still ? Duration.zero : RgMotion.base,
+              curve: RgMotion.curve,
               left: left,
               width: width,
               bottom: 0,

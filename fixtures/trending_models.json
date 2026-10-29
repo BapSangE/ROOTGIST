@@ -29,7 +29,15 @@
           }
         ],
         "limitation": "가상 모델이라 실제로 쓸 수 없어요."
-      }
+      },
+      "variants": [
+        {
+          "id": "example-quant/example-coder-GGUF",
+          "name": "example-coder-GGUF",
+          "author": "example-quant",
+          "quantized": true
+        }
+      ]
     },
     {
       "id": "example-lab/example-video",
@@ -47,6 +55,22 @@
       ],
       "url": "https://example.com/fixture/model-2",
       "card": null
+    },
+    {
+      "id": "example-lab/example-tiny",
+      "author": "example-lab",
+      "name": "example-tiny",
+      "task": "text-generation",
+      "params": 1700000000,
+      "license": "apache-2.0",
+      "likes": 120,
+      "downloads": 3400,
+      "created_at": "2026-10-27T00:00:00Z",
+      "rank": 11,
+      "arxiv": null,
+      "url": "https://huggingface.co/example-lab/example-tiny",
+      "card": null,
+      "variants": []
     }
   ]
 }

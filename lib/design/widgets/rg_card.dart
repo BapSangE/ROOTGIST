@@ -53,6 +53,7 @@ class RgListRow extends StatelessWidget {
     final row = Semantics(
       button: onTap != null,
       child: RgPressable(
+        row: true, // 행 눌림: 98% + 4% 어두워짐
         onTap: onTap,
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 56),
@@ -80,7 +81,7 @@ class RgListRow extends StatelessWidget {
   }
 }
 
-// 다크 카드(레퍼런스 007·016): 화면에서 가장 중요한 것 하나만 검정 면으로. 오늘의 주요 논문, 트렌딩 1위.
+// 다크 카드(레퍼런스 007·016): 화면에서 가장 중요한 것 하나만 차콜 면으로. 오늘의 주요 논문, 트렌딩 1위.
 class RgDarkCard extends StatelessWidget {
   const RgDarkCard({super.key, required this.child, this.padding = const EdgeInsets.all(RgSpace.s22)});
   final Widget child;
@@ -91,7 +92,7 @@ class RgDarkCard extends StatelessWidget {
     padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
     child: Container(
       padding: padding,
-      decoration: BoxDecoration(color: RgColors.actionPrimary, borderRadius: BorderRadius.circular(RgRadius.cardDark)),
+      decoration: BoxDecoration(color: RgColors.surfaceInk, borderRadius: BorderRadius.circular(RgRadius.cardDark)),
       child: child,
     ),
   );

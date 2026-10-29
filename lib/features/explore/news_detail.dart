@@ -9,9 +9,11 @@ import '../../design/typography.dart';
 import '../../design/widgets/rg_buttons.dart';
 import '../../design/widgets/rg_card.dart';
 import '../../design/widgets/rg_pressable.dart';
+import '../../design/widgets/rg_row_head.dart';
 import '../../design/widgets/rg_states.dart';
 import '../../data/unread.dart';
 import '../home/home_screen.dart';
+import '../common/term_text.dart';
 import 'official_news.dart';
 import 'trending_models.dart';
 
@@ -32,9 +34,13 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
     return (n, [for (final r in n?.related ?? const <String>[]) ...all.where((x) => x.id == r)]);
   });
 
+  // 공용 용어 사전(쌓인 논문 용어 중 승인된 것). 받기 전·실패하면 하이라이트 없이 그린다
+  var _terms = const <GlossaryTerm>[];
+
   @override
   void initState() {
     super.initState();
+    dictionary().then((t) => mounted ? setState(() => _terms = t) : null);
     // 열었으니 새 글 점을 뗀다(홈·탐색·보관함 어디서 열어도). 그리는 도중에 바꾸면 다른 화면을 다시 그리라는 요청이
     // 빌드 중에 나가 오류가 나서, 첫 프레임 뒤로 미룬다.
     WidgetsBinding.instance.addPostFrameCallback((_) => markRead('news:${widget.id}'));
@@ -72,15 +78,17 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
     );
   }
 
-  List<Widget> _body(OfficialNews n, List<OfficialNews> related) => [
+  List<Widget> _body(OfficialNews n, List<OfficialNews> related) {
+    // 요약(문장마다 줄바꿈)·핵심 내용을 한 카드로 보고 용어당 처음 1번만 강조
+    final summary = n.summaryKo == null ? null : (n.thin ? n.summaryKo! : byLine(n.summaryKo!));
+    final marks = cardHighlights([?summary, for (final p in n.keyPoints) p.text], _terms);
+    final pointMarks = summary == null ? marks : marks.sublist(1);
+    return [
     Padding(
       padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s12, RgSpace.gutterText, 0),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // 출처 배지 + 출처·종류·날짜 한 줄 → 제목 → 원제
-        Row(spacing: RgSpace.s8, children: [
-          SourceBadge(news: n, size: 28),
-          Expanded(child: Text(newsMeta(n), style: RgText.meta.copyWith(color: RgColors.textSecondary))),
-        ]),
+        // 머리 줄(출처 칩 · 분류 · 날짜) → 제목 → 원제. 목록 행과 같은 머리 줄(열었으니 「새 글」은 없다)
+        RgRowHead(chip: RgChip(n.sourceLabel, source: n.source), meta: newsMetaShort(n)),
         const SizedBox(height: RgSpace.s12),
         HeadingTextScale(child: Semantics(header: true, child: KeepAllText(n.titleKo ?? n.titleEn, style: RgText.titleDetail))),
         if (n.titleKo != null) ...[
@@ -97,7 +105,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Semantics(header: true, child: Text('원문 소개문', style: RgText.titleCard)),
           const SizedBox(height: RgSpace.s8),
-          KeepAllText(n.summaryKo!, style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
+          TermText(summary!, highlights: marks.first, style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
         ]),
       ),
       const SizedBox(height: RgSpace.s12),
@@ -106,16 +114,16 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
       RgCard(
         padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s18),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          if (n.summaryKo case final s?) ...[
+          if (n.summaryKo != null) ...[
             Semantics(header: true, child: Text('AI 요약', style: RgText.titleCard)),
             const SizedBox(height: RgSpace.s10),
-            KeepAllText(s, perSentence: true, style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
+            TermText(summary!, highlights: marks.first, style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
           ],
           if (n.keyPoints.isNotEmpty) ...[
             if (n.summaryKo != null) const SizedBox(height: RgSpace.s24),
             Semantics(header: true, child: Text('핵심 내용', style: RgText.titleCard)),
             const SizedBox(height: RgSpace.s12),
-            NewsPoints(news: n),
+            NewsPoints(news: n, highlights: pointMarks),
           ],
         ]),
       )
@@ -137,7 +145,8 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
     ],
     const SizedBox(height: RgSpace.s28),
     _LinkCard(label: '원문', value: n.sourceLabel, url: n.url),
-  ];
+    ];
+  }
 }
 
 // HF 트렌딩 모델 상세(P9 시안 ③·④): 한눈에 → 제작사가 내세운 강점 → 연결 논문 → 모델 카드 링크.
@@ -153,6 +162,15 @@ class _ModelDetailScreenState extends State<ModelDetailScreen> {
   late final _req = Reloadable(
     () async => (await repository.listTrendingModels()).where((m) => m.id == widget.id).firstOrNull,
   );
+  var _terms = const <GlossaryTerm>[]; // 공용 용어 사전(강점·한계 문장 하이라이트)
+
+  @override
+  void initState() {
+    super.initState();
+    dictionary().then((t) => mounted ? setState(() => _terms = t) : null);
+    // 열었으니 목록의 「새로 진입」을 뗀다(첫 프레임 뒤: 그리는 도중에 다른 화면을 다시 그리게 하면 오류)
+    WidgetsBinding.instance.addPostFrameCallback((_) => markRead('model:${widget.id}'));
+  }
 
   @override
   void dispose() {
@@ -189,14 +207,16 @@ class _ModelDetailScreenState extends State<ModelDetailScreen> {
   List<Widget> _body(TrendingModel m) {
     final c = m.createdAt?.toUtc().add(const Duration(hours: 9));
     final body = RgText.bodySummary.copyWith(color: RgColors.textBody);
+    final marks = cardHighlights([...m.strengths, ?m.limitation], _terms);
     return [
       Padding(
         padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s12, RgSpace.gutterText, 0),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(spacing: RgSpace.s8, children: [
-            const RgTag(label: '모델', inverted: true),
-            Text('트렌딩 ${m.rank}위', style: RgText.meta.copyWith(color: RgColors.textSecondary)),
-          ]),
+          // 머리 줄: 발표한 곳 칩 · 정보 출처(Hugging Face 트렌딩 순위)
+          RgRowHead(
+            chip: RgChip(m.maker, source: m.maker),
+            meta: m.rank <= 10 ? 'Hugging Face 트렌딩 ${m.rank}위' : 'Hugging Face 최근 공개',
+          ),
           const SizedBox(height: RgSpace.s12),
           HeadingTextScale(child: Semantics(header: true, child: Text(m.name, style: RgText.titleDetail))),
           const SizedBox(height: RgSpace.s8),
@@ -244,7 +264,7 @@ class _ModelDetailScreenState extends State<ModelDetailScreen> {
               m.arxiv != null ? '제작사가 모델 카드에 강점이나 평가 결과를 밝히지 않았어요. 연결된 논문에서 확인해 보세요.' : '제작사가 모델 카드에 강점이나 평가 결과를 밝히지 않았어요.',
               perSentence: true, style: body.copyWith(color: RgColors.textSecondary),
             ),
-          for (final s in m.strengths)
+          for (final (i, s) in m.strengths.indexed)
             Padding(
               padding: const EdgeInsets.only(bottom: RgSpace.s6),
               child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s10, children: [
@@ -254,7 +274,7 @@ class _ModelDetailScreenState extends State<ModelDetailScreen> {
                   margin: EdgeInsets.only(top: (MediaQuery.textScalerOf(context).scale(23) - 4) / 2),
                   decoration: const BoxDecoration(color: RgColors.textBody, shape: BoxShape.circle),
                 ),
-                Expanded(child: KeepAllText(s, style: body)),
+                Expanded(child: TermText(s, highlights: marks[i], style: body)),
               ]),
             ),
           if (m.benchmarks.isNotEmpty) ...[
@@ -268,10 +288,23 @@ class _ModelDetailScreenState extends State<ModelDetailScreen> {
             const SizedBox(height: RgSpace.s16),
             Text('제작사가 밝힌 한계', style: RgText.meta.copyWith(fontWeight: FontWeight.w600)),
             const SizedBox(height: RgSpace.s6),
-            KeepAllText(l, style: RgText.bodySmall.copyWith(color: RgColors.textBody)),
+            TermText(l, highlights: marks.last, style: RgText.bodySmall.copyWith(color: RgColors.textBody)),
           ],
         ]),
       ),
+      // 같은 모델의 양자화판·형제 모델(트렌딩에 함께 오른 것). 누르면 그 모델 카드(Hugging Face)
+      if (m.variants.isNotEmpty) ...[
+        const SizedBox(height: RgSpace.s12),
+        RgCard(
+          padding: const EdgeInsets.fromLTRB(RgSpace.s20, RgSpace.s18, RgSpace.s20, RgSpace.s6),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Semantics(header: true, child: Text('함께 오른 변형 ${m.variants.length}개', style: RgText.titleCard)),
+            const SizedBox(height: RgSpace.s4),
+            for (final (i, v) in m.variants.indexed)
+              _Fact(v.name, v.quantized ? '양자화판' : '형제 모델', sub: v.author, last: i == m.variants.length - 1, url: v.url),
+          ]),
+        ),
+      ],
       const SizedBox(height: RgSpace.s12),
       const _Note('모델 카드에 적힌 제작사 발표를 AI가 정리했어요. 독립적으로 검증된 결과가 아니고, 평가 방식은 출처마다 달라요.'),
       const SizedBox(height: RgSpace.s28),
@@ -284,6 +317,9 @@ class _ModelDetailScreenState extends State<ModelDetailScreen> {
     ];
   }
 }
+
+// 「278억 파라미터 이미지·텍스트 이해 모델」: 목록 행·다크 카드(만든 곳은 칩에 있다)
+String modelSpec(TrendingModel m) => [?m.paramsKo, '${m.taskKo} 모델'].join(' ');
 
 // 「Qwen 공개 · 278억 파라미터 이미지·텍스트 이해 모델」: 메타데이터만으로 만든 한 줄(LLM 없음, P9 1단계)
 String modelLine(TrendingModel m) => [
@@ -337,13 +373,21 @@ class _TopBar extends StatelessWidget {
 }
 
 class _Fact extends StatelessWidget {
-  const _Fact(this.label, this.value, {this.sub, this.strong = false, this.last = false});
+  const _Fact(this.label, this.value, {this.sub, this.strong = false, this.last = false, this.url});
   final String label, value;
   final String? sub; // 벤치마크 한국어 풀이
   final bool strong, last;
+  final String? url; // 있으면 줄 전체를 눌러 연다(변형 모델 카드)
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) => url == null
+      ? _row()
+      : Semantics(
+          link: true,
+          child: RgPressable(row: true, onTap: () => launchUrl(Uri.parse(url!), mode: LaunchMode.externalApplication), child: _row()),
+        );
+
+  Widget _row() => Container(
     padding: EdgeInsets.only(top: RgSpace.s12, bottom: last ? 0 : RgSpace.s12),
     decoration: BoxDecoration(border: Border(top: BorderSide(color: RgColors.dividerCard))),
     child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s16, children: [

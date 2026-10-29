@@ -33,7 +33,14 @@
 
 ## 4. 연구소 블로그·개발자 공지 — **위험 낮음~중간, 지금 방식 유지가 조건**
 
-출처: OpenAI 뉴스(RSS), Anthropic(사이트맵), Google DeepMind 블로그(RSS), Google Research 블로그(RSS), Hugging Face 공식 블로그(RSS), OpenAI 개발자 커뮤니티 공지 게시판(RSS).
+출처: OpenAI 뉴스(RSS), Anthropic(사이트맵), Google DeepMind 블로그(RSS), Google Research 블로그(RSS), Hugging Face 블로그(RSS), Meta 엔지니어링 블로그(RSS), NVIDIA 블로그·개발자 블로그(RSS·Atom), OpenAI 개발자 커뮤니티 공지 게시판(RSS).
+
+추가 출처 검토(2026-10-29):
+
+- **Hugging Face 블로그의 회사 계정 글**(`/blog/<계정>/<글>`): 그 회사가 HF에 직접 올린 발표라 다른 회사 블로그와 같은 기준이다. 누구나 쓸 수 있는 자리라 알려진 회사 계정만 받는다(`HF_BLOG_ORGS`). 칩은 그 회사, 분류 자리에 「Hugging Face 블로그」.
+- **Meta**: ai.meta.com은 RSS가 없고 robots.txt 머리에 「서면 허락 없이 자동 수집 금지」가 적혀 있어 받지 않는다. engineering.fb.com은 RSS를 공개하고 robots.txt가 전체 허용이라 「AI Research」 분류 글만 받는다. Llama GitHub 릴리스는 2025년 이후 없어 넣지 않았다.
+- **NVIDIA**: blogs.nvidia.com·developer.nvidia.com 모두 RSS 공개, robots.txt가 피드를 막지 않는다. 홍보·행사 글이 많아 분류로 거른다(회사 블로그는 오픈소스·연구만, 개발자 블로그는 생성형 AI·연구만, GTC·게임 글 제외).
+- **xAI**: x.ai는 자동 접근을 막아(403) 뉴스를 받지 않는다(우회하지 않는다). docs.x.ai는 robots.txt 전체 허용이지만 화면이 스크립트로 그려져 지금 수집기로 읽을 수 없다. GitHub `xai-org/xai-sdk-python` 릴리스(Apache-2.0)만 받는다.
 
 - 글은 각 회사의 저작물이다. 별도 재사용 라이선스가 없어 저작권법의 일반 원칙(제28조 인용, 제35조의5 공정이용)으로 판단한다.
 - 공정이용 네 가지 고려 사항(목적·성격, 저작물의 종류, 이용 비중, 시장 영향)에 지금 방식을 대 보면 이렇다.
@@ -43,6 +50,7 @@
 - 약관:
   - OpenAI 이용약관의 자동 추출 금지(「use any automated or programmatic method to extract data or output from the Services」)는 ChatGPT·API 같은 서비스를 향한 조항이다. 공개 RSS 피드를 읽는 것에 그대로 해당한다고 보기는 어렵다. 그래도 OpenAI 글 페이지는 자동 접근이 막혀 있어(403) 읽지 않고, 피드 소개문만 근거로 쓴다. 이 방식을 유지한다.
   - robots.txt(2026-10-27 확인): anthropic.com·openai.com·deepmind.google·research.google·huggingface.co 전체 허용, community.openai.com은 /admin/ 등만 금지(검색엔진 일부 차단).
+  - robots.txt(2026-10-29 확인): engineering.fb.com 전체 허용, blogs.nvidia.com·developer.nvidia.com 피드 허용. ai.meta.com은 자동 수집 금지 안내, x.ai는 자동 접근 차단.
 - 조건(지키지 않으면 위험이 커진다):
   1. 원문 문장·문단을 화면에 옮기지 않는다. 번역도 전문이 아니라 요약만.
   2. 출처 이름과 원문 링크를 항목마다 붙인다.
@@ -52,19 +60,20 @@
 
 ### 출처 배지 색 (2026-10-29)
 
-공식 소식 출처 배지(OA·An·GD·GR·HF·CC·CA)에 회사 대표 색을 한 가지씩 쓴다(`RgBrand`, `lib/design/tokens.dart`). 법률 판단이 아니라 공개 자료 기준의 정리다.
+공식 소식 출처 배지(OA·An·GD·GR·HF·CC·CA, 2026-10-29부터 NVIDIA·Meta·xAI)와 모델을 발표한 회사 칩에 회사 대표 색을 한 가지씩 쓴다(`RgBrand`, `lib/design/tokens.dart`). 법률 판단이 아니라 공개 자료 기준의 정리다.
 
 - 색 하나만으로는 보통 상표 보호를 받기 어렵다. 한국은 단일 색채에 사용에 의한 식별력을 요구한다(국내 1호 하리보 골드, 2016). 미국은 secondary meaning과 비기능성이 있어야 한다(Qualitex, 1995).
 - Anthropic 상표 가이드: 로고의 색·글꼴·비율 변경 금지, 후원·보증·제휴 암시 금지. 팔레트 규정은 없다. 로고를 쓰지 않으니 색 변경 조항과는 무관하다.
 - Google 브랜드 가이드: 시각적 아이덴티티(「distinctive color combinations」 포함)를 흉내 내지 말 것. → 4색 조합 대신 파랑 하나만.
 - Hugging Face 브랜드 페이지: 로고·브랜드 색을 프로젝트에 쓰라고 공개한다.
 - OpenAI 브랜드 페이지는 자동 접근이 막혀(403) 원문을 읽지 못했다. 요약 자료상 로고를 자기 브랜딩에 섞지 말 것. 브랜드가 흑백이라 검정을 쓴다.
+- NVIDIA·Meta·xAI(2026-10-29): NVIDIA 초록(#76B900)은 흰 글자 대비가 2.4:1이라 검정 글자를 쓴다. Meta는 파랑(#0866FF, 흰 글자 4.8:1)으로 Google 파랑과 비슷해 이름 글자로 구분한다. xAI는 흑백 브랜드라 검정. 세 회사 모두 로고는 쓰지 않는다. 각 회사 브랜드 가이드를 자동으로 읽지는 않았으니 정식 출시 전에 확인한다.
 
 지키는 조건: 회사당 한 색(정확한 브랜드 HEX가 아니라 흰 글자 대비 4.5:1 이상의 앱용 색), Pretendard 머리글자, 로고 모양·글꼴을 따라 하지 않음, 출처 이름을 글자로 함께 표시, 데이터 출처 화면에 「각 소유자의 상표, 제휴·후원 없음」 안내. 권리자가 요청하면 그 출처는 회색 배지로 되돌린다.
 
 ## 5. 릴리스 노트·모델 카드 — **위험 낮음**
 
-- `anthropic-sdk-python`, `openai-python`: Apache-2.0. 요약·번역에 제한이 없다(라이선스 고지는 코드를 다시 배포할 때의 의무).
+- `anthropic-sdk-python`, `openai-python`, `xai-sdk-python`: Apache-2.0. 요약·번역에 제한이 없다(라이선스 고지는 코드를 다시 배포할 때의 의무).
 - `anthropics/claude-code` 저장소와 Claude API 릴리스 노트(docs.claude.com): 별도 라이선스 표기가 없다. 4장의 블로그와 같은 기준(요약 3줄 + 링크)으로 다룬다. docs.claude.com robots.txt는 /api/만 금지한다.
 - HF 모델 카드: 업로더의 글이고, 모델 라이선스와 카드 글의 권리는 별개다. ROOTGIST는 강점 최대 3개·한계 1문장 요약과 제작사가 밝힌 점수를 보여 준다. 점수는 사실(숫자)이라 보호 대상이 아니다. 「제작사가 밝힌 내용이고 독립 검증이 아니다」는 안내가 이미 있다. 메타데이터(과제·크기·라이선스·좋아요·다운로드)는 HF 공개 API의 사실 정보다.
 - 용어집 출처 표시 의무(Google ML Glossary CC BY 4.0, HF Transformers 용어집 Apache 2.0): 데이터 출처 화면에 이미 적혀 있다.

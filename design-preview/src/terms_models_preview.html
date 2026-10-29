@@ -1,0 +1,167 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<!-- 용어 설명 넓히기 + 모델 목록 다양화 시안(2026-10-29). -->
+<style>
+  @font-face { font-family: P; font-weight: 400; src: url(../../assets/fonts/Pretendard-Regular.otf); }
+  @font-face { font-family: P; font-weight: 500; src: url(../../assets/fonts/Pretendard-Medium.otf); }
+  @font-face { font-family: P; font-weight: 600; src: url(../../assets/fonts/Pretendard-SemiBold.otf); }
+  @font-face { font-family: P; font-weight: 700; src: url(../../assets/fonts/Pretendard-Bold.otf); }
+  @font-face { font-family: P; font-weight: 800; src: url(../../assets/fonts/Pretendard-Bold.otf); }
+  :root { --bg:#FFFFFF; --card:#F4F4F2; --fill:#E7E7E3; --line:#E6E6E3; --div:#E3E3E0; --ink:#0E0E0D; --ink2:#33332F; --mute:#6B6B65; --faint:#9B9B94; --newt:#D42A20;
+          --an:#B5522B; --oa:#0E0E0D; --gg:#1A66D9; --hf:#FFD21E; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { width: 2620px; background: #E9E9E6; font-family: P, sans-serif; color: var(--ink); padding: 44px 44px 56px; word-break: keep-all; }
+  h1 { font: 800 34px/1.2 P; letter-spacing: -0.8px; }
+  .lead { margin-top: 10px; font: 400 17px/1.55 P; color: var(--mute); max-width: 1500px; }
+  .grid { display: flex; gap: 26px; margin-top: 30px; }
+  .col { width: 402px; }
+  .label { font: 700 18px/1 P; } .sub { margin-top: 6px; font: 400 14px/1.4 P; color: var(--mute); }
+  .phone { margin-top: 12px; height: 874px; background: var(--bg); border-radius: 44px; border: 6px solid #141413; overflow: hidden; position: relative; }
+  .status { height: 54px; }
+  .top { padding: 4px 20px 0; }
+  .display { font: 800 34px/40px P; letter-spacing: -1px; }
+  .seg { margin: 12px 20px 0; height: 46px; padding: 4px; border-radius: 999px; background: var(--fill); display: flex; gap: 2px; }
+  .seg span { flex: 1; border-radius: 999px; display: flex; align-items: center; justify-content: center; font: 500 14.5px/1 P; color: var(--mute); }
+  .seg span.on { background: #fff; color: var(--ink); font-weight: 700; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+  .utabs { margin: 12px 20px 0; display: flex; gap: 20px; border-bottom: 1px solid var(--line); }
+  .utabs span { padding: 12px 0; font: 500 16px/1 P; color: var(--mute); }
+  .utabs span.on { font-weight: 700; color: var(--ink); border-bottom: 2px solid var(--ink); margin-bottom: -1px; }
+  .filters { display: flex; gap: 8px; padding: 14px 20px 0; overflow: hidden; }
+  .f { height: 36px; padding: 0 15px; border-radius: 999px; border: 1px solid var(--line); display: inline-flex; align-items: center; font: 500 14px/1 P; color: var(--ink2); white-space: nowrap; }
+  .f.on { background: var(--ink); border-color: var(--ink); color: #fff; font-weight: 600; }
+  .sec { padding: 26px 20px 10px; display: flex; align-items: baseline; gap: 6px; }
+  .sec b { font: 700 18px/25px P; letter-spacing: -0.3px; } .sec small { font: 500 14px/1 P; color: var(--mute); }
+  .card { margin: 12px 16px 0; background: var(--card); border-radius: 22px; }
+  .dark { margin: 18px 16px 0; background: var(--ink); color: #fff; border-radius: 26px; padding: 22px; }
+  .dark .m { font: 400 14px/20px P; color: #B9B9B2; }
+  .row { display: flex; gap: 12px; padding: 15px 12px 15px 20px; border-top: 1px solid var(--div); align-items: flex-start; }
+  .card .row:first-child { border-top: 0; }
+  .bare .row { margin: 0 20px; padding: 15px 0; }
+  .bare .row:first-child { border-top: 0; }
+  .grow { flex: 1; min-width: 0; }
+  .head { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; font: 400 13.5px/19px P; color: var(--mute); }
+  .new { font: 700 12px/1 P; color: var(--newt); }
+  .t { margin-top: 6px; font: 600 16.5px/24px P; letter-spacing: -0.3px; }
+  .s { margin-top: 4px; font: 400 14.5px/22px P; color: var(--ink2); }
+  /* 칩: 높이 24, 알약, 12.5 600. 출처는 회사 대표 색, 주제·종류는 중립 */
+  .chip { height: 24px; padding: 0 9px; border-radius: 999px; display: inline-flex; align-items: center; font: 600 12.5px/1 P; white-space: nowrap; background: var(--fill); color: var(--ink2); }
+  .chip.an { background: var(--an); color: #fff; } .chip.oa { background: var(--oa); color: #fff; }
+  .chip.gg { background: var(--gg); color: #fff; } .chip.hf { background: var(--hf); color: var(--ink); }
+  .chip.ink { background: rgba(255,255,255,.14); color: #fff; }
+  .tag { height: 24px; padding: 0 9px; border-radius: 999px; display: inline-flex; align-items: center; font: 500 12.5px/1 P; background: var(--fill); color: var(--ink2); }
+  .bm { width: 44px; height: 44px; flex: none; display: flex; align-items: center; justify-content: center; margin-top: -4px; }
+  .bm i { width: 36px; height: 36px; border-radius: 50%; background: var(--fill); display: flex; align-items: center; justify-content: center; }
+  .bm.on i { background: var(--ink); }
+  .bm svg { width: 16px; height: 16px; stroke: var(--ink); fill: none; stroke-width: 2; stroke-linejoin: round; }
+  .bm.on svg { stroke: #fff; fill: #fff; }
+  .rank { width: 30px; flex: none; font: 800 28px/30px P; letter-spacing: -1px; color: var(--faint); }
+  .tabbar { position: absolute; left: 0; right: 0; bottom: 0; height: 86px; background: #fff; border-top: 1px solid var(--line); display: flex; padding-top: 8px; }
+  .tabbar span { flex: 1; text-align: center; font: 500 13px/1 P; color: var(--mute); }
+  .tabbar span.on { color: var(--ink); font-weight: 700; }
+  .tabbar span::before { content: ''; display: block; width: 22px; height: 22px; margin: 0 auto 6px; border-radius: 6px; border: 1.8px solid currentColor; }
+  .toast { position: absolute; left: 16px; right: 16px; bottom: 100px; height: 52px; border-radius: 16px; background: var(--ink); color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; font: 500 14.5px/1 P; }
+  .toast b { font-weight: 700; }
+  .more { display: flex; justify-content: flex-end; padding: 8px 20px 0; }
+  .pill { height: 34px; padding: 0 14px; border-radius: 999px; background: var(--fill); display: inline-flex; align-items: center; gap: 4px; font: 600 14px/1 P; }
+  /* 모션 판 */
+  .motion { margin-top: 36px; background: #fff; border-radius: 28px; padding: 28px 30px 30px; }
+  .motion h2 { font: 700 22px/1.2 P; }
+  .mgrid { margin-top: 18px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px 26px; }
+  .m h3 { font: 700 16px/1.3 P; } .m p { margin-top: 4px; font: 400 14px/1.5 P; color: var(--mute); }
+  .frames { margin-top: 10px; display: flex; gap: 10px; align-items: center; }
+  .fr { width: 236px; background: var(--card); border-radius: 16px; padding: 10px 6px; position: relative; }
+  .fr .cap { position: absolute; top: -9px; left: 10px; background: #fff; padding: 0 6px; font: 600 11.5px/18px P; color: var(--mute); border-radius: 6px; }
+  .arrow { color: var(--faint); font: 700 18px/1 P; }
+  .rules { margin-top: 20px; font: 400 14.5px/1.6 P; color: var(--ink2); }
+  .rules b { font-weight: 700; }
+</style><style>
+  body { width: 2160px; }
+  .phone { height: 874px; }
+  .hl { background: #FFEFA3; border-radius: 4px; padding: 1px 3px; margin: 0 -1px; }
+  .hl.on { background: #FFE27A; }
+  .hl.og { background: #EDEDE9; }
+  .new2 { font: 700 12px/1 P; color: var(--newt); }
+  .nav { height: 52px; display:flex; align-items:center; justify-content:space-between; padding: 0 16px; }
+  .circ { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); display:flex; align-items:center; justify-content:center; font: 700 15px/1 P; background:#fff; }
+  .ptitle { padding: 8px 20px 0; font: 800 27px/35px P; letter-spacing:-.8px; }
+  .box { margin: 14px 16px 0; background: var(--card); border-radius: 22px; padding: 20px 22px; }
+  .box h4 { font: 700 18px/1 P; display:flex; justify-content:space-between; align-items:baseline; }
+  .box h4 small { font: 400 13.5px/1 P; color: var(--mute); }
+  .body { margin-top: 12px; font: 400 16px/27px P; color: var(--ink2); }
+  .kp { display:flex; gap:14px; margin-top: 14px; font: 500 16px/25px P; }
+  .kp b { font: 700 16px/25px P; width: 12px; }
+  .dim { position:absolute; inset:0; background: rgba(14,14,13,.32); }
+  .sheet { position:absolute; left:0; right:0; bottom:0; background:#fff; border-radius: 30px 30px 0 0; padding: 10px 24px 40px; }
+  .grab { width: 36px; height: 5px; border-radius: 3px; background:#D9D9D6; margin: 0 auto 16px; }
+  .sk { font: 400 13.5px/1 P; color: var(--mute); }
+  .sterm { margin-top: 8px; font: 600 26px/32px "Source Serif 4", Georgia, serif; letter-spacing: -.4px; }
+  .sfull { margin-top: 4px; font: 400 17px/24px Georgia, serif; color: var(--mute); }
+  .sko { margin-top: 6px; font: 400 16px/24px P; color: var(--ink2); }
+  .shr { height:1px; background: var(--div); margin: 18px 0; }
+  .sdef { margin-top: 6px; font: 400 16px/26px P; color: var(--ink); }
+  .src { margin-top: 14px; display:inline-flex; gap:6px; align-items:center; font: 500 13px/1 P; color: var(--mute); }
+  .rd { padding: 16px 20px 0; }
+  .rd .en { font: 400 15.5px/25px Georgia, serif; color: var(--mute); }
+  .rd .ko { margin-top: 8px; font: 400 17px/29px P; color: var(--ink); }
+  .rd .num { font: 600 12.5px/1 P; color: var(--faint); margin-bottom: 8px; }
+  .rd + .rd { border-top: 1px solid var(--div); margin: 16px 20px 0; padding: 16px 0 0; }
+  .var { margin-top: 6px; font: 400 13px/18px P; color: var(--mute); }
+  .var u { text-decoration: none; border-bottom: 1px solid var(--line); }
+  .entry { font: 700 12px/1 P; color: var(--newt); }
+  .note { margin-top: 10px; font: 400 14px/1.5 P; color: var(--ink2); background:#fff; border-radius: 16px; padding: 12px 14px; }
+  .note b { font-weight: 700; }
+  .ctab { margin: 12px 20px 0; display:flex; gap:20px; border-bottom: 1px solid var(--line); }
+  .ctab span { padding: 12px 0; font: 500 16px/1 P; color: var(--mute); }
+  .ctab span.on { font-weight: 700; color: var(--ink); border-bottom: 2px solid var(--ink); margin-bottom:-1px; }
+  .cnt { font: 500 13px/1 P; color: var(--faint); margin-left: 3px; }
+</style></head><body><h1>용어 설명 넓히기 · 모델 목록 다양화 시안</h1>
+<div class="lead">A~C는 용어 설명, D는 모델 목록이에요. 노란 강조는 리더와 같은 색·모양이고, 누르면 같은 용어 시트가 열려요. 예시 문장과 모델 설명은 시안용이에요.</div>
+<div class="grid"><div class="col"><div class="label">A · 논문 상세 카드</div><div class="sub">AI 요약·핵심 내용에도 노란 강조. 누르면 같은 용어 시트</div>
+<div class="phone"><div class="status"></div><div class="nav"><span style="font:400 26px/1 P">‹</span><span class="circ">가</span></div>
+<div style="padding:4px 20px 0" class="head"><span class="chip" style="background:var(--ink);color:#fff">언어 모델</span><span>arXiv 2610.31668</span></div>
+<div class="ptitle">추론 시점 연산의 효율적 확장</div>
+<div class="box"><h4>AI 요약 <small>초록 기반</small></h4>
+<div class="body">입력마다 필요한 <span class="hl">추론 연산</span>량이 다르다는 점에 착안해, 연산을 입력 복잡도에 맞춰 배분하는 방법을 제안한 연구예요.</div>
+<div class="body" style="margin-top:8px"><span class="hl">SFT</span>로 학습한 기준 모델과 비교해, 예시 <span class="hl">벤치마크</span>에서 같은 정확도로 연산을 30% 적게 썼다고 보고해요.</div></div>
+<div class="box"><h4>핵심 내용</h4>
+<div class="kp"><b>1</b><span>입력 복잡도에 따른 추론 연산의 <span class="hl">동적 배분</span></span></div>
+<div class="kp"><b>2</b><span>고정 <span class="hl">연산 예산</span> 방식과의 비교 평가</span></div></div>
+<div class="tabbar"><span class="on">홈</span><span class="">탐색</span><span class="">보관함</span><span class="">설정</span></div></div>
+<div class="note"><b>규칙</b> · 카드마다 용어당 처음 1번만 강조(리더와 같음). 홈 카드는 눌러서 들어가는 카드라 강조하지 않음.</div></div><div class="col"><div class="label">B · 리더 한글 번역문</div><div class="sub">사전에 없는 용어도 번역문 속 표기를 찾아 강조(16% → 대부분)</div>
+<div class="phone"><div class="status"></div><div class="nav"><span style="font:400 26px/1 P">‹</span><span style="font:600 15px/1 P">초록 · 9문장</span><span class="circ">가</span></div>
+<div class="rd"><div class="num">2</div><div class="en">We first apply <span class="hl og">supervised fine-tuning (SFT)</span> on verified execution trajectories.</div>
+<div class="ko">먼저 <span class="hl on">검증된 실행 궤적</span>에 대해 <span class="hl">지도 미세 조정(SFT)</span>을 적용한다.</div></div>
+<div class="rd"><div class="num">3</div><div class="en">A spatial VLM then guides adaptive frame selection.</div>
+<div class="ko">이어서 <span class="hl">공간 VLM</span>이 <span class="hl">적응형 프레임 선택</span>을 이끈다.</div></div>
+<div class="dim"></div>
+<div class="sheet"><div class="grab"></div><div class="sk">용어</div>
+<div class="sterm">verified execution trajectories</div><div class="sko">검증된 실행 궤적</div>
+<div class="shr"></div><div class="sk" style="font-weight:600">이 논문에서의 뜻</div>
+<div class="sdef">실제로 실행해 결과가 맞는지 확인한 행동 기록이에요. 모델을 학습시키는 재료로 써요.</div></div></div>
+<div class="note"><b>찾는 순서</b> · ① 사전 대응어 ② 번역문에 남은 영어 표기(SFT·VLM, 앱에서 바로) ③ 배치가 번역문에서 고른 표기(번역문에 실제로 있는 글자만 저장).</div></div><div class="col"><div class="label">C · 공식 소식 상세</div><div class="sub">쌓인 논문 용어 사전에서 찾아 강조. 시트 출처는 「용어 사전」</div>
+<div class="phone"><div class="status"></div><div class="nav"><span style="font:400 26px/1 P">‹</span><span class="circ">가</span></div>
+<div style="padding:4px 20px 0" class="head"><span class="chip an">Anthropic</span><span>연구 · 10월 28일</span></div>
+<div class="ptitle" style="font-size:24px;line-height:32px">긴 작업에서 에이전트가 길을 잃지 않게 하는 방법</div>
+<div class="box"><h4>AI 요약 <small>원문 기반</small></h4>
+<div class="body"><span class="hl on">컨텍스트 창</span>이 차면 앞 내용을 요약해 이어 가는 방식을 소개해요. <span class="hl">RAG</span>로 필요한 문서만 다시 불러와 긴 작업에서도 목표를 놓치지 않았다고 해요.</div></div>
+<div class="dim"></div>
+<div class="sheet"><div class="grab"></div><div class="sk">용어</div>
+<div class="sterm">context window</div><div class="sko">컨텍스트 창</div>
+<div class="shr"></div><div class="sk" style="font-weight:600">뜻</div>
+<div class="sdef">모델이 한 번에 읽고 기억할 수 있는 글의 최대 길이예요.</div>
+<div class="src">용어 사전 · 논문 12편에서 쓰임</div></div></div>
+<div class="note"><b>데이터</b> · 새 AI 호출 없이 사람이 승인한 사전 용어만 씀. 모델 상세의 「강점」 문장에도 같은 방식.</div></div><div class="col"><div class="label">D · 모델 「새로 나옴」</div><div class="sub">최근 14일 안에 공개된 모델만, 변형은 원래 모델로 묶음</div>
+<div class="phone"><div class="status"></div><div class="top"><div class="display" style="font-size:30px">탐색</div></div>
+<div class="seg"><span>논문</span><span>공식 소식</span><span class="on">모델</span></div>
+<div class="ctab"><span>트렌딩</span><span class="on">새로 나옴</span></div>
+<div class="bare">
+<div class="row"><span class="rank">1</span><div class="grow"><div class="head"><span class="chip hf">Hugging Face</span><span>3일 전 공개 · 문서 인식</span><span class="entry">새로 진입</span></div><div class="t">Unlimited-OCR-2</div><div class="s">baidu · 사진 속 표와 글자를 그대로 옮겨요</div></div></div>
+<div class="row"><span class="rank">2</span><div class="grow"><div class="head"><span class="chip hf">Hugging Face</span><span>5일 전 공개 · 33B</span><span class="entry">새로 진입</span></div><div class="t">Nanbeige4.3-33B</div><div class="s">Nanbeige · 긴 추론과 코드 작성에 맞춘 언어 모델</div></div></div>
+<div class="row"><span class="rank">3</span><div class="grow"><div class="head"><span class="chip hf">Hugging Face</span><span>6일 전 공개 · 1.7B</span></div><div class="t">LFM3-1.7B</div><div class="s">LiquidAI · 휴대폰에서 돌아가는 작은 언어 모델</div><div class="var">변형 2개 · Omni-2B, VL-2B</div></div></div>
+<div class="row"><span class="rank">4</span><div class="grow"><div class="head"><span class="chip hf">Hugging Face</span><span>8일 전 공개</span></div><div class="t">flint</div><div class="s">RecursiveSI · 스스로 답을 고쳐 가는 언어 모델</div><div class="var">변형 1개 · GGUF</div></div></div>
+</div><div class="tabbar"><span class="">홈</span><span class="on">탐색</span><span class="">보관함</span><span class="">설정</span></div></div>
+<div class="note"><b>트렌딩 칸</b> · 지금처럼 HF 트렌딩 순, 단 DeepSeek-V4.1 양자화판 같은 변형은 원래 모델 아래 「변형 N개」로 접고 빈자리는 다음 순위로 채움. 어제 목록에 없던 모델엔 「새로 진입」.</div></div></div><div class="motion"><h2>움직임 · 진동</h2><div class="mgrid">
+<div class="m"><h3>용어 누르기</h3><p>누르는 순간 노랑이 진해지고(100ms) 시트가 아래에서 올라와요(220ms). 가벼운 선택 틱. 시트가 닫히면 원래 노랑으로(160ms).</p>
+<div class="frames"><div class="fr"><span class="cap">0ms</span><span style="font:400 15px/1 P;padding:0 8px"><span class="hl">컨텍스트 창</span></span></div><span class="arrow">→</span><div class="fr"><span class="cap">100ms</span><span style="font:400 15px/1 P;padding:0 8px"><span class="hl on">컨텍스트 창</span></span></div><span class="arrow">→</span><div class="fr"><span class="cap">220ms</span><span style="font:500 13px/1 P;color:var(--mute);padding:0 8px">시트 올라옴</span></div></div></div>
+<div class="m"><h3>「트렌딩 | 새로 나옴」 전환</h3><p>밑줄이 옆 칸으로 미끄러지고(220ms), 목록은 위로 8pt 떠오르며 바뀌어요(160ms, 칩 거르기와 같은 RgFilterSwitch). 선택 틱.</p></div>
+<div class="m"><h3>「새로 진입」·「변형 N개」</h3><p>「새로 진입」은 그 모델을 한 번 열면 「새 글」처럼 작아지며 사라져요(180ms). 「변형 N개」를 누르면 아래로 펼쳐져요(220ms, 보관함 접힘과 같은 SizeTransition).</p></div>
+</div><div class="rules"><b>공통</b> · 길이 150~260ms, 앱 공통 곡선. iOS 「동작 줄이기」면 움직이지 않고 바로 바뀜. 같은 칸 다시 누르기엔 진동 없음.</div></div></body></html>

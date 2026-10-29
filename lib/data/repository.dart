@@ -29,8 +29,16 @@ abstract class Repository {
   Future<PaperDetail> getPaper(String id); // ③
   Future<List<OfficialNews>> listOfficialNews(); // P8d 공식 소식, 최신순
   Future<List<TrendingModel>> listTrendingModels(); // P9 HF 트렌딩 모델, 순위순
+  Future<List<GlossaryTerm>> listTerms(); // 공용 용어 사전(공식 소식·모델 상세 하이라이트). 못 받으면 빈 목록
   Future<Digest?> today() => getDigest();
 }
+
+// 공용 용어 사전은 앱을 켜 있는 동안 한 번만 받는다. 실패하면 하이라이트 없이 그린다(다음 실행에 다시).
+Future<List<GlossaryTerm>>? _dictionary;
+Future<List<GlossaryTerm>> dictionary() =>
+    _dictionary ??= repository.listTerms().catchError((Object _) => <GlossaryTerm>[]);
+@visibleForTesting
+void resetDictionary() => _dictionary = null;
 
 // 개발용 fixture(빌드에 Supabase 설정이 없을 때).
 class FixtureRepository extends Repository {
@@ -82,6 +90,11 @@ class FixtureRepository extends Repository {
   @override
   Future<List<TrendingModel>> listTrendingModels() async => [
         for (final m in (await _load('trending_models.json'))['models']) TrendingModel.fromJson(m),
+      ];
+
+  @override
+  Future<List<GlossaryTerm>> listTerms() async => [
+        for (final t in (await _load('terms.json'))['terms']) GlossaryTerm.dictionary(t),
       ];
 }
 
@@ -138,9 +151,10 @@ void restoreBookmark(Bookmark b) {
 // 홈 「더 보기」·옆으로 밀기 → 탐색의 그 칸으로. (칸, 업데이트 선택 여부). 같은 칸을 다시 눌러도 알리도록 매번 새 값.
 // animate: 탐색 안에서 밀어 넘길 때는 칸이 미끄러져 넘어간다(다른 탭에서 들어올 때는 바로).
 class ExploreJump {
-  const ExploreJump(this.tab, {this.updates = false, this.animate = false});
+  const ExploreJump(this.tab, {this.updates = false, this.fresh = false, this.animate = false});
   final int tab; // 0 논문, 1 공식 소식, 2 모델
-  final bool updates;
+  final bool updates; // 공식 소식: 업데이트 칸
+  final bool fresh; // 모델: 새로 나옴 칸
   final bool animate;
 }
 
@@ -149,3 +163,4 @@ final exploreJump = ValueNotifier<ExploreJump?>(null);
 // 지금 보이는 탐색 칸과 공식 소식의 발표·업데이트. 쉘의 옆으로 밀기가 다음·이전 자리를 정할 때 읽는다.
 final exploreTab = ValueNotifier(0);
 final newsUpdates = ValueNotifier(false);
+final modelsFresh = ValueNotifier(false); // 모델 칸의 트렌딩(false) | 새로 나옴(true)

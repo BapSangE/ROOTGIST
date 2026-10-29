@@ -11,6 +11,7 @@ import '../../design/widgets/rg_buttons.dart';
 import '../../design/widgets/rg_card.dart';
 import '../../design/widgets/rg_pressable.dart';
 import '../../design/widgets/rg_states.dart';
+import '../common/term_text.dart';
 import '../explore/official_news.dart' show EvidencePill;
 import '../reader/text_size_sheet.dart';
 import '../settings/ai_notice_sheet.dart';
@@ -87,6 +88,9 @@ class _PaperScreenState extends State<PaperScreen> {
 
   List<Widget> _content(BuildContext context, PaperDetail p) {
     final secondary = RgText.meta.copyWith(color: RgColors.textSecondary);
+    // AI 요약·핵심 내용 카드에도 이 논문 용어를 강조한다(카드 안에서 용어당 처음 1번)
+    final paras = summaryParagraphs(p.summary ?? ''), points = p.keyPoints.take(3).toList();
+    final marks = cardHighlights([...paras, for (final k in points) k.claim], p.glossary);
     return [
       Padding(
         padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s12, RgSpace.gutterText, 0),
@@ -145,8 +149,8 @@ class _PaperScreenState extends State<PaperScreen> {
                   spacing: RgSpace.s8,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    for (final s in summaryParagraphs(p.summary ?? ''))
-                      KeepAllText(s, style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
+                    for (final (i, s) in paras.indexed)
+                      TermText(s, highlights: marks[i], style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
                   ],
                 ),
                 if (p.keyPoints.isNotEmpty) ...[
@@ -160,7 +164,7 @@ class _PaperScreenState extends State<PaperScreen> {
                     spacing: RgSpace.s12,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      for (final (i, k) in p.keyPoints.take(3).indexed) _KeyPointItem(paper: p, index: i + 1, point: k),
+                      for (final (i, k) in points.indexed) _KeyPointItem(paper: p, index: i + 1, point: k, highlights: marks[paras.length + i]),
                     ],
                   ),
                 ],
@@ -296,10 +300,11 @@ class _TopBar extends StatelessWidget {
 }
 
 class _KeyPointItem extends StatelessWidget {
-  const _KeyPointItem({required this.paper, required this.index, required this.point});
+  const _KeyPointItem({required this.paper, required this.index, required this.point, required this.highlights});
   final PaperDetail paper;
   final int index;
   final KeyPoint point;
+  final List<Highlight> highlights;
 
   @override
   Widget build(BuildContext context) {
@@ -315,7 +320,7 @@ class _KeyPointItem extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              KeepAllText(point.claim, style: RgText.bodySummary),
+              TermText(point.claim, highlights: highlights, style: RgText.bodySummary),
               Semantics(
                 button: true,
                 label: '원문 근거, 초록 $n번째 문장',

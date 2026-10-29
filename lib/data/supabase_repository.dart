@@ -100,6 +100,13 @@ class SupabaseRepository extends Repository {
         : await _rpc('list_trending_models', {}, 'trending_models');
     return [for (final m in j['models'] ?? const []) TrendingModel.fromJson(m)];
   }
+
+  // 공용 용어 사전(supabase/migrations/20261029120000_terms_everywhere_model_variants.sql)
+  @override
+  Future<List<GlossaryTerm>> listTerms() async {
+    final j = await _rpc('list_terms', {}, 'terms');
+    return [for (final t in j?['terms'] ?? const []) GlossaryTerm.dictionary(t)];
+  }
 }
 
 class _ServerError implements Exception {

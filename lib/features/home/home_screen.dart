@@ -9,6 +9,7 @@ import '../../design/typography.dart';
 import '../../design/widgets/rg_buttons.dart';
 import '../../design/widgets/rg_card.dart';
 import '../../design/widgets/rg_pressable.dart';
+import '../../design/widgets/rg_row_head.dart';
 import '../../design/widgets/rg_states.dart';
 import '../common/item_actions.dart';
 import '../explore/official_news.dart';
@@ -185,7 +186,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final top = models.take(2).toList();
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       if (posts.isNotEmpty) ...[
-        const SectionTitle('연구소 소식', eyebrow: 'OpenAI · Anthropic · Google'),
+        const SectionTitle('연구소 소식', eyebrow: 'OpenAI · Anthropic · Google 외'),
         RgCard(
           child: Column(children: [
             FeaturedNews(news: posts.first, divider: posts.length > 1),
@@ -335,6 +336,10 @@ class _DigestPapersState extends State<DigestPapers> {
             ),
           ),
         ],
+        // 주제 칩을 바꾸면 아래 목록이 떠오르며 바뀐다(RgFilterSwitch)
+        RgFilterSwitch(
+          switchKey: _topic,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         if (view.featured case final p?) ...[
           SizedBox(height: chips.isEmpty ? RgSpace.s24 : RgSpace.s16),
           _FeaturedCard(
@@ -362,13 +367,10 @@ class _DigestPapersState extends State<DigestPapers> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (_topic == null && p.topicLabel != null) ...[
-                          Text(p.topicLabel!, style: RgText.eyebrow.copyWith(color: RgColors.textSecondary)),
-                          const SizedBox(height: RgSpace.s4),
-                        ],
+                        // 통일 머리 줄: 주제 칩(중립) · 날짜 · 저자 → 제목. 주제로 거르는 중이어도 칩은 그대로(모양을 바꾸지 않는다)
+                        RgRowHead(chip: p.topicLabel == null ? null : RgChip(p.topicLabel!), meta: '${p.date} · ${p.authors}'),
+                        const SizedBox(height: RgSpace.s6),
                         KeepAllText(p.title, style: RgText.titleList),
-                        const SizedBox(height: RgSpace.s4),
-                        KeepAllText('${p.date} · ${p.authors}', style: RgText.meta.copyWith(color: RgColors.textSecondary)),
                       ],
                     ),
                   ),
@@ -376,6 +378,8 @@ class _DigestPapersState extends State<DigestPapers> {
             ),
           ),
         ],
+          ]),
+        ),
       ]),
     );
   }
@@ -433,6 +437,7 @@ class _FeaturedCard extends StatelessWidget {
     return Semantics(
       button: true,
       child: RgPressable(
+        row: true,
         onTap: () => context.push('/paper/${paper.id}'),
         child: RgDarkCard(
           child: Column(
@@ -451,7 +456,7 @@ class _FeaturedCard extends StatelessWidget {
                         runSpacing: RgSpace.s4,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          if (paper.topicLabel != null) RgTag(label: paper.topicLabel!, onInk: true),
+                          if (paper.topicLabel != null) RgChip(paper.topicLabel!, onInk: true),
                           Text(label, style: RgText.caption.copyWith(color: RgColors.onInkSecondary)),
                         ],
                       ),

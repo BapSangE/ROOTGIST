@@ -49,7 +49,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     final j = exploreJump.value;
     if (j == null || !_pages.hasClients) return;
     if (j.animate) {
-      _pages.animateToPage(j.tab, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+      _pages.animateToPage(j.tab, duration: RgMotion.base, curve: RgMotion.curve);
     } else {
       _pages.jumpToPage(j.tab);
     }
@@ -101,7 +101,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     options: const [(0, '논문'), (1, '공식 소식'), (2, '모델')],
                     value: _tab,
                     dots: {if (hasNewNews(snap.data ?? const [])) 1},
-                    onChanged: (i) => _pages.animateToPage(i, duration: const Duration(milliseconds: 250), curve: Curves.easeOut),
+                    onChanged: (i) => _pages.animateToPage(i, duration: RgMotion.base, curve: RgMotion.curve),
                   ),
                 ),
               ),

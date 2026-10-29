@@ -88,7 +88,8 @@
       "sentence_ids": [
         "A03"
       ],
-      "highlight": true
+      "highlight": true,
+      "term_ko_span": "연산 예산"
     },
     {
       "term": "Benchmark",
@@ -97,7 +98,8 @@
       "sentence_ids": [
         "A04"
       ],
-      "highlight": false
+      "highlight": false,
+      "term_ko_span": "벤치마크"
     }
   ]
 }

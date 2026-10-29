@@ -266,14 +266,18 @@ def _strip_paren(ko: str) -> str:
     return re.sub(r"\s*\(.*\)$", "", ko).strip()
 
 
+SPAN_PAPERS = 40  # 한 번에 LLM으로 표기를 찾는 논문 수. 지난 논문은 며칠에 걸쳐 채운다(배치 시간 초과 방지)
+
+
 def align_spans(db: Db, api_key: str | None) -> int:
-    """연결된 논문 용어마다 번역문 속 실제 표기(ko_span)를 채운다(G2 하이라이트 위치).
-    사전 대응어가 번역문에 그대로 있으면 그것, 없으면 LLM이 번역문에서 고른 부분 문자열(검증 통과분만). 없으면 빈 문자열."""
-    rows = db.select_all("paper_glossary", "sense_id=not.is.null&ko_span=is.null&select=paper_id,idx,term,sentence_ids,sense_id&order=paper_id,idx")
+    """논문 용어마다 번역문 속 실제 표기(ko_span)를 채운다(G2 하이라이트 위치). 사전에 없는 용어도 채운다.
+    사전 대응어가 번역문에 그대로 있으면 그것, 영문 표기가 번역문에 남아 있으면(SFT·VLM) 그것,
+    없으면 LLM이 번역문에서 고른 부분 문자열(번역문에 실제로 있는 글자만). 못 찾으면 빈 문자열."""
+    rows = db.select_all("paper_glossary", "ko_span=is.null&select=paper_id,idx,term,sentence_ids,sense_id&order=paper_id,idx")
     if not rows:
         return 0
     flag = (db.select("app_config", "key=eq.show_ai_reviewed_terms&select=value") or [{}])[0].get("value") == "true"
-    ids = sorted({r["sense_id"] for r in rows})
+    ids = sorted({r["sense_id"] for r in rows if r["sense_id"]})
     senses = {}
     for i in range(0, len(ids), 100):
         for s in db.select("term_senses", f"sense_id=in.({','.join(ids[i:i + 100])})&select=sense_id,canonical_ko,definition_kind,review_status,ai_review_status"):
@@ -283,19 +287,22 @@ def align_spans(db: Db, api_key: str | None) -> int:
     by_paper = defaultdict(list)
     for r in rows:
         by_paper[r["paper_id"]].append(r)
+    asked = 0
     for pid, prs in by_paper.items():
         tr = {t["sentence_id"]: t["translation_ko"] for t in db.select("paper_translations", f"paper_id=eq.{pid}&select=sentence_id,translation_ko")}
         ask = []
         for r in prs:
-            ko, texts = senses.get(r["sense_id"]), [tr[s] for s in r["sentence_ids"] if s in tr]
-            if ko is None:  # 앱에 대응어를 보이지 않는 의미: 위치도 필요 없다
+            ko, texts = senses.get(r["sense_id"]), [tr[s] for s in r["sentence_ids"] if s in tr and tr[s]]
+            found = next((c for c in (ko, r["term"]) if c and any(c in t for t in texts)), None)
+            if found:
+                db.update("paper_glossary", {"ko_span": found}, paper_id=pid, idx=r["idx"])
+            elif not texts:  # 번역이 없는 논문: 찾을 곳이 없다
                 db.update("paper_glossary", {"ko_span": ""}, paper_id=pid, idx=r["idx"])
-            elif any(ko in t for t in texts):
-                db.update("paper_glossary", {"ko_span": ko}, paper_id=pid, idx=r["idx"])
             else:
                 ask.append((r, texts))
-        if not ask or not api_key:
+        if not ask or not api_key or asked >= SPAN_PAPERS:
             continue
+        asked += 1
         from . import llm
 
         terms = [r["term"] for r, _ in ask]
@@ -304,7 +311,9 @@ def align_spans(db: Db, api_key: str | None) -> int:
         out, _ = llm.generate(api_key, messages,
                               lambda o: [] if isinstance(o, dict) and [i.get("term") for i in o.get("items", [])] == terms else ["terms"],
                               lambda r: None)
-        for (r, texts), item in zip(ask, (out or {}).get("items", [None] * len(ask))):
+        if out is None:
+            continue  # 호출 실패: 다음 배치에서 다시
+        for (r, texts), item in zip(ask, out.get("items", [])):
             span = (item or {}).get("span")
             ok = isinstance(span, str) and span.strip() and any(span.strip() in t for t in texts)  # 번역문에 실제로 있는 글자만
             db.update("paper_glossary", {"ko_span": span.strip() if ok else ""}, paper_id=pid, idx=r["idx"])

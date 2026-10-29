@@ -7,10 +7,20 @@ import '../../design/typography.dart';
 import '../../design/widgets/rg_buttons.dart';
 import '../../design/widgets/rg_card.dart';
 import '../../design/widgets/rg_pressable.dart';
+import '../../design/widgets/rg_row_head.dart';
 
 // S05 보관함 (HANDOFF 7.7). 저장 단위만으로 그리므로 네트워크 없이 동작한다. 논문·공식 소식·모델을 함께 담는다.
-class LibraryScreen extends StatelessWidget {
+// 빼면 행이 흐려지며 접히고(220ms) 그다음 지운다. 되돌리면 같은 자리에 다시 펼쳐진다.
+class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
+
+  @override
+  State<LibraryScreen> createState() => _LibraryScreenState();
+}
+
+class _LibraryScreenState extends State<LibraryScreen> {
+  final _leaving = <String>{}; // 접히는 중
+  final _arriving = <String>{}; // 되돌려 펼쳐지는 중
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +85,13 @@ class LibraryScreen extends StatelessWidget {
               RgCard(
                 child: Column(children: [
                   for (final (i, b) in list.indexed)
-                    RgListRow(
+                    _Collapsible(
+                      key: ValueKey(b.id),
+                      leaving: _leaving.contains(b.id),
+                      arriving: _arriving.contains(b.id),
+                      onGone: () => _removed(context, b),
+                      onShown: () => _arriving.remove(b.id),
+                      child: RgListRow(
                       showDivider: i < list.length - 1,
                       onTap: () => context.push(b.path),
                       // 다른 목록과 같은 옅은 원 북마크(저장됨 = 검정 원)
@@ -84,16 +100,15 @@ class LibraryScreen extends StatelessWidget {
                         variant: RgCircleVariant.neutral,
                         visualSize: 36,
                         strongHaptic: true, // 보관함에서 빼는 건 조금 더 또렷한 진동
-                        onTap: () => _remove(context, b),
+                        onTap: _leaving.contains(b.id) ? null : () => setState(() => _leaving.add(b.id)),
                       ),
-                      // 위에 종류·출처 머리말, 아래에 저장일
+                      // 통일 머리 줄: 출처에 대표 색이 있으면 출처 칩(공식 소식·모델), 없으면 종류 칩(논문) → 제목
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('${_kindKo(b.kind)} · ${b.source}', style: RgText.eyebrow.copyWith(color: RgColors.textSecondary)),
-                        const SizedBox(height: RgSpace.s4),
+                        _head(b),
+                        const SizedBox(height: RgSpace.s6),
                         KeepAllText(b.title, style: RgText.titleList),
-                        const SizedBox(height: RgSpace.s4),
-                        Text('${b.savedAt.month}월 ${b.savedAt.day}일 저장', style: RgText.meta.copyWith(color: RgColors.textSecondary)),
                       ]),
+                    ),
                     ),
                 ]),
               ),
@@ -120,8 +135,16 @@ class LibraryScreen extends StatelessWidget {
     );
   }
 
-  // 해제는 즉시 지우고 4초 동안 되돌릴 수 있다.
-  void _remove(BuildContext context, Bookmark b) {
+  Widget _head(Bookmark b) {
+    final saved = '${b.savedAt.month}월 ${b.savedAt.day}일 저장';
+    return brandOf(b.source) != null
+        ? RgRowHead(chip: RgChip(b.source, source: b.source), meta: '${_kindKo(b.kind)} · $saved')
+        : RgRowHead(chip: RgChip(_kindKo(b.kind)), meta: '${b.source} · $saved');
+  }
+
+  // 접힌 뒤 지우고 4초 동안 되돌릴 수 있다. 되돌리면 그 행은 펼쳐지며 돌아온다.
+  void _removed(BuildContext context, Bookmark b) {
+    _leaving.remove(b.id);
     toggleBookmark(b.id, b.title, source: b.source, kind: b.kind);
     // 검정 알림(테마 snackBarTheme). 탭바가 Scaffold.bottomNavigationBar라 알림은 그 위에 저절로 뜬다.
     ScaffoldMessenger.of(context)
@@ -129,7 +152,13 @@ class LibraryScreen extends StatelessWidget {
       ..showSnackBar(SnackBar(
         content: const Text('보관함에서 뺐어요'),
         duration: const Duration(seconds: 4),
-        action: SnackBarAction(label: '되돌리기', onPressed: () => restoreBookmark(b)),
+        action: SnackBarAction(
+          label: '되돌리기',
+          onPressed: () {
+            if (mounted) setState(() => _arriving.add(b.id));
+            restoreBookmark(b);
+          },
+        ),
       ));
   }
 
@@ -147,6 +176,7 @@ class LibraryScreen extends StatelessWidget {
       ),
     );
     if (ok != true || !context.mounted) return;
+    _leaving.clear();
     ScaffoldMessenger.of(context).hideCurrentSnackBar(); // 이전 해제의 「되돌리기」가 비운 목록을 되살리지 않게
     bookmarks.value = {};
   }
@@ -185,4 +215,64 @@ class _OutlineButton extends StatelessWidget {
       ),
     );
   }
+}
+
+// 보관함 행이 빠질 때 흐려지며 높이가 접히고(220ms), 되돌리면 펼쳐진다. 「동작 줄이기」면 바로.
+class _Collapsible extends StatefulWidget {
+  const _Collapsible({
+    super.key,
+    required this.leaving,
+    required this.arriving,
+    required this.onGone,
+    required this.onShown,
+    required this.child,
+  });
+  final bool leaving, arriving;
+  final VoidCallback onGone, onShown;
+  final Widget child;
+
+  @override
+  State<_Collapsible> createState() => _CollapsibleState();
+}
+
+class _CollapsibleState extends State<_Collapsible> with SingleTickerProviderStateMixin {
+  late final _c = AnimationController(vsync: this, duration: RgMotion.base, value: widget.arriving ? 0 : 1);
+  late final _t = CurvedAnimation(parent: _c, curve: RgMotion.curve);
+
+  @override
+  void initState() {
+    super.initState();
+    // 펼치기는 첫 프레임 뒤에(그때 「동작 줄이기」를 읽을 수 있다)
+    if (widget.arriving) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _c.duration = RgMotion.of(context, RgMotion.base);
+        _c.forward().whenComplete(widget.onShown);
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(_Collapsible old) {
+    super.didUpdateWidget(old);
+    if (widget.leaving && !old.leaving) {
+      _c.duration = RgMotion.of(context, RgMotion.base);
+      _c.reverse().whenComplete(() {
+        if (mounted) widget.onGone();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => SizeTransition(
+    sizeFactor: _t,
+    alignment: Alignment.topCenter,
+    child: FadeTransition(opacity: _t, child: widget.child),
+  );
 }

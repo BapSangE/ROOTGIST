@@ -8,10 +8,9 @@ import '../../data/settings.dart';
 import '../../design/tokens.dart';
 import '../../design/typography.dart';
 import '../../design/widgets/rg_buttons.dart';
-import '../../design/widgets/rg_pressable.dart';
 import '../../design/widgets/rg_segmented.dart';
 import '../../design/widgets/rg_states.dart';
-import 'term_sheet.dart';
+import '../common/term_text.dart';
 import 'text_size_sheet.dart';
 
 // S03 초록 원문·번역 리더 (HANDOFF 7.4). 기본 모드는 S06 설정값.
@@ -310,12 +309,12 @@ class _Pair extends StatelessWidget {
         ? RgText.serifTogether.copyWith(color: RgColors.textBody)
         : RgText.serifOnly;
     // 「함께」에서 원문 쪽 용어는 옅은 회색(노란색은 번역문의 용어에만)
-    final enText = Text.rich(_highlighted(latexDisplay(sentence.text), highlights, enStyle, (s) => s, original: showKo));
+    final enText = Text.rich(highlightedSpan(latexDisplay(sentence.text), highlights, enStyle, (s) => s, original: showKo));
     final body = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: RgSpace.s8,
       children: [
-        if (showKo) Text.rich(_highlighted(ko, highlightsKo, RgText.bodyReaderKo, keepAll)),
+        if (showKo) Text.rich(highlightedSpan(ko, highlightsKo, RgText.bodyReaderKo, keepAll)),
         if (showEn)
           if (showKo)
             // A: 번역 아래 원문은 왼쪽 세로선 + 들여쓰기
@@ -346,109 +345,27 @@ class _Pair extends StatelessWidget {
       ],
     );
   }
-
-  // 한국어는 하이라이트 사이 조각마다 keepAll을 적용한다(위치는 원래 문자열 기준이라 먼저 나눈 뒤 변환).
-  TextSpan _highlighted(String text, List<Highlight> hs, TextStyle style, String Function(String) wrap, {bool original = false}) {
-    final spans = <InlineSpan>[];
-    var at = 0;
-    for (final (start, t, label) in hs) {
-      spans.add(TextSpan(text: wrap(text.substring(at, start))));
-      // 용어 뒤에 공백 없이 붙은 글자(조사 「을」, 복수 「s.」)는 같은 덩어리로 묶어 줄 끝에서 갈라지지 않게 한다.
-      final end = start + label.length;
-      final gap = text.indexOf(RegExp(r'\s'), end);
-      final suffix = text.substring(end, gap < 0 ? text.length : gap);
-      spans.add(
-        WidgetSpan(
-          alignment: PlaceholderAlignment.baseline,
-          baseline: TextBaseline.alphabetic,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              // 한 줄보다 긴 용어(큰 글씨·좁은 화면)는 하이라이트 안에서 줄을 바꿀 수 있어야 한다
-              Flexible(child: _Term(term: t, label: label, style: style, original: original)),
-              if (suffix.isNotEmpty) Text(suffix, style: style, textScaler: TextScaler.noScaling),
-            ],
-          ),
-        ),
-      );
-      at = end + suffix.length;
-    }
-    spans.add(TextSpan(text: wrap(text.substring(at))));
-    return TextSpan(style: style, children: spans);
-  }
 }
-
-// 용어 하이라이트: 노란 highlight 배경(레퍼런스 011), 모서리 4, 여백 3/1. 누름·시트 열림 동안 highlightActive.
-// ponytail: WidgetSpan이라 여러 단어 용어가 줄 끝에서 통째로 다음 줄로 넘어간다. 시안처럼 쪼개려면 TextSpan 배경 + 직접 그리기.
-class _Term extends StatefulWidget {
-  const _Term({required this.term, required this.label, required this.style, this.original = false});
-  final GlossaryTerm term;
-  final String label; // 화면에 보이는 표기(영문 원어 또는 한국어 대응어)
-  final TextStyle style;
-  final bool original; // 번역 아래 대조용 원문(옅은 회색)
-
-  @override
-  State<_Term> createState() => _TermState();
-}
-
-class _TermState extends State<_Term> {
-  var _active = false;
-
-  Future<void> _open() async {
-    setState(() => _active = true);
-    await showTermSheet(context, widget.term);
-    if (mounted) setState(() => _active = false);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      container: true, // 문장 Text에 합쳐지지 않고 따로 조작되게
-      button: true,
-      label: '용어 설명: ${widget.term.term}',
-      excludeSemantics: true,
-      onTap: _open,
-      child: RgPressable(
-        onTap: _open,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
-          decoration: BoxDecoration(
-            color: _active
-                ? (widget.original ? RgColors.dividerCard : RgColors.highlightActive)
-                : (widget.original ? RgColors.highlightOriginal : RgColors.highlight),
-            borderRadius: BorderRadius.circular(RgRadius.term),
-          ),
-          // 문장 Text.rich가 WidgetSpan 자리를 이미 글자 배율만큼 키우므로 여기서 또 키우지 않는다.
-          child: Text(widget.label, style: widget.style, textScaler: TextScaler.noScaling),
-        ),
-      ),
-    );
-  }
-}
-
-typedef Highlight = (int start, GlossaryTerm term, String label);
 
 // 문장 ID → [(시작 위치, 용어, 표기)]. 용어마다 리더 전체에서 처음 나온 1회만.
 // 영문: 표시 문자열(8.3 변환 후)에서 원어를 찾는다. highlight=false 이거나 정의가 빈 용어는 강조하지 않는다(8.4, 7.5).
-// 한국어(G2): 사전에 연결된 용어를 번역문에서 찾는다. 이 논문 번역문의 실제 표기(termKoSpan)가 있으면 그것,
-// 없으면 대응어. 「강화 학습 (RL)」처럼 뒤 괄호는 떼고 찾는다.
+// 한국어(G2): 번역문에서 찾는다. 이 논문 번역문의 실제 표기(termKoSpan) → 사전 대응어 → 번역문에 남은 영문(SFT·VLM).
+// 사전에 없는 용어도 찾는다. 「강화 학습 (RL)」처럼 뒤 괄호는 떼고 찾는다.
 Map<String, List<Highlight>> firstHighlights(PaperDetail p, {bool korean = false}) {
   final out = <String, List<Highlight>>{};
-  final terms = korean
-      ? p.glossary.where((t) => t.termKo != null && t.definition.isNotEmpty)
-      : p.glossary.where((t) => t.highlight && t.definition.isNotEmpty);
+  final terms = p.glossary.where((t) => t.definition.isNotEmpty && (korean || t.highlight));
   for (final t in terms) {
-    final label = korean ? (t.termKoSpan ?? t.termKo!).replaceFirst(RegExp(r'\s*\(.*\)$'), '') : t.term;
-    if (label.isEmpty) continue;
+    found:
     for (final s in p.sentences.where((s) => s.kind == 'text' && t.sentenceIds.contains(s.id))) {
-      final start = (korean ? s.translation ?? '' : latexDisplay(s.text)).indexOf(label);
-      if (start < 0) continue;
-      final list = out.putIfAbsent(s.id, () => []);
-      final end = start + label.length;
-      if (list.every((h) => end <= h.$1 || start >= h.$1 + h.$3.length)) list.add((start, t, label)); // 겹침 제외
-      break;
+      final text = korean ? s.translation ?? '' : latexDisplay(s.text);
+      for (final label in korean ? t.koreanLabels : [t.term]) {
+        final start = findTerm(text, label);
+        if (start < 0) continue;
+        final list = out.putIfAbsent(s.id, () => []);
+        final end = start + label.length;
+        if (list.every((h) => end <= h.$1 || start >= h.$1 + h.$3.length)) list.add((start, t, label)); // 겹침 제외
+        break found;
+      }
     }
   }
   for (final list in out.values) {

@@ -25,8 +25,8 @@ AI가 만든 내용에는 오류가 있을 수 있어요. 중요한 내용은 �
 
 2026.10.27
 
-- 탐색 탭을 옆으로 밀면 Anthropic, OpenAI, Google DeepMind, Google Research, Hugging Face의 공식 블로그 소식을 볼 수 있어요.
-- 「업데이트」에서는 Claude Code·SDK 릴리스, Claude API 변경 사항, OpenAI 개발자 커뮤니티 공지를 모아 보여 드려요.
+- 탐색 탭을 옆으로 밀면 Anthropic, OpenAI, Google DeepMind, Google Research, Hugging Face, Meta, NVIDIA의 공식 블로그 소식을 볼 수 있어요. Hugging Face 블로그에 NVIDIA·IBM·Microsoft 같은 회사 계정이 쓴 글도 그 회사 소식으로 보여 드려요.
+- 「업데이트」에서는 Claude Code·Anthropic·OpenAI·xAI SDK 릴리스, Claude API 변경 사항, OpenAI 개발자 커뮤니티 공지를 모아 보여 드려요.
 - 핵심 내용의 「근거」를 누르면 원문의 해당 문단으로 바로 열려요.
 
 ## ROOTGIST 베타를 시작해요

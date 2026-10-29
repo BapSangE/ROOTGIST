@@ -127,7 +127,9 @@ class RgCircleButton extends StatelessWidget {
           width: size,
           height: size,
           alignment: Alignment.center,
-          child: Container(
+          // 바탕색이 바뀌면 120ms 동안 물든다(북마크 저장 → 검정 원)
+          child: AnimatedContainer(
+            duration: RgMotion.of(context, const Duration(milliseconds: 120)),
             width: visualSize ?? size,
             height: visualSize ?? size,
             alignment: Alignment.center,
@@ -265,7 +267,10 @@ class RgFilterChip extends StatelessWidget {
           height: touchHeight(context),
           child: Center(
             widthFactor: 1, // 가로로 늘어나지 않고 칩 폭만큼(Wrap 안에서도)
-            child: Container(
+            // 고르면 150ms 동안 검정으로 채워진다
+            child: AnimatedContainer(
+              duration: RgMotion.of(context, RgMotion.fast),
+              curve: RgMotion.curve,
               height: rgPillHeight(context, 36),
               padding: const EdgeInsets.symmetric(horizontal: RgSpace.s16),
               decoration: BoxDecoration(

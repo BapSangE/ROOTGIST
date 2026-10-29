@@ -168,10 +168,10 @@ class _WithTabBar extends StatelessWidget {
 }
 
 // 옆으로 밀어 탭 넘기기(실기기 QA 요청). 한 줄로 이어진 자리를 차례로 넘는다:
-// 홈 → 탐색·논문 → 탐색·공식 소식(발표) → 공식 소식(업데이트) → 탐색·모델 → 보관함 → 설정.
+// 홈 → 탐색·논문 → 탐색·공식 소식(발표) → 공식 소식(업데이트) → 탐색·모델(트렌딩) → 모델(새로 나옴) → 보관함 → 설정.
 // 왼쪽으로 밀면 다음, 오른쪽으로 밀면 이전. 하단 탭바 선택도 같이 옮겨 간다.
 // 탭의 첫 화면에서만: 지난 날짜·설정 하위 화면에서는 가장자리 밀기(뒤로)가 먼저다. 가로로 넘기는 칩 목록은 칩이 먼저 넘어간다.
-typedef TabStop = (int branch, int exploreTab, bool updates);
+typedef TabStop = (int branch, int exploreTab, bool second); // second: 공식 소식은 업데이트, 모델은 새로 나옴
 
 const tabStops = <TabStop>[
   (0, 0, false),
@@ -179,13 +179,14 @@ const tabStops = <TabStop>[
   (1, 1, false),
   (1, 1, true),
   (1, 2, false),
+  (1, 2, true),
   (2, 0, false),
   (3, 0, false),
 ];
 
 // 지금 자리. 탐색이 아니면 탐색 칸 값은 보지 않는다.
-int currentStop(int branch, int tab, bool updates) => tabStops.indexWhere(
-  (s) => s.$1 == branch && (branch != 1 || (s.$2 == tab && (tab != 1 || s.$3 == updates))),
+int currentStop(int branch, int tab, bool second) => tabStops.indexWhere(
+  (s) => s.$1 == branch && (branch != 1 || (s.$2 == tab && (tab == 0 || s.$3 == second))),
 );
 
 class _TabSwipe extends StatefulWidget {
@@ -204,7 +205,7 @@ class _TabSwipe extends StatefulWidget {
 class _TabSwipeState extends State<_TabSwipe> with SingleTickerProviderStateMixin {
   double _dx = 0;
   GoRouterDelegate? _router;
-  late final _enter = AnimationController(vsync: this, duration: const Duration(milliseconds: 220), value: 1);
+  late final _enter = AnimationController(vsync: this, duration: RgMotion.base, value: 1);
   double _from = 0; // 들어오기 시작하는 x(다음이면 오른쪽 +, 이전이면 왼쪽 −)
 
   // 화면을 옮길 때마다 탭 첫 화면인지 다시 본다
@@ -234,12 +235,14 @@ class _TabSwipeState extends State<_TabSwipe> with SingleTickerProviderStateMixi
     // 살짝 밀거나(60pt) 빠르게 튕기면(초당 300pt) 넘긴다
     if (dx.abs() < 60 && v.abs() < 300) return;
     final shell = widget.shell;
-    final at = currentStop(shell.currentIndex, exploreTab.value, newsUpdates.value);
+    final at = currentStop(shell.currentIndex, exploreTab.value, exploreTab.value == 2 ? modelsFresh.value : newsUpdates.value);
     final next = at + ((dx != 0 ? dx : v) < 0 ? 1 : -1);
     if (at < 0 || next < 0 || next >= tabStops.length) return;
-    final (branch, tab, updates) = tabStops[next];
+    final (branch, tab, second) = tabStops[next];
     HapticFeedback.selectionClick();
-    if (branch == 1) exploreJump.value = ExploreJump(tab, updates: updates, animate: shell.currentIndex == 1);
+    if (branch == 1) {
+      exploreJump.value = ExploreJump(tab, updates: tab == 1 && second, fresh: tab == 2 && second, animate: shell.currentIndex == 1);
+    }
     if (branch != shell.currentIndex) {
       shell.goBranch(branch);
       if (!MediaQuery.disableAnimationsOf(context)) {
@@ -264,7 +267,7 @@ class _TabSwipeState extends State<_TabSwipe> with SingleTickerProviderStateMixi
         child: widget.child,
         builder: (context, child) {
           // 모양은 늘 같게(끝나면 투명도 1·이동 0): 위젯 모양이 바뀌면 탭 화면 상태가 새로 만들어진다
-          final t = Curves.easeOutCubic.transform(_enter.value);
+          final t = RgMotion.curve.transform(_enter.value);
           return Opacity(opacity: 0.4 + 0.6 * t, child: Transform.translate(offset: Offset(_from * (1 - t), 0), child: child));
         },
       ),

@@ -130,6 +130,35 @@ class GlossaryLinkTest(unittest.TestCase):
         self.assertEqual(len(candidates["trajectory drift"]), 2)
 
 
+class AlignSpansTest(unittest.TestCase):
+    def test_spans_for_unlinked_terms_too(self):
+        from . import glossary
+        updates = {}
+
+        class FakeDb:
+            def select_all(self, table, q):
+                return [{"paper_id": "p", "idx": 0, "term": "SFT", "sentence_ids": ["A01"], "sense_id": None},
+                        {"paper_id": "p", "idx": 1, "term": "verified trajectories", "sentence_ids": ["A01"], "sense_id": None},
+                        {"paper_id": "p", "idx": 2, "term": "frozen decoder", "sentence_ids": ["A01"], "sense_id": "S1"}]
+
+            def select(self, table, q):
+                if table == "term_senses":
+                    return [{"sense_id": "S1", "canonical_ko": "고정 디코더", "definition_kind": "paper_glossary",
+                             "review_status": "approved", "ai_review_status": "first_pass_complete"}]
+                if table == "paper_translations":
+                    return [{"sentence_id": "A01", "translation_ko": "검증된 궤적과 고정 디코더로 SFT를 한다."}]
+                return []
+
+            def update(self, table, data, **key):
+                updates[key["idx"]] = data["ko_span"]
+
+        reply = {"items": [{"term": "verified trajectories", "span": "검증된 궤적"}]}
+        with mock.patch.object(llm, "stream_chat", return_value={"content": json.dumps(reply, ensure_ascii=False), "finish_reason": "stop"}):
+            glossary.align_spans(FakeDb(), "k")
+        # 영문이 번역문에 그대로 있으면 LLM 없이, 사전 대응어도 그대로, 나머지만 LLM(번역문에 있는 글자만)
+        self.assertEqual(updates, {0: "SFT", 1: "검증된 궤적", 2: "고정 디코더"})
+
+
 class MergePluralsTest(unittest.TestCase):
     def test_merge_only_when_singular_exists(self):
         from .glossary import merge_plurals
@@ -268,6 +297,7 @@ FEED = b"""<?xml version="1.0"?><rss><channel>
 HF_FEED = b"""<?xml version="1.0"?><rss><channel>
 <item><title>Official</title><link>https://huggingface.co/blog/official-post</link><pubDate>Thu, 22 Oct 2026 10:00:00 GMT</pubDate></item>
 <item><title>Community</title><link>https://huggingface.co/blog/some-org/community-post</link><pubDate>Thu, 22 Oct 2026 10:00:00 GMT</pubDate></item>
+<item><title>Nemotron</title><link>https://huggingface.co/blog/nvidia/nemotron-post</link><pubDate>Thu, 22 Oct 2026 11:00:00 GMT</pubDate></item>
 </channel></rss>"""
 
 
@@ -279,10 +309,37 @@ class OfficialNewsTest(unittest.TestCase):
             got = official_news.pick(official_news.from_rss("openai", "OpenAI", "x"), self.NOW)
         self.assertEqual([i["title_en"] for i in got], ["Research post"])  # 사례 글·14일 넘은 글 제외
 
-    def test_hf_keeps_only_official_posts(self):
+    def test_hf_keeps_official_and_known_company_posts(self):
         with mock.patch.object(official_news, "fetch", return_value=HF_FEED):
             got = official_news.from_rss("huggingface", "Hugging Face", "x")
-        self.assertEqual([i["title_en"] for i in got], ["Official"])
+        # 모르는 계정의 커뮤니티 글은 빼고, 알려진 회사 계정 글은 그 회사 소식(분류 자리에 HF 블로그)
+        self.assertEqual([(i["title_en"], i["source"], i["source_label"]) for i in got],
+                         [("Official", "huggingface", "Hugging Face"), ("Nemotron", "nvidia", "NVIDIA")])
+        self.assertEqual(got[1]["category"], "Hugging Face Blog")
+
+    def test_category_rules_for_atom_and_rss(self):
+        atom = b"""<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom">
+<entry><title>Agents</title><link href="https://developer.nvidia.com/blog/a"/><published>2026-10-25T10:00:00Z</published>
+<category term="Agentic AI / Generative AI"/></entry>
+<entry><title>Kubernetes</title><link href="https://developer.nvidia.com/blog/b"/><published>2026-10-25T10:00:00Z</published>
+<category term="Data Center / Cloud"/></entry></feed>"""
+        with mock.patch.object(official_news, "fetch", return_value=atom):
+            got = official_news.from_rss("nvidia_dev", "NVIDIA 개발자", "x")
+        self.assertEqual([i["title_en"] for i in got], ["Agents"])
+        rss = b"""<?xml version="1.0"?><rss><channel>
+<item><title>Open model</title><link>https://blogs.nvidia.com/a</link><pubDate>Sun, 25 Oct 2026 10:00:00 GMT</pubDate><category>Open Source</category></item>
+<item><title>Game</title><link>https://blogs.nvidia.com/b</link><pubDate>Sun, 25 Oct 2026 10:00:00 GMT</pubDate><category>Nemotron</category><category>Gaming</category></item>
+</channel></rss>"""
+        with mock.patch.object(official_news, "fetch", return_value=rss):
+            got = official_news.from_rss("nvidia", "NVIDIA", "x")
+        self.assertEqual([i["title_en"] for i in got], ["Open model"])  # 게임 글은 빼고
+
+    def test_pick_counts_per_source(self):
+        mk = lambda src, h: {"source": src, "published_at": self.NOW - official_news.timedelta(hours=h)}
+        items = [mk("huggingface", h) for h in range(7)] + [mk("nvidia", 10)]
+        got = official_news.pick(items, self.NOW)
+        self.assertEqual(sum(i["source"] == "huggingface" for i in got), official_news.PER_SOURCE)
+        self.assertEqual(sum(i["source"] == "nvidia" for i in got), 1)  # 같은 피드에서 나온 다른 회사는 따로 센다
 
     def test_releases_grouped_into_one_item(self):
         atom = b"""<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom">
@@ -338,6 +395,25 @@ class OfficialNewsTest(unittest.TestCase):
             got = official_news.from_hf_trending()
         self.assertEqual([m["id"] for m in got], ["a/good"])
         self.assertEqual((got[0]["params"], got[0]["license"], got[0]["arxiv"]), (27_000_000_000, "mit", ["2601.00001"]))
+
+    def test_trending_groups_variants_and_keeps_new_models(self):
+        q = lambda base: [f"base_model:{base}", f"base_model:quantized:{base}"]
+        f = lambda base: [f"base_model:{base}", f"base_model:finetune:{base}"]
+        old, new = "2026-08-01T00:00:00.000Z", "2026-10-25T00:00:00.000Z"
+        rows = [("ds/V4", [], new), ("lab/V4-GGUF", q("ds/V4"), new), ("liq/LFM-1B", f("liq/LFM-Base"), new),
+                ("liq/LFM-VL", f("liq/LFM-Base"), new), ("other/V4-tuned", f("ds/V4"), new)]
+        rows += [(f"big/m{i}", [], old) for i in range(12)] + [(f"fresh/late{i}", [], new) for i in range(20)]
+        listing = json.dumps([{"id": i, "pipeline_tag": "text-generation", "tags": t, "createdAt": c} for i, t, c in rows]).encode()
+        with mock.patch.object(official_news, "fetch", side_effect=lambda u: listing if "sort=" in u else b"{}"):
+            got = official_news.from_hf_trending(datetime(2026, 10, 29, tzinfo=timezone.utc))
+        ids = [m["id"] for m in got]
+        self.assertEqual(ids[:3], ["ds/V4", "liq/LFM-1B", "other/V4-tuned"])  # 양자화판·같은 회사 형제는 묶고, 다른 회사 미세 조정은 따로
+        self.assertEqual([(v["id"], v["quantized"]) for v in got[0]["variants"]], [("lab/V4-GGUF", True)])
+        self.assertEqual([v["id"] for v in got[1]["variants"]], ["liq/LFM-VL"])
+        # 트렌딩 10개(그중 새 모델 3개) + 10위 밖의 새 모델로 새 모델 20개까지
+        self.assertEqual(len(ids), 10 + 17)
+        self.assertEqual(ids[-1], "fresh/late16")
+        self.assertEqual([m["rank"] for m in got], list(range(1, 28)))
 
     def test_save_db_upserts_news_and_replaces_models(self):
         calls = []

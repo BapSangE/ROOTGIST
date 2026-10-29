@@ -76,6 +76,8 @@ abstract class RgColors {
   static const highlightActive = Color(0xFFFFE27A);
   static const actionPrimary = Color(0xFF0E0E0D);
   static const onAction = Color(0xFFFFFFFF);
+  static const surfaceInk = Color(0xFF2B2B29); // 다크 카드 면(차콜). 순검정은 흰 바탕에서 너무 튄다
+  static const chipOnInk = Color(0xFFFFFFFF); // 다크 카드 위 칩: 흰 알약 + 잉크 글자(카드 대비 14.2:1)
   static const onInkSecondary = Color(0xFFB9B9B2); // 다크 카드 위 보조 글자(8.6:1)
   static const onInkMuted = Color(0xFFA9A9A2); // 검정 세그먼트의 고르지 않은 칸
   static const glassOnInk = Color(0x24FFFFFF); // 다크 카드 위 원형 버튼(흰 14%)
@@ -92,6 +94,21 @@ abstract class RgBrand {
   static const openai = Color(0xFF0E0E0D); // OpenAI·OpenAI 커뮤니티(흑백 브랜드)
   static const google = Color(0xFF1A66D9); // Google DeepMind·Google Research(흰 글자 5.3:1)
   static const huggingface = Color(0xFFFFD21E); // Hugging Face(노랑, 검정 글자 13.3:1)
+  static const nvidia = Color(0xFF76B900); // NVIDIA(초록, 흰 글자는 2.4:1이라 검정 글자 8.0:1)
+  static const meta = Color(0xFF0866FF); // Meta(파랑, 흰 글자 4.8:1)
+  static const xai = Color(0xFF0E0E0D); // xAI(흑백 브랜드)
+}
+
+// 움직임(design-preview/DESIGN_SYSTEM.md 「움직임·진동」). 앱 전체가 같은 속도·곡선을 쓴다.
+// 「동작 줄이기」(MediaQuery.disableAnimations)면 길이를 0으로: RgMotion.of(context, RgMotion.base).
+abstract class RgMotion {
+  static const press = Duration(milliseconds: 100); // 눌림 들어감
+  static const release = Duration(milliseconds: 160); // 떼고 돌아옴(살짝 튐)
+  static const fast = Duration(milliseconds: 150); // 칩 채움·색 바뀜
+  static const base = Duration(milliseconds: 220); // 미끄러짐·접힘·탭 넘김
+  static const curve = Curves.easeOutCubic;
+  static const pressScale = 0.98; // 행·카드 눌림
+  static Duration of(BuildContext context, Duration d) => MediaQuery.disableAnimationsOf(context) ? Duration.zero : d;
 }
 
 abstract class RgSpace {

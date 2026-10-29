@@ -1,0 +1,7 @@
+{
+  "terms": [
+    {"term": "API", "aliases": ["API", "APIs"], "term_ko": "API", "definition_ko": "프로그램끼리 기능을 주고받는 약속된 창구예요. (가상 예시 뜻)", "full_form_en": "Application Programming Interface", "papers": 3},
+    {"term": "agent", "aliases": ["agent", "agents"], "term_ko": "에이전트", "definition_ko": "스스로 계획을 세우고 도구를 써서 일을 끝내는 AI예요. (가상 예시 뜻)", "full_form_en": null, "papers": 12},
+    {"term": "GPU", "aliases": ["GPU"], "term_ko": "GPU", "definition_ko": "많은 계산을 한꺼번에 처리하는 칩이에요. (가상 예시 뜻)", "full_form_en": "Graphics Processing Unit", "papers": 5}
+  ]
+}

@@ -15,3 +15,18 @@ bool isNew(String key, DateTime published) =>
 void markRead(String key) {
   if (!readItems.value.contains(key)) readItems.value = {...readItems.value, key};
 }
+
+// 모델 목록의 「새로 진입」: 이 기기에서 그 모델을 목록에서 처음 본 시각(UTC ISO). 처음 목록을 받았을 때 이미 있던
+// 모델은 'base'(새로 진입이 아니다): 설치하자마자 모두 새로 진입으로 뜨지 않게. 열어 보면(markRead 'model:id') 뗀다.
+final modelsSeen = ValueNotifier<Map<String, String>>({});
+
+void noteModels(Iterable<String> ids) {
+  final first = modelsSeen.value.isEmpty, now = clock().toUtc().toIso8601String();
+  final add = {for (final id in ids) if (!modelsSeen.value.containsKey(id)) id: first ? 'base' : now};
+  if (add.isNotEmpty) modelsSeen.value = {...modelsSeen.value, ...add};
+}
+
+bool enteredModel(String id) {
+  final seen = DateTime.tryParse(modelsSeen.value[id] ?? '');
+  return seen != null && !readItems.value.contains('model:$id') && clock().difference(seen) < newFor;
+}
