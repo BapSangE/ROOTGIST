@@ -1,9 +1,9 @@
 import { Suspense } from "react";
-import { AdminScreen } from "@/components/admin-screen";
+import { TermsWorkbench } from "@/components/terms-workbench";
 export default function Page() {
   return (
     <Suspense fallback={<p role="status">불러오는 중이에요.</p>}>
-      <AdminScreen view="terms" />
+      <TermsWorkbench />
     </Suspense>
   );
 }

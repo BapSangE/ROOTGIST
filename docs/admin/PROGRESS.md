@@ -124,3 +124,9 @@
 사용자가 한 화면에서 용어를 검토하고 논문/기타 메뉴를 제거하는 방향을 요청했다. UI/UX Pro Max를 실제 실행했고 부적합한 hero/glassmorphism 추천은 미채택했다. 기존 Ink & Paper를 유지한 적응형 3열(목록224px/문맥가변/사전300px)과 상단52px·하단60px을 별도 임시 공간의 정적 시안으로 만들었다. 1280×720에서 필수 검수 도구와 사전 필드가 함께 표시되고 페이지 overflow가 없음을 확인했다. 752px에서는 목록/사전을 modal 패널로 전환한다. 검색·강조·현재/가정 미리보기·변경 경고·메모리 초안 보존과 다음 이동을 확인했다.
 
 독립 builder check에서 실제 표시 설정 예외, 다음 이동 시 초안 소실, modal 중 배경 단축키를 지적받아 수정하고 재검토했다. 후보는 사전 동기화 대기, Axx 탭은 탐색만(sentence_ids 불변)으로 명확히 했다. TERM_REVIEW_FOCUS_DESIGN.md에 UI·실제 데이터 대응·한계·향후 반영 범위를 기록했다. 아직 사용자 디자인 승인 전이며 실제 관리자 UI/메뉴·API·배포 설정·Flutter·워커·DB는 변경하지 않았다. 문서/진행 기록만 승인된 커밋·일반 푸시 범위로 남긴다.
+
+## 2026-10-29 — 승인된 용어 집중 화면 1차 구현
+
+사용자가 시안을 긍정적으로 확인해 용어 전용 shell/3열 문맥 중심 UI/좁은 창 native dialog를 실제 컴포넌트에 반영했다. 기존 projection과 실제 데이터 읽기·권한 경계를 보존하고 다른 메뉴 URL은 용어 화면으로 모은다. 회색 표기 찾기와 노란 앱 표시, 일치 수와 선택 문장 실제 강조 수를 구분한다. 사전 편집·저장·승인은 잠겨 있고 span만 메모리 미리보기다.
+
+별도 Git worktree에서 Node24 실제 fixture HTTP 포함 65 tests passed, lint/typecheck/build 성공. 1280×720 및 752px, 변경 경고/미리보기 보존/빈 검색/중첩 패널을 CUA로 확인했다. 검색 취소 표시 불일치도 재현 후 수정했다. 자동 Playwright 실행은 미완료이며 spec만 새 흐름에 맞췄다. 독립 리뷰 Important 없음. Flutter/worker/DB/migration/동시 사용자 작업은 수정·포함하지 않는다. 계획/반영 상세는 TERM_REVIEW_FOCUS_PLAN.md와 TERM_REVIEW_FOCUS_IMPLEMENTATION.md. 커밋·푸시 후 실제 배포를 확인한다.

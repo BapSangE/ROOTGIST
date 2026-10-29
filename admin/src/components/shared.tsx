@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { patchReviewQuery } from "@/lib/domain/query";
 import type { Highlight } from "@/lib/domain/display";
 export function Icon({ name, size = 19 }: { name: string; size?: number }) {
   const paths: Record<string, React.ReactNode> = {
@@ -184,25 +185,17 @@ export function useResource<T>(url: string | null) {
   };
 }
 export function useQuery() {
-  const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   return {
     params,
     change: (values: Record<string, string | null>) => {
-      const next = new URLSearchParams(window.location.search);
-      if (
-        Object.keys(values).some((k) =>
-          ["query", "type", "filter", "tab", "source", "kind"].includes(k),
-        )
-      )
-        next.delete("cursor");
-      for (const [key, value] of Object.entries(values))
-        if (value === null || value === "") next.delete(key);
-        else next.set(key, value);
-      router.push(`${pathname}${next.size ? "?" + next.toString() : ""}`, {
-        scroll: false,
-      });
+      const next = patchReviewQuery(window.location.search, values);
+      window.history.pushState(
+        null,
+        "",
+        `${pathname}${next ? "?" + next : ""}`,
+      );
     },
   };
 }

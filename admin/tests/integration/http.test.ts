@@ -28,3 +28,20 @@ it.skipIf(!origin)(
     );
   },
 );
+
+it.skipIf(!origin)(
+  "legacy admin entry pages converge on the focused terms workspace",
+  async () => {
+    for (const path of [
+      "/admin",
+      "/admin/papers",
+      "/admin/news",
+      "/admin/notices",
+      "/admin/operations",
+    ]) {
+      const r = await fetch(`${origin}${path}`, { redirect: "manual" });
+      expect(r.status, path).toBe(307);
+      expect(r.headers.get("location")).toBe("/admin/terms");
+    }
+  },
+);

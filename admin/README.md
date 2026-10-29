@@ -1,6 +1,6 @@
 # ROOTGIST Admin — R0 로컬 검토본
 
-Next.js + React + TypeScript로 만든 별도 관리자 웹입니다. Flutter 앱의 `web/`를 사용하지 않습니다. 현재 여섯 화면과 조회·문맥·앱 강조 미리보기를 제공합니다. **초안 저장·승인·게시는 지원하지 않으며 모든 쓰기 API는 차단합니다.**
+Next.js + React + TypeScript로 만든 별도 관리자 웹입니다. Flutter 앱의 `web/`를 사용하지 않습니다. 현재 용어 검수 전용 화면에서 목록·문맥·사전 의미·앱 강조 미리보기를 제공합니다. `/admin`과 예전 논문/뉴스/공지/운영 화면 URL은 `/admin/terms`로 모입니다. 관련 읽기 API는 유지합니다. **초안 저장·승인·게시는 지원하지 않으며 모든 쓰기 API는 차단합니다.**
 
 ## 실행
 
@@ -16,7 +16,7 @@ npm run dev:fixture
 
 ## 실제 조회 연결
 
-`.env.example`을 참고하여 별도 환경의 `.env.local`에 `ADMIN_DATA_MODE=supabase`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `ADMIN_USER_ID`, 서버 전용 `SUPABASE_SECRET_KEY`를 설정합니다. 계정은 사전 등록된 관리자 1명을 전제로 하며 공개 회원가입은 제공하지 않습니다. 실제 Auth/DB 연결은 이번 작업에서 검증하지 않았습니다. 운영 환경에 그대로 연결한 것으로 간주하지 마세요.
+`.env.example`을 참고하여 별도 환경의 `.env.local`에 `ADMIN_DATA_MODE=supabase`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `ADMIN_USER_ID`, 서버 전용 `SUPABASE_SECRET_KEY`를 설정합니다. 계정은 사전 등록된 관리자 1명을 전제로 하며 공개 회원가입은 제공하지 않습니다. 실제 연결과 배포 검증 이력은 [VERCEL_VERIFICATION.md](../docs/admin/VERCEL_VERIFICATION.md)에 기록했습니다. fixture 통과와 실제 인증 통과는 구분합니다.
 
 세션 검증은 Supabase `auth.getUser()`의 검증된 UUID를 서버 ADMIN_USER_ID와 비교합니다. 페이지·API 모두 확인하며 관리자 확인 뒤에만 privileged 읽기에 들어갑니다. secret key는 client/NEXT_PUBLIC_*에 넣지 않습니다. R0 전송기는 GET/HEAD 테이블 조회만 허용하고 RPC/POST/PUT/PATCH/DELETE는 거부합니다.
 
@@ -35,7 +35,7 @@ npm run build
 npm run start
 ```
 
-기본 test에서는 외부 서버가 필요한 HTTP 테스트 하나를 제외합니다. 위 ADMIN_TEST_URL 실행에서는 28개 테스트를 모두 확인했습니다. 자동 브라우저 검증은 별도로 `npx playwright install chromium` 후 `npm run test:e2e`입니다. 현재 Codex 샌드박스에서는 Chromium의 macOS MachPort 기동이 거부되어 자동 E2E 통과를 확인하지 못했습니다. 인앱 브라우저로 실제 주요 흐름을 검증한 기록은 아래 진행 문서에 있습니다.
+기본 test에서는 외부 서버가 필요한 HTTP 테스트 2개를 제외합니다. 이번 용어 전용 UI 변경은 Node 24에서 실제 fixture HTTP 포함 65개 테스트, lint/typecheck/build를 확인했습니다. 자동 브라우저 검증은 별도로 `npx playwright install chromium` 후 `npm run test:e2e`입니다. 이 작업에서는 자동 E2E 러너를 실행하지 않았으며 CUA 브라우저로 핵심 흐름을 확인했습니다. 구체적인 결과와 한계는 [반영 기록](../docs/admin/TERM_REVIEW_FOCUS_IMPLEMENTATION.md)을 참고하세요.
 
 개발 모드는 환경의 FSEvent 제한을 피하기 위해 Webpack과 Watchpack polling을 사용합니다. Next telemetry는 dev/build에서 껐습니다. production build 성공은 운영 배포나 실제 Supabase 연결 성공을 뜻하지 않습니다.
 
@@ -53,3 +53,5 @@ npm run start
 Root Directory는 `admin`, Framework/Application Preset은 Next.js, Node.js는 24.x, Install은 `npm ci`, Build는 `npm run build`, Output Directory는 기본값을 사용합니다. worker를 Services로 함께 배포하지 않습니다. [배포 준비/환경변수/현재 제한](../docs/admin/VERCEL_DEPLOYMENT.md)을 참고하세요.
 
 로그인·조회 성능 개선과 남은 제한은 [PERFORMANCE.md](../docs/admin/PERFORMANCE.md)에 기록했습니다. API는 화면별 의존 테이블만 읽으며 Vercel 함수 리전은 기존 Supabase DB와 같은 뭄바이(bom1)입니다.
+
+승인된 용어 전용 집중 화면의 [설계](../docs/admin/TERM_REVIEW_FOCUS_DESIGN.md), [작업계획](../docs/admin/TERM_REVIEW_FOCUS_PLAN.md), [반영·검증 기록](../docs/admin/TERM_REVIEW_FOCUS_IMPLEMENTATION.md)을 함께 확인하세요.

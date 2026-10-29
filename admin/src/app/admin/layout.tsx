@@ -1,3 +1,4 @@
+import "@/styles/term-focus.css";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/server/require-admin";
 import { AdminError } from "@/lib/server/errors";
