@@ -34,6 +34,10 @@
 
 ## 남은 단계
 
-커밋·일반 푸시 후 Vercel READY와 실제 관리자 세션의 화면/데이터/쓰기 잠금을 확인한다. 이 문서의 로컬 fixture 통과는 운영 실제 데이터 확인의 대체가 아니다.
+구현 커밋 03100992ec85ddbba5910c74af2be0fb368c7842를 main에 fast-forward 통합 후 일반 푸시했다. 통합 checkout에서도 기본 suite 63 passed / HTTP 2 skipped를 확인했다. 격리 fixture 서버의 전체 HTTP 포함 suite는 65 passed다.
+
+Production 배포 dpl_FE32VEJ8e1AuvwFw2fiHjNrZKnqQ READY, bom1, rootgist.vercel.app alias를 확인했다. 기존 관리자 세션에서 실제 데이터/적용 위치476개 목록과 선택 항목의 원문·번역·강조·사전 정보를 확인했다. 1280×720에서 페이지 width1280/height720, 강조 입력 bottom520, 미리보기 bottom644, 동작 top660으로 모두 화면 안에 있다. 767×724 기존 창에서도 가로/세로 overflow가 없고 목록/사전 펼침 방식으로 표시됐다. 오류 alert 없음.
+
+운영 화면의 임시 저장/수정 필요/적용 위치 저장은 disabled, 다음 항목은 enabled다. 실제 쓰기 요청을 운영 DB에 보내지는 않았다. 별도 미로그인 /login200 및 용어 API401/private-no-store를 확인했다. 최근15분 런타임 오류 조회는 보고0건이며 전체 운영 기간의 무오류를 의미하지 않는다. 운영 캡처는 개인 검토용 outputs에만 두며 저장소에 게시하지 않는다.
 
 다음 기능 단계는 여전히 워커 수정본 보호와 M6 저장 계약이다. 이 변경은 승인된 레이아웃과 진입 단순화의 읽기 전용 반영이며, 용어 저장 기능 완성을 의미하지 않는다.

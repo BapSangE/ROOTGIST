@@ -46,4 +46,4 @@ Files: tests/integration/http.test.ts, tests/e2e/review-readonly.spec.ts, docs/a
 - [x] CUA로 1280x720 실제 fixture UI와 좁은 창/강조/유형/탐색/경고를 확인. 자동 E2E는 실행 가능 여부를 구분해 보고.
 - [x] 새 reviewer로 전체 변경을 검토, Important는 재현 후 수정하고 재검증.
 - [x] 원래 checkout의 대상 파일이 baseline과 같음을 확인한 후 변경 파일만 통합. 사용자 변경은 보존.
-- [ ] 승인된 커밋/일반 푸시 후 Vercel READY, 실제 관리자 세션 UI/조회/쓰기 잠금 재검증. 수동 deploy/DB 변경은 하지 않음.
+- [x] 승인된 커밋/일반 푸시 후 Vercel READY, 실제 관리자 세션 UI/조회/쓰기 잠금 재검증. 수동 deploy/DB 변경은 하지 않음.

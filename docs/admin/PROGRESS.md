@@ -130,3 +130,6 @@
 사용자가 시안을 긍정적으로 확인해 용어 전용 shell/3열 문맥 중심 UI/좁은 창 native dialog를 실제 컴포넌트에 반영했다. 기존 projection과 실제 데이터 읽기·권한 경계를 보존하고 다른 메뉴 URL은 용어 화면으로 모은다. 회색 표기 찾기와 노란 앱 표시, 일치 수와 선택 문장 실제 강조 수를 구분한다. 사전 편집·저장·승인은 잠겨 있고 span만 메모리 미리보기다.
 
 별도 Git worktree에서 Node24 실제 fixture HTTP 포함 65 tests passed, lint/typecheck/build 성공. 1280×720 및 752px, 변경 경고/미리보기 보존/빈 검색/중첩 패널을 CUA로 확인했다. 검색 취소 표시 불일치도 재현 후 수정했다. 자동 Playwright 실행은 미완료이며 spec만 새 흐름에 맞췄다. 독립 리뷰 Important 없음. Flutter/worker/DB/migration/동시 사용자 작업은 수정·포함하지 않는다. 계획/반영 상세는 TERM_REVIEW_FOCUS_PLAN.md와 TERM_REVIEW_FOCUS_IMPLEMENTATION.md. 커밋·푸시 후 실제 배포를 확인한다.
+
+
+용어 집중 UI 0310099를 main에 통합·푸시했고 Production 배포 dpl_FE32VEJ8e1AuvwFw2fiHjNrZKnqQ READY/bom1을 확인했다. 실제 관리자 세션에서 적용 위치476개와 문맥/사전/앱표시를 조회했다. 1280×720 및 기존767×724 창에서 페이지 overflow 없음. 저장 관련 동작disabled/다음항목enabled, 미로그인API401/no-store 유지. 운영 쓰기 호출·DB 적용 없음. 최근15분 런타임 오류 보고0건. 구현/검증 상세와 자동 E2E 미실행 한계는 TERM_REVIEW_FOCUS_IMPLEMENTATION.md에 갱신했다.
