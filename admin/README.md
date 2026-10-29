@@ -51,3 +51,5 @@ npm run start
 ## Vercel 배포 설정
 
 Root Directory는 `admin`, Framework/Application Preset은 Next.js, Node.js는 24.x, Install은 `npm ci`, Build는 `npm run build`, Output Directory는 기본값을 사용합니다. worker를 Services로 함께 배포하지 않습니다. [배포 준비/환경변수/현재 제한](../docs/admin/VERCEL_DEPLOYMENT.md)을 참고하세요.
+
+로그인·조회 성능 개선과 남은 제한은 [PERFORMANCE.md](../docs/admin/PERFORMANCE.md)에 기록했습니다. API는 화면별 의존 테이블만 읽으며 Vercel 함수 리전은 기존 Supabase DB와 같은 뭄바이(bom1)입니다.

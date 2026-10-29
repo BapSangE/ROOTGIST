@@ -39,3 +39,8 @@
 - https://vercel.com/docs/builds/configure-a-build
 - https://vercel.com/docs/environment-variables
 - https://nodejs.org/dist/v24.22.2/SHASUMS256.txt
+
+
+### 함수 리전
+
+admin/vercel.json의 regions=[bom1]을 사용한다. 기존 Supabase ROOTGIST_DB의 실제 ap-south-1과 맞춘 설정이며 DB 이전은 아니다. 리전을 바꿀 때는 [PERFORMANCE.md](PERFORMANCE.md)의 측정과 실제 DB 위치를 함께 확인한다.

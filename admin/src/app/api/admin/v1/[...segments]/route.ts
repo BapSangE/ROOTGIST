@@ -12,7 +12,7 @@ export async function GET(
     const actor = await requireAdmin();
     const { segments } = await context.params;
     return readResource(
-      await readSnapshot(actor),
+      await readSnapshot(actor, segments[0]),
       segments,
       new URL(request.url).searchParams,
     );

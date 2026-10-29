@@ -10,9 +10,11 @@ export async function login(form: FormData) {
   const password = String(form.get("password") ?? "");
   if (email.length > 254 || password.length > 1024 || !email || !password)
     redirect("/login?error=credentials");
-  const { error } = await client.auth.signInWithPassword({ email, password });
+  const { data, error } = await client.auth.signInWithPassword({
+    email,
+    password,
+  });
   if (error) redirect("/login?error=credentials");
-  const { data } = await client.auth.getUser();
   if (data.user?.id !== environment.adminUserId) {
     await client.auth.signOut();
     redirect("/login?error=admin");

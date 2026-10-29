@@ -62,6 +62,36 @@ const specs = {
   app_config: ["key,value", "key"],
   worker_state: ["key,value", "key"],
 } as const;
+// Read only the dependencies used by the requested screen. In particular,
+// news/models/notices must not wait for every paper translation and glossary.
+type Table = keyof typeof specs;
+const paperTables: Table[] = [
+  "papers",
+  "paper_ai",
+  "paper_sentences",
+  "paper_translations",
+  "paper_glossary",
+  "paper_key_points",
+  "digest_papers",
+];
+const termTables: Table[] = [
+  "terms",
+  "term_senses",
+  "term_aliases",
+  "term_candidates",
+  ...paperTables,
+  "app_config",
+];
+const resourceTables: Record<string, Table[]> = {
+  terms: termTables,
+  papers: ["terms", "term_senses", ...paperTables, "app_config"],
+  dashboard: [...termTables, "official_news", "digests"],
+  news: ["official_news", "app_config"],
+  models: ["trending_models", "app_config"],
+  notices: ["app_config"],
+  sources: ["worker_state"],
+  operations: ["digests"],
+};
 const str = (r: Row, k: string) =>
   typeof r[k] === "string" ? (r[k] as string) : "";
 const nullable = (r: Row, k: string) =>
@@ -70,11 +100,16 @@ const number = (r: Row, k: string) =>
   typeof r[k] === "number" ? (r[k] as number) : 0;
 export async function supabaseSnapshot(
   actor: AdminIdentity,
+  resource = "all",
 ): Promise<Snapshot> {
   const client = privilegedReadClient(actor);
+  const selected = new Set<string>(
+    resource === "all" ? Object.keys(specs) : (resourceTables[resource] ?? []),
+  );
   const results = await Promise.all(
     Object.entries(specs).map(async ([table, [columns, order]]) => {
       const rows: Row[] = [];
+      if (!selected.has(table)) return [table, rows] as const;
       let total = 0;
       for (let from = 0; from === 0 || from < total; from += 500) {
         let query = client.from(table).select(columns, { count: "exact" });
