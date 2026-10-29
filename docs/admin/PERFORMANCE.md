@@ -26,7 +26,7 @@
 - 화면별 조회와 전체 snapshot의 응답 동등성, 논문 A01 번역/용어 문맥 의존성, 실제 GET handler의 범위 전달을 검증했다.
 - Node 24.22.2에서 실제 로컬 fixture HTTP 포함 57 tests passed. 8개 조회 경로 200, capabilities 모두 false, 모든 쓰기 verb 423 확인. lint/typecheck/build 성공.
 - 독립 코드 리뷰에서 Critical/Important 없음. 제안된 응답 동등성 검증도 추가했다.
-- 커밋/자동 배포 후 운영 조회 속도와 bom1 반영을 재확인한다. 현재 이 문서의 로컬 검증을 운영 성능 보장으로 간주하지 않는다.
+- 커밋 632a18b3f81e3d5b01f561c6889563a2d97010d9의 Production 배포 dpl_HR9z8x8R7WsthgqySg3dDCsAiSZm READY, regions=[bom1], rootgist.vercel.app alias를 확인했다. 운영 측정은 다음과 같다.
 
 ## 보안·한계
 
@@ -41,3 +41,17 @@
 - [Supabase signInWithPassword](https://supabase.com/docs/reference/javascript/auth-signinwithpassword): 서버 인증 응답의 data/error 사용.
 - [Supabase SSR 인증](https://supabase.com/docs/guides/auth/server-side/creating-a-client?queryGroups=framework&framework=nextjs): getUser의 서버 사용자 검증과 캐시 주의사항. 이번에는 requireAdmin에서 getUser를 유지한다.
 - Supabase changelog의 관련 breaking change를 확인했다. 최근 TLS 1.2 CBC 제한 예고는 최신 Node 24 클라이언트/이번 조회 범위 변경을 막는 사항이 아니다.
+
+
+## 운영 배포 후 관측
+
+| 요청 | 개선 전 | 개선 후 관측 |
+| --- | ---: | ---: |
+| 모델 목록(limit=1) | 5.60초 | 2.06초, 반복 1.10초 |
+| 용어 적용 위치 목록(limit=1) | 9.37초 | 배포 직후 첫 요청 8.33초, 이후 2.29초 |
+
+같은 관리자 브라우저 세션, 동일 URL과 탐색+JSON DOM 확인 방식으로 측정했다. 응답은 모두 fixture=false이고 모델 10개/용어 적용 위치 476개였다. 서버의 순수 처리 시간이나 로그인 폼 제출 시간은 아니며 소수 표본이다. 첫 요청/워밍업·네트워크 영향을 분리한 벤치마크도 아니므로 cold start가 단독 원인이라고 단정하지 않는다. 배포 직후 첫 요청 지연은 남아 있다.
+
+실제 용어 화면 새로고침 후 사전 의미·논문 문맥·강조 표기 입력과 저장 버튼 잠금을 확인했다. 오류 alert 없음. API뿐 아니라 화면의 상세 조회도 이어서 동작했다. 별도 미로그인 요청은 /login 200(약 421ms), 용어 API 401(약 383ms), private/no-store였다. 선택한 최근 15분 런타임 오류 조회는 보고 0건이며 전체 기간의 무오류 보장이 아니다.
+
+사용자에게 반복 조회 개선과 첫 요청의 한계를 함께 보고한다. 느린 첫 요청과 용어/논문 전체 의존 데이터 조회는 추가 최적화 여지로 남긴다. 운영 DB 쓰기·테스트 데이터 삽입·마이그레이션 적용·수동 배포 명령은 실행하지 않았다.
