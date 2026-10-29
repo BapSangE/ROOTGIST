@@ -1,0 +1,81 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<!-- 공식 소식 출처 배지 비교 2(2026-10-29): 진한 대표 색 한 가지 + 새 글 표시 세 가지. 흰 바탕(기본).
+     색은 각 회사 공개 브랜드의 대표 계열을 흰 글자 대비 4.5:1 이상으로 맞춘 앱용 색(정확한 브랜드 HEX 아님). Google은 4색 조합 대신 파랑 하나. -->
+<style>
+  @font-face { font-family: Pretendard; font-weight: 400; src: url(../../assets/fonts/Pretendard-Regular.otf); }
+  @font-face { font-family: Pretendard; font-weight: 600; src: url(../../assets/fonts/Pretendard-SemiBold.otf); }
+  @font-face { font-family: Pretendard; font-weight: 700; src: url(../../assets/fonts/Pretendard-Bold.otf); }
+  :root { --bg:#FFFFFF; --card:#F4F4F2; --fill:#E7E7E3; --line:#E6E6E3; --ink:#0E0E0D; --ink2:#33332F; --mute:#6B6B65; --dot:#F0362B; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { width: 1760px; background: #E9E9E6; font-family: Pretendard, sans-serif; color: var(--ink); padding: 40px 40px 48px; }
+  h1 { font: 700 30px/1.2 Pretendard; letter-spacing: -0.6px; }
+  .lead { margin-top: 8px; font: 400 16px/1.5 Pretendard; color: var(--mute); }
+  .grid { display: flex; gap: 24px; margin-top: 28px; }
+  .col { width: 402px; }
+  .label { font: 700 18px/1 Pretendard; } .sub { margin-top: 6px; font: 400 14px/1.4 Pretendard; color: var(--mute); height: 40px; }
+  .phone { margin-top: 12px; background: var(--bg); border-radius: 36px; padding: 20px 0 24px; border: 6px solid #141413; }
+  .seg { margin: 0 20px; display: flex; gap: 20px; border-bottom: 1px solid var(--line); }
+  .seg span { padding: 12px 0; font: 500 16px/1 Pretendard; color: var(--mute); }
+  .seg span.on { font-weight: 700; color: var(--ink); border-bottom: 2px solid var(--ink); margin-bottom: -1px; }
+  .card { margin: 14px 16px 0; background: var(--card); border-radius: 22px; }
+  .item { display: flex; gap: 12px; padding: 16px 20px; border-top: 1px solid var(--line); align-items: flex-start; }
+  .item:first-child { border-top: 0; }
+  .grow { flex: 1; min-width: 0; }
+  .meta { font: 400 13.5px/19px Pretendard; color: var(--mute); display: flex; align-items: center; gap: 6px; }
+  .t { margin-top: 3px; font: 600 16px/23px Pretendard; letter-spacing: -0.3px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--dot); flex: none; }
+  .bm { width: 36px; height: 36px; border-radius: 50%; background: var(--fill); flex: none; display: flex; align-items: center; justify-content: center; }
+  .bm svg { width: 16px; height: 16px; stroke: var(--ink); fill: none; stroke-width: 2; stroke-linejoin: round; }
+  /* 배지 */
+  .b { width: 34px; height: 34px; flex: none; display: flex; align-items: center; justify-content: center; font: 700 12px/1 Pretendard; color: var(--ink2); background: var(--fill); border-radius: 10px; }
+  /* 진한 대표 색: 회사당 한 가지. 흰 글자 대비 4.5:1 이상(Anthropic 5.0, Google 5.3), HF는 검정 글자(13.3) */
+  .S { color: #FFFFFF; }
+  .S.anthropic, .S.claudecode { background: #B5522B; }
+  .S.openai, .S.oacomm { background: #0E0E0D; }
+  .S.deepmind, .S.gresearch { background: #1A66D9; }
+  .S.hf { background: #FFD21E; color: #0E0E0D; }
+  /* 새 글 표시 */
+  .newtxt { font: 700 12px/1 Pretendard; color: var(--dot); margin-left: 2px; }
+  .inkdot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink); flex: none; }
+  .legend { margin-top: 14px; display: grid; gap: 6px; font: 400 13.5px/1.4 Pretendard; color: var(--ink2); }
+  .legend i { display: inline-block; width: 14px; height: 14px; vertical-align: -2px; margin-right: 6px; border-radius: 4px; }
+  .note { margin-top: 22px; display: grid; gap: 6px; font: 400 14.5px/1.55 Pretendard; color: var(--ink2); max-width: 1680px; }
+  .note b { font-weight: 700; }
+</style></head><body>
+<h1>공식 소식 출처 배지 비교 2 · 진한 대표 색</h1>
+<div class="lead">흰 바탕(기본) · 공식 소식 목록. 회사당 대표 색 한 가지(Google은 4색 조합 대신 파랑 하나), 흰 글자 대비 4.5:1 이상으로 맞춘 앱용 색이에요(정확한 브랜드 HEX 아님). 글자는 Pretendard 머리글자, 로고 모양은 따라 하지 않았어요.</div>
+<div class="grid" id="grid"></div>
+<div class="note">
+  <div><b>지금</b> 같은 회색 네모, 빨간 점이 새 글.</div>
+  <div><b>진한 색 · 빨간 점</b> 배지만 회사 대표 색으로. 새 글 표시는 그대로. Anthropic(점토 주황)과 빨간 점이 나란히 놓이는 자리를 봐 주세요(밝기 차이 1.25:1로 비슷해 색으로만 갈려요).</div>
+  <div><b>진한 색 · 「새 글」 글자</b> 점 대신 출처 줄 끝에 빨간 「새 글」 두 글자. 색이 하나 더 늘어도 뜻이 글자로 분명해요.</div>
+  <div><b>진한 색 · 검정 점</b> 색은 출처에만 쓰고, 새 글 점은 잉크색으로. 앱 전체의 새 글 점(설정 공지사항, 탐색 「공식 소식」)도 같이 바뀌어요.</div>
+</div>
+<script>
+const rows = [
+  ['An', 'anthropic', 'lab', 'Anthropic · 연구 · 10월 18일', '예시 에이전트에 관한 가상 연구', true],
+  ['OA', 'openai', 'lab', 'OpenAI · 제품 · 10월 18일', '가상의 예시 API를 소개합니다', false],
+  ['GD', 'deepmind', 'lab', 'Google DeepMind · 10월 16일', 'fixture용으로 만든 예시 지도', false],
+  ['GR', 'gresearch', 'lab', 'Google Research · 10월 16일', 'Fictional screening research for tests', false],
+  ['HF', 'hf', 'lab', 'Hugging Face · 10월 15일', '예시 하드웨어에서 예시 모델 실행하기', false],
+  ['CC', 'claudecode', 'release', 'Claude Code · 릴리스 · 10월 18일', 'Claude Code 업데이트 3건', true],
+  ['OA', 'oacomm', 'community', 'OpenAI 커뮤니티 · 공지 · 10월 17일', '가상의 예시 기능을 이제 쓸 수 있어요', false],
+];
+const cols = [
+  ['지금', '같은 회색 네모, 빨간 점이 새 글', '', 'dot'],
+  ['진한 색 · 빨간 점', '회사 대표 색 한 가지, 새 글 표시는 그대로', 'S', 'dot'],
+  ['진한 색 · 「새 글」 글자', '점 대신 출처 줄 끝에 빨간 「새 글」', 'S', 'txt'],
+  ['진한 색 · 검정 점', '색은 출처에만, 새 글 점은 잉크색', 'S', 'ink'],
+];
+const bm = '<span class="bm"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg></span>';
+document.getElementById('grid').innerHTML = cols.map(([label, sub, v, mark]) => `
+  <div class="col"><div class="label">${label}</div><div class="sub">${sub}</div>
+    <div class="phone">
+      <div class="seg"><span class="on">발표</span><span>업데이트</span></div>
+      <div class="card">${rows.map(([ini, brand, kind, meta, title, isNew]) => `
+        <div class="item"><span class="b ${v} ${v ? brand : ''}">${ini}</span>
+          <div class="grow"><div class="meta">${isNew && mark === 'dot' ? '<span class="dot"></span>' : ''}${isNew && mark === 'ink' ? '<span class="inkdot"></span>' : ''}${meta}${isNew && mark === 'txt' ? '<span class="newtxt">새 글</span>' : ''}</div><div class="t">${title}</div></div>${bm}</div>`).join('')}
+      </div>
+    </div></div>`).join('');
+</script>
+</body></html>

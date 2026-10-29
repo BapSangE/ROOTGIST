@@ -157,9 +157,11 @@ class RgBadge extends StatelessWidget {
 
 // 출처 머리글자 배지처럼 쓰는 34×34 네모(모서리 10, fill).
 class RgSquareBadge extends StatelessWidget {
-  const RgSquareBadge({super.key, required this.text, this.size = 34});
+  const RgSquareBadge({super.key, required this.text, this.size = 34, this.color, this.textColor});
   final String text;
   final double size;
+  final Color? color; // 없으면 fill(출처 대표 색이 없는 곳)
+  final Color? textColor;
 
   @override
   Widget build(BuildContext context) => ExcludeSemantics(
@@ -167,11 +169,11 @@ class RgSquareBadge extends StatelessWidget {
       width: size,
       height: size,
       alignment: Alignment.center,
-      decoration: BoxDecoration(color: RgColors.fillNeutral, borderRadius: BorderRadius.circular(RgRadius.badge)),
+      decoration: BoxDecoration(color: color ?? RgColors.fillNeutral, borderRadius: BorderRadius.circular(RgRadius.badge)),
       child: Text(
         text,
         textScaler: TextScaler.noScaling, // 상자 크기가 고정이라 글자도 고정
-        style: RgText.caption.copyWith(fontSize: size < 32 ? 11 : 12, fontWeight: FontWeight.w700, color: RgColors.textBody),
+        style: RgText.caption.copyWith(fontSize: size < 32 ? 11 : 12, fontWeight: FontWeight.w700, color: textColor ?? RgColors.textBody),
       ),
     ),
   );

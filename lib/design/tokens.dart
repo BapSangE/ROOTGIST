@@ -17,8 +17,9 @@ class RgPalette {
     required this.divider,
     required this.grabber,
     required this.newDot,
+    required this.newText,
   });
-  final Color bgApp, bgReading, surfaceCard, fill, line, divider, grabber, newDot;
+  final Color bgApp, bgReading, surfaceCard, fill, line, divider, grabber, newDot, newText;
 
   static const white = RgPalette(
     bgApp: Color(0xFFFFFFFF),
@@ -29,6 +30,7 @@ class RgPalette {
     divider: Color(0xFFE3E3E0),
     grabber: Color(0xFFD9D9D6),
     newDot: Color(0xFFF0362B), // 선명한 빨강
+    newText: Color(0xFFD42A20), // 「새 글」 글자: 점보다 한 단계 진하게(회색 카드 위 4.6:1)
   );
   static const paper = RgPalette(
     bgApp: Color(0xFFF4F4F1),
@@ -39,6 +41,7 @@ class RgPalette {
     divider: Color(0xFFE4E4DF),
     grabber: Color(0xFFD9D9D3),
     newDot: Color(0xFFE0533A), // 로고 주황
+    newText: Color(0xFFC2462E), // 「새 글」 글자(종이 바탕 위 4.5:1)
   );
 }
 
@@ -60,7 +63,8 @@ abstract class RgColors {
   static Color get dividerReading => _p.divider;
   static Color get highlightOriginal => _p.fill; // 「함께」의 원문 쪽 용어는 옅은 회색
   static Color get grabber => _p.grabber;
-  static Color get newDot => _p.newDot; // 새 글 점. 흑백 화면에서 유일한 포인트 색
+  static Color get newDot => _p.newDot; // 새 글 점(설정 공지사항, 탐색 칸 이름 옆)
+  static Color get newText => _p.newText; // 공식 소식 출처 줄의 「새 글」 글자
 
   // 두 바탕에 같은 색
   static const surfaceRaised = Color(0xFFFFFFFF); // 늘 흰 면: 탭바, 시트, 세그먼트 선택 알약, 외곽선 버튼, 하단 버튼 줄
@@ -78,6 +82,16 @@ abstract class RgColors {
   static const lineOnInk = Color(0x24FFFFFF);
   static const tagOnInk = Color(0x1FFFFFFF); // 다크 카드 위 태그(흰 12%)
   static const overlayDim = Color(0x520E0E0D); // 0.32
+}
+
+// 공식 소식 출처 배지의 대표 색. 회사당 한 가지, 흰 글자 대비 4.5:1 이상으로 맞춘 앱용 색(정확한 브랜드 HEX 아님).
+// Google은 4색 조합을 흉내 내지 않고 파랑 하나만(Google 가이드: 「distinctive color combinations」을 따라 하지 말 것).
+// 로고 모양·글꼴은 따라 하지 않고 Pretendard 머리글자만 쓴다. 권리 검토: docs/RIGHTS.md 4장.
+abstract class RgBrand {
+  static const anthropic = Color(0xFFB5522B); // Anthropic·Claude Code·Claude API(점토 주황, 흰 글자 5.0:1)
+  static const openai = Color(0xFF0E0E0D); // OpenAI·OpenAI 커뮤니티(흑백 브랜드)
+  static const google = Color(0xFF1A66D9); // Google DeepMind·Google Research(흰 글자 5.3:1)
+  static const huggingface = Color(0xFFFFD21E); // Hugging Face(노랑, 검정 글자 13.3:1)
 }
 
 abstract class RgSpace {

@@ -223,7 +223,8 @@ String? relatedHint(OfficialNews related, OfficialNews about) {
   return null;
 }
 
-// 출처 머리글자 배지 34×34(모서리 10, fill). 로고 대신 글자(상표·이미지 권리 부담 없이 출처를 구분).
+// 출처 머리글자 배지 34×34(모서리 10). 로고 대신 Pretendard 머리글자 + 회사 대표 색 한 가지(RgBrand).
+// 로고·이미지는 쓰지 않는다(docs/RIGHTS.md 4장). 대표 색이 없는 출처는 fill 회색.
 class SourceBadge extends StatelessWidget {
   const SourceBadge({super.key, required this.news, this.size = 34});
   final OfficialNews news;
@@ -240,8 +241,28 @@ class SourceBadge extends StatelessWidget {
     'claude_api': 'CA',
   };
 
+  // (바탕, 글자). 같은 회사는 같은 색
+  static const _colors = {
+    'anthropic': (RgBrand.anthropic, RgColors.onAction),
+    'claude_code': (RgBrand.anthropic, RgColors.onAction),
+    'claude_api': (RgBrand.anthropic, RgColors.onAction),
+    'openai': (RgBrand.openai, RgColors.onAction),
+    'openai_community': (RgBrand.openai, RgColors.onAction),
+    'deepmind': (RgBrand.google, RgColors.onAction),
+    'google_research': (RgBrand.google, RgColors.onAction),
+    'huggingface': (RgBrand.huggingface, RgColors.textPrimary),
+  };
+
   @override
-  Widget build(BuildContext context) => RgSquareBadge(text: _initials[news.source] ?? news.sourceLabel.substring(0, 2), size: size);
+  Widget build(BuildContext context) {
+    final c = _colors[news.source];
+    return RgSquareBadge(
+      text: _initials[news.source] ?? news.sourceLabel.substring(0, 2),
+      size: size,
+      color: c?.$1,
+      textColor: c?.$2,
+    );
+  }
 }
 
 // 홈 「연구소 소식」 맨 위 대표 글(피드백 3차 C안): 출처 줄 → 제목(카드 제목 크기) → 요약 두 줄까지. 오른쪽 위 북마크.
@@ -343,9 +364,10 @@ class NewsMetaLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ValueListenableBuilder(
     valueListenable: readItems,
+    // 새 글은 출처 줄 끝에 「새 글」 글자. 출처 배지가 회사 색을 쓰게 되면서, 점(색)만으로는 배지 색과 신호가 섞였다.
     builder: (context, _, _) => Row(spacing: RgSpace.s6, children: [
-      if (isNew(newsKey(news), news.publishedAt)) const RgNewDot(),
       Flexible(child: Text(newsMeta(news), style: RgText.caption.copyWith(color: RgColors.textSecondary))),
+      if (isNew(newsKey(news), news.publishedAt)) const RgNewLabel(),
     ]),
   );
 }

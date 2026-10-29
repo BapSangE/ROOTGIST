@@ -524,8 +524,8 @@ void main() {
     router.go('/home');
     await settle(tester);
 
-    // 홈의 공식 발표 행: 7일 안의 안 연 글에 점, 상세를 열면 그 글만 사라진다
-    final dots = find.descendant(of: find.byType(NewsRow), matching: find.byType(RgNewDot));
+    // 홈의 공식 발표 행: 7일 안의 안 연 글에 「새 글」 글자(출처 배지가 회사 색이라 점 대신), 상세를 열면 그 글만 사라진다
+    final dots = find.descendant(of: find.byType(NewsRow), matching: find.byType(RgNewLabel));
     final before = dots.evaluate().length;
     expect(before, greaterThan(0));
     await tester.tap(find.byType(NewsRow).first);
@@ -1193,6 +1193,27 @@ void main() {
     await tester.pumpAndSettle();
     expect(haptics, ['HapticFeedbackType.selectionClick']);
     expect(bar().center.dx, closeTo(tester.getCenter(find.text('업데이트')).dx, 2));
+  });
+
+  testWidgets('출처 배지: 회사 대표 색 한 가지(같은 회사는 같은 색), 대표 색 없는 출처는 회색', (tester) async {
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+    router.go('/explore');
+    await settle(tester);
+    await tester.tap(find.text('공식 소식'));
+    await slide(tester);
+    await settle(tester);
+    Color? colorOf(String initials) => tester
+        .widget<RgSquareBadge>(find.ancestor(of: find.text(initials).first, matching: find.byType(RgSquareBadge)))
+        .color;
+    expect(colorOf('An'), RgBrand.anthropic);
+    expect(colorOf('OA'), RgBrand.openai);
+    expect(colorOf('GD'), RgBrand.google);
+    expect(colorOf('GR'), RgBrand.google); // Google은 4색 조합 대신 파랑 하나
+    expect(colorOf('HF'), RgBrand.huggingface);
+    expect(tester.widget<Text>(find.text('HF').first).style!.color, RgColors.textPrimary); // 노랑 위는 검정 글자
   });
 
   testWidgets('S1: 글자 크기 4단계가 S02 AI 요약·핵심 내용에도 적용된다', (tester) async {
