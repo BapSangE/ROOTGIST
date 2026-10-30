@@ -28,12 +28,21 @@ export function reviewContext(
         : normalizeTerm(g.term) === row.id,
   );
   const texts = paper?.sentences.filter((s) => s.kind === "text") ?? [];
-  const sentence =
-    texts.find((s) => s.id === options.sentenceId) ??
-    texts.find((s) => glossary?.sentence_ids.includes(s.id)) ??
-    texts[0];
   const span =
     options.span !== undefined ? options.span : (glossary?.ko_span ?? null);
+  // AI가 용어를 직접 쓰지 않은 문장(개념만 다루는 앞 문장)도 연결 문장으로 넣는 일이 있다(2610.11942 transition → A01).
+  // 원문에 용어가 있거나 번역문에 강조 표기가 있는 연결 문장을 먼저 연다.
+  const mentions = (s: (typeof texts)[number]) =>
+    (!!span && (s.translation ?? "").includes(span)) ||
+    (!!glossary &&
+      findTerm(latexDisplay(s.text).toLowerCase(), glossary.term.toLowerCase()) >= 0);
+  const linked = texts.filter((s) => glossary?.sentence_ids.includes(s.id));
+  const sentence =
+    texts.find((s) => s.id === options.sentenceId) ??
+    linked.find(mentions) ??
+    linked[0] ??
+    texts[0];
+  const withoutTerm = new Set(linked.filter((s) => !mentions(s)).map((s) => s.id));
   const projected =
     paper && glossary
       ? {
@@ -95,6 +104,7 @@ export function reviewContext(
     glossary,
     sentence,
     texts,
+    withoutTerm,
     span,
     label,
     labels,

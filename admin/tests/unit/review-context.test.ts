@@ -140,3 +140,17 @@ it("can locate a selected label even when an earlier glossary item owns the actu
   expect(c.appliedCount).toBe(0);
   expect(c.inspection.ko).toHaveLength(1);
 });
+it("opens the first linked sentence that actually mentions the term", () => {
+  const d = input();
+  const p = d.papers[0];
+  p.sentences = [
+    { id: "A01", kind: "text", start_offset: 0, text: "A login screen after a tap.", translation: "탭한 뒤 로그인 화면." },
+    { id: "A02", kind: "text", start_offset: 50, text: "the frozen decoder holds", translation: "동결된 디코더가 유지된다" },
+  ];
+  p.glossary[0].sentence_ids = ["A01", "A02"];
+  p.glossary[0].ko_span = "동결된 디코더";
+  const ctx = reviewContext(d, {});
+  expect(ctx.sentence?.id).toBe("A02");
+  expect([...ctx.withoutTerm]).toEqual(["A01"]);
+  expect(reviewContext(d, { sentenceId: "A01" }).sentence?.id).toBe("A01"); // 직접 고르면 그대로
+});

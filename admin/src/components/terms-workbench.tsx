@@ -527,14 +527,20 @@ export function TermsWorkbench() {
                       <option key={s.id} value={s.id}>
                         {s.id}
                         {ctx.glossary?.sentence_ids.includes(s.id)
-                          ? " · 연결"
+                          ? ctx.withoutTerm.has(s.id)
+                            ? " · 연결 · 용어 없음"
+                            : " · 연결"
                           : ""}
                       </option>
                     ))}
                   </select>
                 </label>
                 <span className="micro subtle">
-                  {linkedSentence ? "연결 문장" : "탐색 문장 · 적용 연결 안 됨"}
+                  {!linkedSentence
+                    ? "탐색 문장 · 적용 연결 안 됨"
+                    : ctx.sentence && ctx.withoutTerm.has(ctx.sentence.id)
+                      ? "연결 문장 · 이 문장엔 용어가 직접 나오지 않아요"
+                      : "연결 문장"}
                 </span>
                 <span className="sentence-position micro subtle">
                   검토 표기 찾기 · 앱 표시와 별개
