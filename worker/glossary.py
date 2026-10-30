@@ -365,7 +365,10 @@ NEWS_TERM_RULES = """AI 소식 앱의 한국어 글에서, 개발자 독자가 �
 - 글마다 최대 3개. 설명이 필요한 용어가 없으면 빈 목록.
 - AI·머신러닝·소프트웨어 개발의 개념, 기법, 구조, 프로토콜만 고른다(예: 전문가 혼합(MoE), 양자화, 컨텍스트 창, 투기적 디코딩, MCP, 함수 호출).
 - 회사·제품·모델·서비스·사람 이름(Claude, Gemini, GPT-6.1, Codex, Hugging Face), 일반 낱말(AI, 모델, 데이터, 성능, 기능), 버전 번호는 고르지 않는다.
-- ko는 글에 실제로 쓰인 표기를 한 글자도 바꾸지 않고 그대로 복사한다(괄호 속 원어는 빼도 된다). 글에 없는 표기는 쓰지 않는다.
+- 개발자라면 이미 아는 넓은 낱말(context, prompt, parameter, backend, upstream, endpoint, coverage, API, SDK)은 고르지 않는다. 그 낱말이 들어간 더 구체적인 용어(context window)가 글에 있으면 그것을 고른다.
+- 한 제품·게임·코드에서만 쓰는 이름이나 설정 값(device_map, tolerance 0, 함수 이름, 옵션 이름)은 고르지 않는다. 여러 글에서 다시 나올 만한 분야 용어만 고른다.
+- 같은 개념을 가리키는 표기는 하나만 고른다(tool call과 tool calling 중 하나).
+- ko는 글에 실제로 쓰인 표기를 한 글자도 바꾸지 않고 그대로 복사한다(괄호 속 원어는 빼도 된다). 글에 없는 표기는 쓰지 않는다. 용어의 일부만 잘라 쓰지 않는다(「서비스형 모델」을 「서비스형」으로 쓰지 않는다).
 - term은 그 용어의 영문 표준 표기(약어면 약어, 예: MoE, quantization, context window).
 - definition_ko는 이 글이 아니라 분야 전반의 일반 정의를 한두 문장으로, 명사형으로 끝낸다(예: 「여러 전문가 하위 신경망 중 입력마다 일부만 골라 계산하는 모델 구조.」). 한자·가나를 쓰지 않는다.
 - 입력의 모든 id를 입력 순서대로 정확히 한 번씩.
@@ -388,20 +391,31 @@ def check_news_terms(out, batch: list[tuple[str, str]]) -> list[str]:
     return [f"terms: {sorted(set(bad))}"] if bad else []
 
 
-def plan_news_terms(out: dict, texts: dict[str, str], skip: set[str]) -> dict[str, dict]:
+# AI가 규칙을 어겨도 한 번 더 거른다: 개발자가 이미 아는 넓은 낱말(첫 실행 2026-10-30에 91개 중 섞여 나온 것)
+BROAD_TERMS = {"ai", "api", "sdk", "model", "data", "context", "prompt", "parameter", "backend", "frontend", "upstream",
+               "downstream", "endpoint", "coverage", "performance", "feature", "token", "agent", "workflow", "benchmark",
+               "inference", "training", "dataset", "framework", "library", "server", "client", "pipeline"}
+
+
+def plan_news_terms(out: dict, texts: dict[str, str], skip: set[str], skip_ko: set[str] = frozenset()) -> dict[str, dict]:
     """AI가 고른 용어 → 새 후보 {정규화 표기: 행}. 글에 실제로 없는 표기(지어낸 것), 이미 사전·후보에 있는 표기는 버린다.
     같은 용어가 여러 글에 나오면 한 후보로 합치고 seen_count로 센다(처음 본 글이 문맥)."""
-    found = {}
+    found, ko_seen = {}, set(skip_ko)
     for item in out.get("items") or []:
         text = texts.get(item.get("id"), "")
         for t in (item.get("terms") or [])[:NEWS_TERMS_PER_ITEM]:
             ko = _strip_paren(t["ko"].strip())
             n = normalize(t["term"])
-            if len(ko) < 2 or find_term(text, ko) < 0 or (variants(t["term"]) & skip):
+            if len(ko) < 2 or find_term(text, ko) < 0 or (variants(t["term"]) & skip) or n in BROAD_TERMS:
                 continue
-            if n in found:
-                found[n]["seen_count"] += 1
+            # 같은 용어가 여러 글에 나오면 센다. 영문은 달라도 한국어 표기가 같으면(tool call·tool calling → 도구 호출) 같은 후보로
+            same = found.get(n) or next((r for r in found.values() if r["canonical_ko_draft"] == ko), None)
+            if same:
+                same["seen_count"] += 1
                 continue
+            if ko in ko_seen:  # 이미 있는 후보·사전 의미와 표기가 같다
+                continue
+            ko_seen.add(ko)
             line = next(l for l in text.split("\n") if find_term(l, ko) >= 0)
             found[n] = {"normalized_form": n, "surface_form": t["term"].strip(), "definition_ko": t["definition_ko"].strip(),
                         "canonical_ko_draft": ko, "seen_count": 1, "source": "news", "first_news_id": item["id"],
@@ -419,12 +433,14 @@ def news_candidates(db: Db, contents: list[dict], api_key: str, seen: dict, log=
     if not texts:
         return 0
     flag = _show_ai(db)
-    shown = {s["sense_id"] for s in db.select_all(
-        "term_senses", "select=sense_id,definition_kind,review_status,ai_review_status&order=sense_id") if _shown(s, flag)}
+    senses = db.select_all("term_senses", "select=sense_id,canonical_ko,definition_kind,review_status,ai_review_status&order=sense_id")
+    shown = {s["sense_id"] for s in senses if _shown(s, flag)}
     skip = {v for a in db.select_all("term_aliases", "select=sense_id,surface_form&order=alias_id")
             if a["sense_id"] in shown for v in variants(a["surface_form"])}
-    known = {c["normalized_form"] for c in db.select_all("term_candidates", "select=normalized_form&order=normalized_form")}
-    skip |= known
+    cands = db.select_all("term_candidates", "select=normalized_form,canonical_ko,canonical_ko_draft&order=normalized_form")
+    skip |= {c["normalized_form"] for c in cands}
+    skip_ko = {_strip_paren(k) for c in cands for k in (c.get("canonical_ko"), c.get("canonical_ko_draft")) if k}
+    skip_ko |= {_strip_paren(s["canonical_ko"]) for s in senses if s["sense_id"] in shown and s.get("canonical_ko")}
     ids, added = list(texts), {}
     model = None
     for i in range(0, len(ids), NEWS_TERM_BATCH):
@@ -435,7 +451,7 @@ def news_candidates(db: Db, contents: list[dict], api_key: str, seen: dict, log=
         if out is None:
             log(f"  소식 용어 후보 실패({len(batch)}개 글), 다음 배치에서 다시")
             continue
-        for n, row in plan_news_terms(out, texts, skip | set(added)).items():
+        for n, row in plan_news_terms(out, texts, skip | set(added), skip_ko | {r["canonical_ko_draft"] for r in added.values()}).items():
             added[n] = {**row, "draft_model": model}
         for k, _ in batch:
             seen[k] = True

@@ -52,8 +52,8 @@ PER_SOURCE = 5  # 출처마다 최신 몇 개
 # 목록 페이지(/news, /research)도 최신 글을 다 싣지 않는다. 그래서 글마다 한 번 읽어 게시일을 저장하고, 다음부터는 새 주소만 읽는다.
 # ponytail: 미리보기에서는 worker/out/의 파일, 정식 배치에서는 DB 테이블에 둔다.
 ANTHROPIC_SEEN = OUT / "anthropic_seen.json"
-DIGEST_CACHE = OUT / "digest_cache.json"
-NEWS_TERMS_SEEN = OUT / "news_terms_seen.json"  # 용어 후보를 이미 물어본 소식·모델 id  # 주소(릴리스는 제목) → 번역·요약
+DIGEST_CACHE = OUT / "digest_cache.json"  # 주소(릴리스는 제목) → 번역·요약
+NEWS_TERMS_SEEN = OUT / "news_terms_seen.json"  # 용어 후보를 이미 물어본 소식·모델 id
 
 HF_TRENDING = "https://huggingface.co/api/models?sort=trendingScore&limit=100"
 TRENDING_TOP = 10  # 「트렌딩」 칸

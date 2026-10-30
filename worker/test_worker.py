@@ -202,6 +202,15 @@ class NewsTermsTest(unittest.TestCase):
         self.assertEqual((moe["source"], moe["first_news_id"], moe["context_ko"]), ("news", "n1", "새 모델은 전문가 혼합(MoE) 구조예요."))
         self.assertEqual(set(seen), {"old", "n1", "org/m"})
 
+    def test_news_terms_drop_broad_and_same_korean(self):
+        from .glossary import plan_news_terms
+        texts = {"a": "도구 호출과 컨텍스트 창을 늘리고 프롬프트를 바꿨어요.", "b": "도구 호출을 지원해요. 화자 분리도 돼요."}
+        t = lambda term, ko: {"term": term, "ko": ko, "definition_ko": "d"}
+        out = {"items": [{"id": "a", "terms": [t("tool call", "도구 호출"), t("context window", "컨텍스트 창"), t("prompt", "프롬프트")]},
+                         {"id": "b", "terms": [t("tool calling", "도구 호출"), t("speaker diarization", "화자 분리")]}]}
+        got = plan_news_terms(out, texts, set(), {"화자 분리"})  # 화자 분리는 이미 있는 후보의 표기
+        self.assertEqual({n: r["seen_count"] for n, r in got.items()}, {"tool call": 2, "context window": 1})
+
     def test_sync_keeps_news_candidates(self):
         from . import glossary
         deleted = []
