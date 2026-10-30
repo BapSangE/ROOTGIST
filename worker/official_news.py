@@ -39,7 +39,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from . import llm
+from . import glossary, llm
 from .db import Db
 from .run import setting
 
@@ -52,7 +52,8 @@ PER_SOURCE = 5  # 출처마다 최신 몇 개
 # 목록 페이지(/news, /research)도 최신 글을 다 싣지 않는다. 그래서 글마다 한 번 읽어 게시일을 저장하고, 다음부터는 새 주소만 읽는다.
 # ponytail: 미리보기에서는 worker/out/의 파일, 정식 배치에서는 DB 테이블에 둔다.
 ANTHROPIC_SEEN = OUT / "anthropic_seen.json"
-DIGEST_CACHE = OUT / "digest_cache.json"  # 주소(릴리스는 제목) → 번역·요약
+DIGEST_CACHE = OUT / "digest_cache.json"
+NEWS_TERMS_SEEN = OUT / "news_terms_seen.json"  # 용어 후보를 이미 물어본 소식·모델 id  # 주소(릴리스는 제목) → 번역·요약
 
 HF_TRENDING = "https://huggingface.co/api/models?sort=trendingScore&limit=100"
 TRENDING_TOP = 10  # 「트렌딩」 칸
@@ -883,6 +884,15 @@ def main(argv=None):
     if db:
         save_db(db, items, models, now)
         report.append(f"DB 저장: 소식 {len(items)}개, 모델 {len(models)}개")
+        # 소식·모델 글의 용어 후보(관리자 웹에서 승인하면 다음 배치에 앱 사전에 들어간다). 실패해도 소식 저장에는 영향이 없다
+        if key:
+            seen = load_state(db, "news_terms_seen", NEWS_TERMS_SEEN)
+            try:
+                added = glossary.news_candidates(db, items + models, key, seen, report.append)
+                report.append(f"용어 후보: 새 글 기준 {added}개 추가(검토 대기)")
+            except Exception as e:
+                report.append(f"용어 후보: 실패 {e!r}")
+            save_state(db, "news_terms_seen", NEWS_TERMS_SEEN, seen)
     print("\n".join(report))
     print(f"총 {len(items)}개 → {OUT / 'official_news.json'}")
 

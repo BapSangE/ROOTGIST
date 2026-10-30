@@ -51,6 +51,10 @@ export type Candidate = {
   full_form_en: string | null;
   full_form_en_draft: string | null;
   draft_model: string | null;
+  // 공식 소식·모델 글에서 온 후보(worker/glossary.py news_candidates): 처음 본 글과 문장
+  source?: "paper" | "news";
+  first_news_id?: string | null;
+  context_ko?: string | null;
 };
 export type Paper = {
   id: string;

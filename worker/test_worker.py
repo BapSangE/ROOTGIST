@@ -159,6 +159,73 @@ class AlignSpansTest(unittest.TestCase):
         self.assertEqual(updates, {0: "SFT", 1: "검증된 궤적", 2: "고정 디코더"})
 
 
+class NewsTermsTest(unittest.TestCase):
+    def test_find_term_same_as_app(self):
+        from .glossary import find_term
+        self.assertEqual(find_term("RAGAS와 RAG를 비교", "RAG"), 7)  # RAGAS 속 RAG는 건너뛴다
+        self.assertEqual(find_term("비양자화 대신 양자화를", "양자화"), 8)  # 앞이 한글이면 낱말이 아니다
+        self.assertEqual(find_term("양자화로", "MoE"), -1)
+
+    def test_candidates_from_news_text(self):
+        from . import glossary
+        inserted = []
+
+        class FakeDb:
+            def select(self, table, q):
+                return [{"value": "true"}] if table == "app_config" else []
+
+            def select_all(self, table, q):
+                if table == "term_senses":
+                    return [{"sense_id": "S1", "definition_kind": "paper_glossary", "review_status": "approved", "ai_review_status": "first_pass_complete"},
+                            {"sense_id": "S2", "definition_kind": "source_machine_translation_verbatim", "review_status": "pending", "ai_review_status": "not_reviewed"}]
+                if table == "term_aliases":  # S1은 앱에 보이니 건너뛰고, S2(기계 번역 원문)는 보이지 않으니 새 후보로
+                    return [{"sense_id": "S1", "surface_form": "KV cache"}, {"sense_id": "S2", "surface_form": "MoE"}]
+                return [{"normalized_form": "rubric"}]  # 이미 있는 후보
+
+            def insert_ignore(self, table, rows, on_conflict):
+                inserted.extend(rows)
+
+        news = {"id": "n1", "summary_ko": "새 모델은 전문가 혼합(MoE) 구조예요.", "key_points": [{"text": "KV 캐시를 줄이고 루브릭으로 평가해요."}]}
+        model = {"id": "org/m", "card": {"strengths": ["4비트 양자화를 지원해요."], "limitation": None}}
+        reply = {"items": [
+            {"id": "n1", "terms": [{"term": "MoE", "ko": "전문가 혼합", "definition_ko": "입력마다 일부 전문가만 계산하는 구조."},
+                                   {"term": "KV cache", "ko": "KV 캐시", "definition_ko": "x"},
+                                   {"term": "rubric", "ko": "루브릭", "definition_ko": "x"},
+                                   {"term": "speculative decoding", "ko": "투기적 디코딩", "definition_ko": "글에 없는 표기"}]},
+            {"id": "org/m", "terms": [{"term": "quantization", "ko": "양자화", "definition_ko": "가중치를 적은 비트로 나타내는 기법."}]}]}
+        seen = {"old": True}
+        with mock.patch.object(llm, "stream_chat", return_value={"content": json.dumps(reply, ensure_ascii=False), "finish_reason": "stop"}):
+            n = glossary.news_candidates(FakeDb(), [news, model, {"id": "old", "summary_ko": "지난 글"}], "k", seen, lambda m: None)
+        self.assertEqual(n, 2)
+        self.assertEqual({r["normalized_form"]: r["canonical_ko_draft"] for r in inserted}, {"moe": "전문가 혼합", "quantization": "양자화"})
+        moe = next(r for r in inserted if r["normalized_form"] == "moe")
+        self.assertEqual((moe["source"], moe["first_news_id"], moe["context_ko"]), ("news", "n1", "새 모델은 전문가 혼합(MoE) 구조예요."))
+        self.assertEqual(set(seen), {"old", "n1", "org/m"})
+
+    def test_sync_keeps_news_candidates(self):
+        from . import glossary
+        deleted = []
+
+        class FakeDb:
+            def select(self, table, q):
+                return []
+
+            def select_all(self, table, q):
+                if table == "term_candidates" and "source" in q:  # sync가 정리할 때 읽는 목록
+                    return [{"normalized_form": "moe", "review_status": "pending", "canonical_ko_draft": "전문가 혼합", "draft_model": "m",
+                             "sense_id": None, "source": "news", "surface_form": "MoE"},
+                            {"normalized_form": "old term", "review_status": "pending", "canonical_ko_draft": None, "draft_model": None,
+                             "sense_id": None, "source": "paper", "surface_form": "old term"}]
+                return []
+
+            def upsert(self, *a): pass
+            def update(self, *a, **k): pass
+            def delete(self, table, **eq): deleted.append(eq["normalized_form"])
+
+        glossary.sync(FakeDb(), None)
+        self.assertEqual(deleted, ["old term"])  # 논문에 없어진 논문 후보만 지우고 소식 후보는 남긴다
+
+
 class MergePluralsTest(unittest.TestCase):
     def test_merge_only_when_singular_exists(self):
         from .glossary import merge_plurals

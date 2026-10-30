@@ -295,5 +295,16 @@ class TermStorage(unittest.TestCase):
         self.assertEqual(after['summary_ko'],before['summary_ko'])
 
 
+    def test_news_terms_in_app_dictionary(self):
+        # 20261030150000: 소식 후보는 source로 구분, 앱 사전은 논문에 안 쓰인 보이는 의미도 담는다(S2 = AI 1차 검토본)
+        sql("insert into public.term_candidates(normalized_form,surface_form,definition_ko,source,first_news_id,context_ko) "
+            "values('moe','MoE','가상 정의','news','n1','전문가 혼합(MoE) 구조예요.');")
+        self.assertEqual(sql("select source||'/'||first_news_id from public.term_candidates where normalized_form='moe';"), "news/n1")
+        self.assertEqual(sql("select source from public.term_candidates where normalized_form='gamma';"), "paper")
+        terms={t['term']:t for t in json.loads(sql("set role anon; select public.list_terms();"))['terms']}
+        self.assertEqual((terms['alpha']['papers'], terms['beta']['papers']), (1, 0))
+        sql("insert into public.term_candidates(normalized_form,surface_form,definition_ko,source) values('x','x','d','web');", ok=False)
+
+
 if __name__ == "__main__":
     unittest.main()

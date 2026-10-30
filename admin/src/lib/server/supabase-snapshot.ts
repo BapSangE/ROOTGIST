@@ -25,7 +25,7 @@ const specs = {
     "alias_id",
   ],
   term_candidates: [
-    "normalized_form,surface_form,canonical_ko,canonical_ko_draft,definition_ko,review_status,seen_count,first_paper_id,sense_id,full_form_en,full_form_en_draft,draft_model",
+    "normalized_form,surface_form,canonical_ko,canonical_ko_draft,definition_ko,review_status,seen_count,first_paper_id,sense_id,full_form_en,full_form_en_draft,draft_model,source,first_news_id,context_ko",
     "normalized_form",
   ],
   papers: ["paper_id,title_en,abstract_en,published_at,withdrawn", "paper_id"],

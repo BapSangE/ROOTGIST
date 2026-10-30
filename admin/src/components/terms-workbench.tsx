@@ -1121,7 +1121,9 @@ function Inspector({
           </span>
           {candidate && (
             <span className="field-help">
-              관측 {candidate.seen_count}회 · 연결 논문 {row.paper_count}편 · 승인하면 다음 배치에 사전에 들어가요
+              {candidate.source === "news"
+                ? `소식·모델 글 ${candidate.seen_count}곳 · 승인하면 다음 배치에 사전에 들어가요`
+                : `관측 ${candidate.seen_count}회 · 연결 논문 ${row.paper_count}편 · 승인하면 다음 배치에 사전에 들어가요`}
             </span>
           )}
         </label>
@@ -1151,13 +1153,20 @@ function Inspector({
             )}
           </div>
         </section>
-        <section className="context-meaning">
-          <h3>이 논문에서의 뜻</h3>
-          <p>
-            {context?.glossary?.definition_ko ??
-              "연결된 적용 위치의 정의가 없어요."}
-          </p>
-        </section>
+        {candidate?.source === "news" ? (
+          <section className="context-meaning">
+            <h3>처음 나온 소식 문장</h3>
+            <p>{candidate.context_ko ?? "문장을 남기지 못했어요."}</p>
+          </section>
+        ) : (
+          <section className="context-meaning">
+            <h3>이 논문에서의 뜻</h3>
+            <p>
+              {context?.glossary?.definition_ko ??
+                "연결된 적용 위치의 정의가 없어요."}
+            </p>
+          </section>
+        )}
         <section className="related">
           <div className="field-heading">
             <h3>비슷한 표기</h3>

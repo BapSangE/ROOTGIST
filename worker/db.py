@@ -27,6 +27,11 @@ class Db:
         if rows:
             self._req("POST", f"{table}?on_conflict={on_conflict}", rows, "resolution=merge-duplicates,return=minimal")
 
+    def insert_ignore(self, table: str, rows: list[dict], on_conflict: str):
+        """이미 있는 키는 그대로 두고 새 행만 넣는다."""
+        if rows:
+            self._req("POST", f"{table}?on_conflict={on_conflict}", rows, "resolution=ignore-duplicates,return=minimal")
+
     def delete(self, table: str, **eq):
         q = "&".join(f"{k}=eq.{urllib.parse.quote(str(v))}" for k, v in eq.items())
         self._req("DELETE", f"{table}?{q}", prefer="return=minimal")

@@ -266,6 +266,16 @@ def _strip_paren(ko: str) -> str:
     return re.sub(r"\s*\(.*\)$", "", ko).strip()
 
 
+def _show_ai(db: Db) -> bool:
+    return (db.select("app_config", "key=eq.show_ai_reviewed_terms&select=value") or [{}])[0].get("value") == "true"
+
+
+def _shown(s: dict, show_ai: bool) -> bool:
+    """앱에 보이는 의미인가(DB display_term_ko와 같은 규칙). 기계 번역 원문 정의는 승인해도 보이지 않는다."""
+    return s["definition_kind"] != "source_machine_translation_verbatim" and (
+        s["review_status"] == "approved" or (show_ai and s["ai_review_status"] == "first_pass_complete" and s["review_status"] == "pending"))
+
+
 SPAN_PAPERS = 40  # 한 번에 LLM으로 표기를 찾는 논문 수. 지난 논문은 며칠에 걸쳐 채운다(배치 시간 초과 방지)
 
 
@@ -276,14 +286,12 @@ def align_spans(db: Db, api_key: str | None) -> int:
     rows = db.select_all("paper_glossary", "ko_span=is.null&select=paper_id,idx,term,sentence_ids,sense_id&order=paper_id,idx")
     if not rows:
         return 0
-    flag = (db.select("app_config", "key=eq.show_ai_reviewed_terms&select=value") or [{}])[0].get("value") == "true"
+    flag = _show_ai(db)
     ids = sorted({r["sense_id"] for r in rows if r["sense_id"]})
     senses = {}
     for i in range(0, len(ids), 100):
         for s in db.select("term_senses", f"sense_id=in.({','.join(ids[i:i + 100])})&select=sense_id,canonical_ko,definition_kind,review_status,ai_review_status"):
-            shown = s["definition_kind"] != "source_machine_translation_verbatim" and (
-                s["review_status"] == "approved" or (flag and s["ai_review_status"] == "first_pass_complete" and s["review_status"] == "pending"))
-            senses[s["sense_id"]] = _strip_paren(s["canonical_ko"]) if shown and s["canonical_ko"] else None
+            senses[s["sense_id"]] = _strip_paren(s["canonical_ko"]) if _shown(s, flag) and s["canonical_ko"] else None
     by_paper = defaultdict(list)
     for r in rows:
         by_paper[r["paper_id"]].append(r)
@@ -320,6 +328,124 @@ def align_spans(db: Db, api_key: str | None) -> int:
     return len(rows)
 
 
+# --- 공식 소식·모델 글의 용어 (앱 term_text.dart findTerm과 같은 규칙으로 찾는다) ---
+# 사전은 논문 용어로만 자라서 소식·릴리스·모델 글(MoE·양자화·MCP …)에는 맞는 용어가 거의 없었다(실데이터 2026-10-30:
+# 소식 60건 중 9건, 릴리스 0건). 소식 글에서 AI가 용어 후보와 일반 정의를 뽑아 후보 목록에 넣고, 관리자 웹에서 승인하면
+# 다음 배치에 사전 의미가 되어 앱의 모든 카드에서 설명이 붙는다.
+_ASCII, _HANGUL = re.compile(r"[A-Za-z0-9]"), re.compile(r"[가-힣]")
+NEWS_TERM_BATCH = 15  # 한 번에 AI에 넘기는 글 수
+NEWS_TERMS_PER_ITEM = 3
+
+
+def find_term(text: str, label: str) -> int:
+    """text에서 label이 낱말로 나오는 첫 자리(없으면 -1). 영문은 앞뒤가 영문·숫자가 아닐 때, 한글은 앞이 한글이 아닐 때만."""
+    if not label:
+        return -1
+    at = text.find(label)
+    while at >= 0:
+        before = text[at - 1] if at else ""
+        after = text[at + len(label)] if at + len(label) < len(text) else ""
+        if not ((_ASCII.match(label[0]) and before and _ASCII.match(before))
+                or (_ASCII.match(label[-1]) and after and _ASCII.match(after))
+                or (_HANGUL.match(label[0]) and before and _HANGUL.match(before))):
+            return at
+        at = text.find(label, at + 1)
+    return -1
+
+
+def content_text(item: dict) -> str:
+    """앱 상세 화면에 보이는 한국어 글(용어 하이라이트가 붙는 곳): 소식 요약·핵심 내용, 모델 카드 강점·한계."""
+    card = item.get("card") or {}
+    parts = [item.get("summary_ko"), *[p.get("text") for p in item.get("key_points") or [] if isinstance(p, dict)],
+             *(card.get("strengths") or []), card.get("limitation")]
+    return "\n".join(p for p in parts if isinstance(p, str) and p.strip())
+
+
+NEWS_TERM_RULES = """AI 소식 앱의 한국어 글에서, 개발자 독자가 뜻을 몰라 설명이 필요할 기술 용어를 고른다. 아래 규칙을 지킨다.
+- 글마다 최대 3개. 설명이 필요한 용어가 없으면 빈 목록.
+- AI·머신러닝·소프트웨어 개발의 개념, 기법, 구조, 프로토콜만 고른다(예: 전문가 혼합(MoE), 양자화, 컨텍스트 창, 투기적 디코딩, MCP, 함수 호출).
+- 회사·제품·모델·서비스·사람 이름(Claude, Gemini, GPT-6.1, Codex, Hugging Face), 일반 낱말(AI, 모델, 데이터, 성능, 기능), 버전 번호는 고르지 않는다.
+- ko는 글에 실제로 쓰인 표기를 한 글자도 바꾸지 않고 그대로 복사한다(괄호 속 원어는 빼도 된다). 글에 없는 표기는 쓰지 않는다.
+- term은 그 용어의 영문 표준 표기(약어면 약어, 예: MoE, quantization, context window).
+- definition_ko는 이 글이 아니라 분야 전반의 일반 정의를 한두 문장으로, 명사형으로 끝낸다(예: 「여러 전문가 하위 신경망 중 입력마다 일부만 골라 계산하는 모델 구조.」). 한자·가나를 쓰지 않는다.
+- 입력의 모든 id를 입력 순서대로 정확히 한 번씩.
+출력은 JSON 하나만: {"items": [{"id": "...", "terms": [{"term": "...", "ko": "...", "definition_ko": "..."}]}]}"""
+
+
+def check_news_terms(out, batch: list[tuple[str, str]]) -> list[str]:
+    from .validate import FOREIGN
+
+    items = out.get("items") if isinstance(out, dict) else None
+    if not isinstance(items, list) or [i.get("id") for i in items] != [b[0] for b in batch]:
+        return ["ids: 입력 글과 순서·id가 다름"]
+    bad = []
+    for item in items:
+        for t in item.get("terms") or []:
+            if not (isinstance(t, dict) and all(isinstance(t.get(k), str) and t[k].strip() for k in ("term", "ko", "definition_ko"))
+                    and len(t["term"]) <= 80 and len(t["ko"]) <= 40 and len(t["definition_ko"]) <= 300
+                    and not FOREIGN.search(t["ko"] + t["definition_ko"])):
+                bad.append(item["id"])
+    return [f"terms: {sorted(set(bad))}"] if bad else []
+
+
+def plan_news_terms(out: dict, texts: dict[str, str], skip: set[str]) -> dict[str, dict]:
+    """AI가 고른 용어 → 새 후보 {정규화 표기: 행}. 글에 실제로 없는 표기(지어낸 것), 이미 사전·후보에 있는 표기는 버린다.
+    같은 용어가 여러 글에 나오면 한 후보로 합치고 seen_count로 센다(처음 본 글이 문맥)."""
+    found = {}
+    for item in out.get("items") or []:
+        text = texts.get(item.get("id"), "")
+        for t in (item.get("terms") or [])[:NEWS_TERMS_PER_ITEM]:
+            ko = _strip_paren(t["ko"].strip())
+            n = normalize(t["term"])
+            if len(ko) < 2 or find_term(text, ko) < 0 or (variants(t["term"]) & skip):
+                continue
+            if n in found:
+                found[n]["seen_count"] += 1
+                continue
+            line = next(l for l in text.split("\n") if find_term(l, ko) >= 0)
+            found[n] = {"normalized_form": n, "surface_form": t["term"].strip(), "definition_ko": t["definition_ko"].strip(),
+                        "canonical_ko_draft": ko, "seen_count": 1, "source": "news", "first_news_id": item["id"],
+                        "context_ko": line[:300], "review_status": "pending"}
+    return found
+
+
+def news_candidates(db: Db, contents: list[dict], api_key: str, seen: dict, log=print) -> int:
+    """새 소식·모델 글에서 용어 후보를 뽑아 term_candidates에 넣는다(검토 대기). seen = 이미 본 글 id(다시 묻지 않는다).
+    이미 앱에 보이는 사전 의미의 표기나 있는 후보(승인·반려 포함)는 건너뛴다. 검수한 후보는 건드리지 않는다."""
+    from . import llm
+
+    texts = {c["id"]: content_text(c) for c in contents if c["id"] not in seen}
+    texts = {k: v for k, v in texts.items() if v}
+    if not texts:
+        return 0
+    flag = _show_ai(db)
+    shown = {s["sense_id"] for s in db.select_all(
+        "term_senses", "select=sense_id,definition_kind,review_status,ai_review_status&order=sense_id") if _shown(s, flag)}
+    skip = {v for a in db.select_all("term_aliases", "select=sense_id,surface_form&order=alias_id")
+            if a["sense_id"] in shown for v in variants(a["surface_form"])}
+    known = {c["normalized_form"] for c in db.select_all("term_candidates", "select=normalized_form&order=normalized_form")}
+    skip |= known
+    ids, added = list(texts), {}
+    model = None
+    for i in range(0, len(ids), NEWS_TERM_BATCH):
+        batch = [(k, texts[k]) for k in ids[i:i + NEWS_TERM_BATCH]]
+        messages = [{"role": "system", "content": NEWS_TERM_RULES},
+                    {"role": "user", "content": json.dumps([{"id": k, "text": v} for k, v in batch], ensure_ascii=False)}]
+        out, model = llm.generate(api_key, messages, lambda o: check_news_terms(o, batch), lambda r: None)
+        if out is None:
+            log(f"  소식 용어 후보 실패({len(batch)}개 글), 다음 배치에서 다시")
+            continue
+        for n, row in plan_news_terms(out, texts, skip | set(added)).items():
+            added[n] = {**row, "draft_model": model}
+        for k, _ in batch:
+            seen[k] = True
+    now = datetime.now(timezone.utc).isoformat()
+    # 새 표기만 넣는다(있는 후보는 위에서 건너뛰었다). 같은 밤에 논문 쪽이 먼저 같은 후보를 만들었으면 그대로 둔다.
+    if added:
+        db.insert_ignore("term_candidates", [{**r, "last_seen_at": now} for r in added.values()], "normalized_form")
+    return len(added)
+
+
 def sync(db: Db, api_key: str | None = None):
     promoted = promote_candidates(db)
     fill_paper_full_forms(db)
@@ -331,7 +457,7 @@ def sync(db: Db, api_key: str | None = None):
     # 후보는 표기 하나당 한 행, 복수형은 단수형 후보로 합친다. seen_count는 아직 연결 안 된 논문 용어 중
     # 같은 후보로 묶이는 수(다시 돌려도 같은 값). 검토 상태는 덮어쓰지 않는다.
     known = {c["normalized_form"]: c for c in db.select_all(
-        "term_candidates", "select=normalized_form,review_status,canonical_ko_draft,draft_model,sense_id&order=normalized_form")}
+        "term_candidates", "select=normalized_form,review_status,canonical_ko_draft,draft_model,sense_id,source&order=normalized_form")}
     key = merge_plurals(set(candidates) | set(known))
     merged = defaultdict(list)
     for n, g in candidates.items():
@@ -354,9 +480,11 @@ def sync(db: Db, api_key: str | None = None):
     ], "normalized_form")
     for n, (draft, model) in carried.items():
         db.update("term_candidates", {"canonical_ko_draft": draft, "draft_model": model}, normalized_form=n)
-    # 해설을 다시 만들어 더 이상 어느 논문에도 없는 대기 후보는 지운다(검토 목록 정리). 승인·반려한 후보는 남긴다.
+    # 해설을 다시 만들어 더 이상 어느 논문에도 없는 대기 후보는 지운다(검토 목록 정리). 승인·반려한 후보와
+    # 소식 글에서 온 후보(논문에 없는 게 정상)는 남긴다.
     stale = [n for n, c in known.items()
-             if n not in merged and key[n] == n and c["review_status"] == "pending" and c["sense_id"] is None]
+             if n not in merged and key[n] == n and c["review_status"] == "pending" and c["sense_id"] is None
+             and c.get("source", "paper") == "paper"]
     for n in stale:
         db.delete("term_candidates", normalized_form=n)
     candidates = merged
