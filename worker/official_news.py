@@ -106,6 +106,20 @@ RELEASE_SOURCES = [
     ("xai_sdk", "xAI Python SDK", "https://github.com/xai-org/xai-sdk-python/releases.atom", "https://github.com/xai-org/xai-sdk-python/releases"),
 ]
 CLAUDE_API_NOTES = "https://docs.claude.com/en/release-notes/overview"
+# 개발자 화제(kind=hot): 공식 발표가 아닌, 개발자들이 많이 본 글과 새 도구. 공식 API만 쓴다.
+HN_SEARCH = "https://hn.algolia.com/api/v1/search_by_date"  # Hacker News 공식 검색 API(Algolia)
+HN_HOURS, HN_MIN_POINTS, HN_TOP = 36, 60, 15  # 최근 36시간, 60점 이상, AI 관련 상위 15개
+GH_SEARCH = "https://api.github.com/search/repositories"  # GitHub 공식 검색 API
+GH_TOPICS, GH_DAYS, GH_MIN_STARS, GH_TOP = ("llm", "ai-agents", "generative-ai"), 7, 150, 5
+# 제목으로 AI 관련 글만 고른다(HN 첫 화면은 AI 외 글이 대부분)
+AI_WORDS = re.compile(
+    r"\b(AI|LLMs?|GPT[- ]?\d*|ChatGPT|Claude|Gemini|Anthropic|OpenAI|Llama|Mistral|DeepSeek|Qwen|Grok|Copilot|Codex|Cursor|"
+    r"(?:AI|coding|LLM) agents?|agentic|transformers?|diffusion models?|inference|RAG|MCP|neural|machine learning|deep learning|"
+    r"fine-?tun\w*|embeddings?|prompt\w*|world models?|vibe cod\w*)\b", re.I)  # 「agents」「tokens」만으로는 안 고른다(ICE 요원 기사가 걸렸다)
+# 글이 실린 사이트 → 칩 이름. 모르는 사이트는 주소(www. 뺌) 그대로
+SITE_NAMES = {"mistral.ai": "Mistral AI", "openai.com": "OpenAI", "anthropic.com": "Anthropic", "deepmind.google": "Google DeepMind",
+              "blog.google": "Google", "ai.meta.com": "Meta", "x.ai": "xAI", "huggingface.co": "Hugging Face", "github.com": "GitHub",
+              "news.ycombinator.com": "Hacker News", "nvidia.com": "NVIDIA", "blogs.nvidia.com": "NVIDIA"}
 NOTES_CHARS = 8000  # 요약에 넘길 릴리스 노트 길이 상한
 MAX_PARAS, BODY_CHARS = 60, 12000  # 글 요약에 넘길 문단 수·길이 상한
 
@@ -177,6 +191,10 @@ def paragraphs(page: str) -> list[str]:
 
 
 def body_paragraphs(item: dict) -> list[str]:
+    if item["source"] == "github":  # 저장소 설명 한 줄(번역만)
+        return [item["_desc"]]
+    if item["kind"] == "hot" and (item["url"].startswith("https://news.ycombinator.com/") or not robots_allow(item["url"])):
+        return []  # robots.txt가 막는 사이트·HN 안의 글은 요약 없이 제목·점수·링크만
     if item["source"] == "openai" or item["kind"] == "notice":
         desc = item["_desc"]
         return paragraphs(desc) or ([_text(desc)] if _text(desc) else [])
@@ -234,6 +252,109 @@ def from_claude_api_notes(now: datetime) -> list[dict]:
              "url": CLAUDE_API_NOTES, "published_at": days[-1][0], "notes": notes}]
 
 
+_robots: dict[str, object] = {}
+
+
+def robots_allow(url: str) -> bool:
+    """원문 사이트의 robots.txt가 우리 수집기를 허용하는지(화제 글 요약 전에). 못 읽으면 허용으로 본다(표준 관례)."""
+    from urllib import robotparser
+
+    host = urllib.parse.urlsplit(url)
+    base = f"{host.scheme}://{host.netloc}"
+    if base not in _robots:
+        rp = robotparser.RobotFileParser()
+        try:
+            rp.parse(fetch(base + "/robots.txt").decode("utf-8", "replace").splitlines())
+        except Exception:
+            rp = None
+        _robots[base] = rp
+    rp = _robots[base]
+    return rp is None or rp.can_fetch(UA, url)
+
+
+def site_label(url: str) -> str:
+    host = urllib.parse.urlsplit(url).netloc.lower().removeprefix("www.")
+    return SITE_NAMES.get(host) or next((v for k, v in SITE_NAMES.items() if host.endswith("." + k)), host)
+
+
+def from_hn(now: datetime) -> list[dict]:
+    """Hacker News: 최근 36시간 60점 넘는 글 중 제목이 AI 관련인 것, 점수 순 15개. 점수·댓글은 실행마다 새로 받는다."""
+    q = urllib.parse.urlencode({"tags": "story", "hitsPerPage": 200,
+                                "numericFilters": f"created_at_i>{int((now - timedelta(hours=HN_HOURS)).timestamp())},points>={HN_MIN_POINTS}"})
+    hits = json.loads(fetch(f"{HN_SEARCH}?{q}"))["hits"]
+    out = []
+    for h in sorted(hits, key=lambda h: -(h.get("points") or 0)):
+        title = (h.get("title") or "").strip()
+        if not AI_WORDS.search(title):
+            continue
+        discussion = f"https://news.ycombinator.com/item?id={h['objectID']}"
+        url = h.get("url") or discussion  # Ask HN 등 본문이 HN에 있는 글
+        out.append({"source": "hn", "source_label": site_label(url), "kind": "hot", "category": "Hacker News",
+                    "title_en": html.unescape(title), "url": url, "published_at": _date(h["created_at"]),
+                    "points": h.get("points") or 0, "comments": h.get("num_comments") or 0, "discussion_url": discussion,
+                    "_desc": ""})
+        if len(out) == HN_TOP:
+            break
+    return out
+
+
+_CJK = re.compile(r"[\u3040-\u30ff\u4e00-\u9fff]")  # 일본어 가나·한자(한글은 뺀다)
+
+
+def from_github(now: datetime) -> list[dict]:
+    """GitHub: 최근 7일 안에 생긴 AI 저장소 중 별 150개 이상, 별 순 5개. 설명이 없거나 대부분 중국어·일본어인 저장소는 뺀다
+    (실데이터: 상위가 안드로이드용 중국어 저장소로 채워졌다). 설명은 「원문 소개문」처럼 번역만 한다."""
+    since = (now - timedelta(days=GH_DAYS)).date().isoformat()
+    found: dict[str, dict] = {}
+    for topic in GH_TOPICS:
+        q = urllib.parse.urlencode({"q": f"topic:{topic} created:>={since} stars:>={GH_MIN_STARS}", "sort": "stars",
+                                    "order": "desc", "per_page": 20})
+        for r in json.loads(fetch(f"{GH_SEARCH}?{q}"))["items"]:
+            desc = (r.get("description") or "").strip()
+            if not desc or len(_CJK.findall(desc)) > len(desc) * 0.2:
+                continue
+            found.setdefault(r["html_url"], {
+                "source": "github", "source_label": "GitHub", "kind": "hot", "category": "GitHub",
+                "title_en": f"{r['name']}: {desc}"[:160], "url": r["html_url"], "published_at": _date(r["created_at"]),
+                "points": r.get("stargazers_count") or 0, "comments": None, "discussion_url": None, "_desc": desc})
+    return sorted(found.values(), key=lambda i: -i["points"])[:GH_TOP]
+
+
+# 번호가 붙은 모델 이름(앱 briefing.dart의 출시 규칙과 같다): 「Mistral Large 4」「Gemini 4 Carbon」「GPT-6.1」 → mistral-large-4 …
+MODEL_NAME = re.compile(r"\b(gpt|gemini|claude|llama|mistral|grok|qwen|deepseek|nemotron|gemma|phi|sora|veo|imagen)"
+                        r"(?:[- ]?(v?\d+(?:\.\d+)*)|[- ](?!code\b)(\w+)[- ](\d+(?:\.\d+)*))", re.I)
+
+
+def model_keys(text: str) -> set[str]:
+    return {"-".join(p.lower() for p in m.groups() if p) for m in MODEL_NAME.finditer(text or "")}
+
+
+def _norm_url(u: str) -> str:
+    p = urllib.parse.urlsplit(u)
+    return p.netloc.lower().removeprefix("www.") + p.path.rstrip("/")
+
+
+def attach_hn(items: list[dict], hot: list[dict]) -> list[dict]:
+    """HN 글이 이미 모은 공식 소식과 같은 글(주소)이거나 같은 모델·제품 이름을 다루면 따로 두지 않고 그 소식에 점수·댓글을 붙인다.
+    남은 HN 글만 돌려준다. 공식 출처가 없는 발표(예: mistral.ai)는 그대로 남아 화제로 보인다."""
+    official = {_norm_url(i["url"]): i for i in items}
+    keys = [(names(i), i) for i in items]
+    left = []
+    for h in hot:
+        if h["source"] != "hn":
+            left.append(h)
+            continue
+        mk = model_keys(h["title_en"])
+        same = (official.get(_norm_url(h["url"]))
+                or next((i for k, i in keys if k & names(h)), None)
+                or next((i for i in items if mk & model_keys(i.get("title_en", ""))), None))
+        if same is None:
+            left.append(h)
+        elif (same.get("points") or 0) < h["points"]:
+            same.update(points=h["points"], comments=h["comments"], discussion_url=h["discussion_url"])
+    return left
+
+
 def from_anthropic(seen: dict) -> list[dict]:
     """RSS가 없다. 사이트맵의 /news·/research 글 중 처음 보는 주소만 페이지를 읽어 datePublished·제목을 seen에 남긴다."""
     root = ET.fromstring(fetch("https://www.anthropic.com/sitemap.xml"))
@@ -279,7 +400,7 @@ def save_state(db, key: str, path: Path, value: dict):
 
 
 NEWS_COLUMNS = ("id", "source", "source_label", "kind", "category", "title_en", "title_ko", "url", "published_at",
-                "summary_ko", "key_points", "thin", "related")
+                "summary_ko", "key_points", "thin", "related", "points", "comments", "discussion_url")
 MODEL_COLUMNS = ("id", "rank", "author", "name", "task", "params", "license", "likes", "downloads", "created_at",
                  "arxiv", "url", "card", "variants")
 
@@ -317,8 +438,12 @@ def link_related(items: list[dict], limit: int = 3):
 def save_db(db, items: list[dict], models: list[dict], now: datetime):
     """소식은 쌓고(주소마다 한 줄, 다시 모으면 덮어쓴다), 모델 순위는 이번 실행 것으로 바꾼다."""
     stamp = now.isoformat()
-    db.upsert("official_news", [{**{k: i.get(k) for k in NEWS_COLUMNS}, "key_points": i.get("key_points") or [],
-                                 "collected_at": stamp} for i in items], "id")
+    news = [{**{k: i.get(k) for k in NEWS_COLUMNS}, "key_points": i.get("key_points") or [], "collected_at": stamp} for i in items]
+    try:
+        db.upsert("official_news", news, "id")
+    except Exception:  # 화제 열(points·comments·discussion_url)과 kind=hot을 더하는 마이그레이션 전이면 화제를 빼고 저장한다
+        old = ("points", "comments", "discussion_url")
+        db.upsert("official_news", [{k: v for k, v in r.items() if k not in old} for r in news if r["kind"] != "hot"], "id")
     if models:  # 트렌딩을 못 받은 날은 어제 순위를 그대로 둔다
         rows = [{**{k: m.get(k) for k in MODEL_COLUMNS}, "collected_at": stamp} for m in models]
         try:
@@ -640,6 +765,15 @@ def main(argv=None):
     except Exception as e:
         report.append(f"Claude API 릴리스 노트: 실패 {e!r}")
 
+    hot = []
+    for label, collect in (("Hacker News", from_hn), ("GitHub 새 AI 도구", from_github)):
+        try:
+            got = collect(now)
+            report.append(f"{label}: {len(got)}개")
+            hot += got
+        except Exception as e:
+            report.append(f"{label}: 실패 {e!r}")
+
     try:
         models = from_hf_trending()
         report.append(f"HF 트렌딩 모델: {len(models)}개")
@@ -649,6 +783,9 @@ def main(argv=None):
 
     items = [i for i in items if i["url"] not in blocked]
     releases = [r for r in releases if r["url"] not in blocked]
+    hot = [h for h in attach_hn(items + releases, hot) if h["url"] not in blocked]
+    report.append(f"화제: 공식 소식에 붙인 HN 반응 {sum(1 for i in items + releases if i.get('points'))}개, 따로 보일 화제 {len(hot)}개")
+    items += hot  # 화제도 글처럼 제목 번역·요약(robots.txt가 허용하는 사이트만)
     models = [m for m in models if m["url"] not in blocked]
     key = None if args.no_llm else llm.api_key()
     cache = load_state(db, "digest_cache", DIGEST_CACHE)

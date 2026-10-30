@@ -210,7 +210,10 @@ class OfficialNews {
         publishedAt = DateTime.parse(j['published_at']),
         url = j['url'],
         thin = j['thin'] ?? false,
-        related = [for (final r in j['related'] ?? const []) r as String];
+        related = [for (final r in j['related'] ?? const []) r as String],
+        points = j['points'],
+        comments = j['comments'],
+        discussionUrl = j['discussion_url'];
 
   final String id;
   final String source; // openai, anthropic, …
@@ -226,8 +229,23 @@ class OfficialNews {
   // 원문이 피드 소개문 한 줄뿐(OpenAI 글 페이지는 자동 접근을 막는다). summaryKo는 요약이 아니라 그 소개문의 번역
   final bool thin;
   final List<String> related; // 모델·제품 이름이 겹치는 다른 소식 id(수집기가 잇는다)
+  // 화제(kind=hot): HN 점수 또는 GitHub 별 수 / HN 댓글 수 / HN 토론 주소. 공식 소식에도 같은 글의 HN 반응이 붙을 수 있다
+  final int? points;
+  final int? comments;
+  final String? discussionUrl;
 
-  bool get isUpdate => kind != 'post'; // 「업데이트」 칸(공지·릴리스)
+  bool get isUpdate => kind == 'notice' || kind == 'release'; // 「업데이트」 칸(공지·릴리스)
+  bool get isHot => kind == 'hot'; // 「화제」 칸(Hacker News·GitHub)
+  bool get isGithub => source == 'github';
+
+  // 「HN 1,314점」「408점 · 댓글 213」「★ 179」: 화제는 점수가 주인공이라 앞에, 공식 소식은 뒤에 짧게
+  String? get reaction => points == null
+      ? null
+      : isGithub
+          ? '★ ${countKo(points!)}'
+          : isHot
+              ? '${countKo(points!)}점${comments == null ? '' : ' · 댓글 ${countKo(comments!)}'}'
+              : 'HN ${countKo(points!)}점';
 
   // 근거 문장으로 바로 여는 원문 주소(브라우저 텍스트 위치 링크 #:~:text=). 인용이 없으면 글 주소.
   String evidenceUrl(NewsPoint p) =>

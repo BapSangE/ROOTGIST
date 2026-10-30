@@ -98,7 +98,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s12, RgSpace.gutterText, RgSpace.s4),
                 child: ChromeTextScale(
                   child: RgSegmented(
-                    options: const [(0, '논문'), (1, '공식 소식'), (2, '모델')],
+                    options: const [(0, '논문'), (1, '소식'), (2, '모델')],
                     value: _tab,
                     dots: {if (hasNewNews(snap.data ?? const [])) 1},
                     onChanged: (i) => _pages.animateToPage(i, duration: RgMotion.base, curve: RgMotion.curve),

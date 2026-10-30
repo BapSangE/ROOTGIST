@@ -151,10 +151,12 @@ void restoreBookmark(Bookmark b) {
 // 홈 「더 보기」·옆으로 밀기 → 탐색의 그 칸으로. (칸, 업데이트 선택 여부). 같은 칸을 다시 눌러도 알리도록 매번 새 값.
 // animate: 탐색 안에서 밀어 넘길 때는 칸이 미끄러져 넘어간다(다른 탭에서 들어올 때는 바로).
 class ExploreJump {
-  const ExploreJump(this.tab, {this.updates = false, this.fresh = false, this.animate = false});
-  final int tab; // 0 논문, 1 공식 소식, 2 모델
-  final bool updates; // 공식 소식: 업데이트 칸
+  const ExploreJump(this.tab, {this.updates = false, this.hot = false, this.fresh = false, this.animate = false});
+  final int tab; // 0 논문, 1 소식, 2 모델
+  final bool updates; // 소식: 업데이트 칸
+  final bool hot; // 소식: 화제 칸
   final bool fresh; // 모델: 새로 나옴 칸
+  int get newsTab => hot ? 2 : (updates ? 1 : 0);
   final bool animate;
 }
 
@@ -162,5 +164,5 @@ final exploreJump = ValueNotifier<ExploreJump?>(null);
 
 // 지금 보이는 탐색 칸과 공식 소식의 발표·업데이트. 쉘의 옆으로 밀기가 다음·이전 자리를 정할 때 읽는다.
 final exploreTab = ValueNotifier(0);
-final newsUpdates = ValueNotifier(false);
+final newsTab = ValueNotifier(0); // 소식 칸의 발표(0) | 업데이트(1) | 화제(2)
 final modelsFresh = ValueNotifier(false); // 모델 칸의 트렌딩(false) | 새로 나옴(true)

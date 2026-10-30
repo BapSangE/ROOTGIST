@@ -9,7 +9,9 @@ import '../../design/typography.dart';
 import '../../design/widgets/rg_card.dart';
 import '../../design/widgets/rg_pressable.dart';
 import '../../design/widgets/rg_row_head.dart';
+import '../../data/repository.dart';
 import '../explore/official_news.dart';
+import 'home_screen.dart' show openExplore;
 import 'briefing.dart';
 
 // 홈 맨 위 「오늘의 브리핑」(시안 A): 날짜·브리핑 이름 → 「어제 이후 새 소식 N건」 → 요약 알약 → 주요 소식 5개 카드.
@@ -57,6 +59,7 @@ class _BriefingSectionState extends State<BriefingSection> {
           padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
           child: Wrap(spacing: RgSpace.s6, runSpacing: RgSpace.s6, children: [
             if (b.stories.isNotEmpty) _Pill('주요 소식', '${b.stories.length}'),
+            if (b.hotCount > 0) _Pill('개발자 화제', '${b.hotCount}'),
             if (widget.paperCount > 0) _Pill('새 논문', '${widget.paperCount}편'),
             if (b.updates > 0) _Pill('바뀐 도구', '${b.updates}'),
           ]),
@@ -115,6 +118,43 @@ class _BriefingSectionState extends State<BriefingSection> {
           ]),
         ),
       ],
+      // 개발자 화제(시안 A): Hacker News 점수 순 2개, 나머지는 탐색의 화제 칸으로
+      if (b != null && b.talk.isNotEmpty) ...[
+        const SizedBox(height: RgSpace.s12),
+        RgCard(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(RgSpace.s20, RgSpace.s18, RgSpace.s20, RgSpace.s4),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
+                Expanded(child: Semantics(header: true, child: Text('개발자 화제', style: RgText.titleCard))),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 120),
+                  child: Text('Hacker News', textAlign: TextAlign.end, style: RgText.meta.copyWith(fontSize: 13, color: RgColors.textSecondary)),
+                ),
+              ]),
+            ),
+            for (final (i, n) in b.talk.take(2).indexed) BriefRow(news: n, number: i + 1, now: now, divider: i > 0),
+            Semantics(
+              button: true,
+              child: RgPressable(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  openExplore(context, const ExploreJump(1, hot: true));
+                },
+                child: Container(
+                  constraints: const BoxConstraints(minHeight: RgSpace.minTouch + 4),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(border: Border(top: BorderSide(color: RgColors.dividerCard))),
+                  child: Row(mainAxisSize: MainAxisSize.min, spacing: RgSpace.s4, children: [
+                    Flexible(child: Text('화제 ${b.hotCount}건 모두 보기', textAlign: TextAlign.center, style: RgText.meta.copyWith(fontWeight: FontWeight.w600, color: RgColors.textBody))),
+                    const RgIcon('chevron-right', size: 16, color: RgColors.textBody),
+                  ]),
+                ),
+              ),
+            ),
+          ]),
+        ),
+      ],
     ]);
   }
 }
@@ -168,7 +208,9 @@ class BriefRow extends StatelessWidget {
                   valueListenable: readItems,
                   builder: (context, _, _) => RgRowHead(
                     chip: RgChip(n.sourceLabel, source: n.source),
-                    meta: [relativeKo(n.publishedAt, now), if (n.related.isNotEmpty) '관련 ${n.related.length}'].join(' · '),
+                    meta: n.isHot
+                        ? [?n.reaction, relativeKo(n.publishedAt, now)].join(' · ')
+                        : [relativeKo(n.publishedAt, now), if (n.related.isNotEmpty) '관련 ${n.related.length}', ?n.reaction].join(' · '),
                     isNew: isNew(newsKey(n), n.publishedAt),
                   ),
                 ),

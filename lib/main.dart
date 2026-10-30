@@ -45,7 +45,7 @@ class _RootgistAppState extends State<RootgistApp> with WidgetsBindingObserver {
         // Top state includes imperative push/pop; currentConfiguration.uri may remain the underlying shell URI.
         router.routerDelegate.state.uri,
         exploreTab: exploreTab.value,
-        updates: newsUpdates.value,
+        updates: newsTab.value == 1,
       );
     });
   }
@@ -74,7 +74,7 @@ class _RootgistAppState extends State<RootgistApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     router.routerDelegate.addListener(_navigationChanged);
     exploreTab.addListener(_navigationChanged);
-    newsUpdates.addListener(_navigationChanged);
+    newsTab.addListener(_navigationChanged);
     analyticsCollectionEnabled.addListener(_consentChanged);
     analytics.setActive(
       WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed,
@@ -94,7 +94,7 @@ class _RootgistAppState extends State<RootgistApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     router.routerDelegate.removeListener(_navigationChanged);
     exploreTab.removeListener(_navigationChanged);
-    newsUpdates.removeListener(_navigationChanged);
+    newsTab.removeListener(_navigationChanged);
     analyticsCollectionEnabled.removeListener(_consentChanged);
     backdrop.removeListener(_repaint);
     super.dispose();

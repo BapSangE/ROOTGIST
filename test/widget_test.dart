@@ -50,7 +50,7 @@ Future<void> pumpApp(WidgetTester tester) async {
   readerScale.value = 1.0;
   backdrop.value = Backdrop.white;
   exploreTab.value = 0;
-  newsUpdates.value = false;
+  newsTab.value = 0;
   modelsFresh.value = false;
   fixtureMode.value = FixtureMode.normal;
   exploreJump.value = null;
@@ -430,7 +430,7 @@ void main() {
     await tester.fling(find.byType(PageView), const Offset(300, 0), 1000);
     await slide(tester);
     await settle(tester);
-    expect(newsUpdates.value, isFalse);
+    expect(newsTab.value, 0);
     expect(find.text('Claude Code · 릴리스 · 10월 18일'), findsNothing);
     await tester.fling(find.byType(PageView), const Offset(300, 0), 1000);
     await slide(tester);
@@ -1049,6 +1049,53 @@ void main() {
     expect([newsGroup('claude_api'), newsGroup('nvidia_dev'), newsGroup('ai2')], ['Anthropic', 'NVIDIA', '기타']);
   });
 
+  test('브리핑 화제: 크게 화제가 된 글(HN 500점·모델 출시)은 주요 소식에, 나머지 HN 글은 개발자 화제로', () {
+    final now = DateTime.utc(2026, 10, 29, 23);
+    OfficialNews n(String id, String source, String kind, String title, int hoursAgo, {int? points}) => OfficialNews.fromJson({
+      'id': id, 'source': source, 'source_label': source, 'kind': kind, 'title_en': title, 'url': 'https://e.com/$id',
+      'published_at': now.subtract(Duration(hours: hoursAgo)).toIso8601String(), 'points': points,
+    });
+    final b = Briefing([
+      n('spec', 'openai', 'post', 'An updated Model Spec', 6),
+      n('mistral', 'hn', 'hot', "We're releasing the weights of Mistral Large 4", 12, points: 1314),
+      n('voice', 'hn', 'hot', 'LLM Voice', 9, points: 408),
+      n('tool', 'github', 'hot', 'tool: an agent tool', 30, points: 179),
+    ], now);
+    expect(b.stories.first.id, 'mistral'); // 공식 출처가 없는 발표도 화제 덕에 1위
+    expect(b.talk.map((x) => x.id), ['voice']); // GitHub 새 도구는 탐색 화제 칸에만
+    expect(b.hotCount, 3);
+    expect(b.total, 3); // 공식 1 + 24시간 안 화제 2
+    expect(b.stories.first.reaction, '1,314점');
+    expect(OfficialNews.fromJson({'id': 'g', 'source': 'deepmind', 'source_label': 'Google DeepMind', 'kind': 'post', 'title_en': 'x',
+      'url': 'u', 'published_at': '2026-10-29T00:00:00Z', 'points': 331}).reaction, 'HN 331점'); // 공식 소식에 붙은 반응
+  });
+
+  testWidgets('소식 · 화제 칸: Hacker News 점수 순 → GitHub 새 도구, 상세는 원문·HN 토론 링크', (tester) async {
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+    clock = () => DateTime.utc(2026, 10, 19);
+    router.go('/explore');
+    await settle(tester);
+    await tester.tap(find.text('소식'));
+    await slide(tester);
+    await settle(tester);
+    await tester.tap(find.text('화제'));
+    await tester.pumpAndSettle();
+    expect(find.text('Hacker News · 최근 이틀'), findsOneWidget);
+    expect(find.text('GitHub · 이번 주 새 AI 도구'), findsOneWidget);
+    final first = tester.getTopLeft(find.text(keepAll('Example-4 가중치 공개'))).dy;
+    expect(first, lessThan(tester.getTopLeft(find.text(keepAll('LLM 글쓰기 문체에 관한 가상 글'))).dy)); // 점수 순
+    expect(find.textContaining(keepAll('1,314점 · 댓글 360')), findsOneWidget);
+    expect(find.textContaining(keepAll('★ 179')), findsOneWidget);
+    await tester.tap(find.text(keepAll('LLM 글쓰기 문체에 관한 가상 글')));
+    await settle(tester);
+    expect(find.text('Hacker News 토론'), findsOneWidget);
+    expect(find.text('댓글 213'), findsOneWidget);
+    clock = DateTime.now;
+  });
+
   testWidgets('공식 소식(발표): 회사 묶음 칩, 날짜 머리, 지난번 본 곳에 「여기까지 봤어요」 선', (tester) async {
     tester.view.physicalSize = const Size(390, 2400);
     tester.view.devicePixelRatio = 1;
@@ -1057,7 +1104,7 @@ void main() {
     newsSeenAt.value = DateTime.utc(2026, 10, 17, 12); // 지난번엔 10월 17일 낮 글까지 봤다
     router.go('/explore');
     await settle(tester);
-    await tester.tap(find.text('공식 소식'));
+    await tester.tap(find.text('소식'));
     await slide(tester);
     await settle(tester);
     expect(find.text('지난번에 여기까지 봤어요'), findsOneWidget);
@@ -1265,7 +1312,7 @@ void main() {
     String where() {
       final path = router.routerDelegate.currentConfiguration.uri.path;
       final sub = switch (exploreTab.value) {
-        1 => newsUpdates.value ? ' 업데이트' : ' 발표',
+        1 => const [' 발표', ' 업데이트', ' 화제'][newsTab.value],
         2 => modelsFresh.value ? ' 새로 나옴' : ' 트렌딩',
         _ => '',
       };
@@ -1279,7 +1326,7 @@ void main() {
       await settle(tester);
     }
 
-    const forward = ['explore 0', 'explore 1 발표', 'explore 1 업데이트', 'explore 2 트렌딩', 'explore 2 새로 나옴', '/library', '/settings'];
+    const forward = ['explore 0', 'explore 1 발표', 'explore 1 업데이트', 'explore 1 화제', 'explore 2 트렌딩', 'explore 2 새로 나옴', '/library', '/settings'];
     for (final w in forward) {
       await swipe(-300);
       expect(where(), w);
@@ -1334,7 +1381,7 @@ void main() {
     expect(haptics, ['HapticFeedbackType.selectionClick']);
 
     // 공식 소식 안 밑줄 탭: 선택 틱, 밑줄이 「업데이트」 아래로
-    await tester.tap(find.text('공식 소식'));
+    await tester.tap(find.text('소식'));
     await slide(tester);
     await settle(tester);
     haptics.clear();
@@ -1353,7 +1400,7 @@ void main() {
     await pumpApp(tester);
     router.go('/explore');
     await settle(tester);
-    await tester.tap(find.text('공식 소식'));
+    await tester.tap(find.text('소식'));
     await slide(tester);
     await settle(tester);
     final colors = <String, Color?>{}, text = <String, Color?>{};

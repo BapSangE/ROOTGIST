@@ -1,0 +1,182 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<!-- 화제 출처(Hacker News·GitHub) 시안(2026-10-30). 실제 10월 29~30일 데이터. -->
+<style>
+  @font-face { font-family: P; font-weight: 400; src: url(../../assets/fonts/Pretendard-Regular.otf); }
+  @font-face { font-family: P; font-weight: 500; src: url(../../assets/fonts/Pretendard-Medium.otf); }
+  @font-face { font-family: P; font-weight: 600; src: url(../../assets/fonts/Pretendard-SemiBold.otf); }
+  @font-face { font-family: P; font-weight: 700; src: url(../../assets/fonts/Pretendard-Bold.otf); }
+  @font-face { font-family: P; font-weight: 800; src: url(../../assets/fonts/Pretendard-Bold.otf); }
+  :root { --bg:#FFFFFF; --card:#F4F4F2; --fill:#E7E7E3; --line:#E6E6E3; --div:#E3E3E0; --ink:#0E0E0D; --ink2:#33332F; --mute:#6B6B65; --faint:#9B9B94; --newt:#D42A20;
+          --an:#B5522B; --oa:#0E0E0D; --gg:#1A66D9; --hf:#FFD21E; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { width: 2620px; background: #E9E9E6; font-family: P, sans-serif; color: var(--ink); padding: 44px 44px 56px; word-break: keep-all; }
+  h1 { font: 800 34px/1.2 P; letter-spacing: -0.8px; }
+  .lead { margin-top: 10px; font: 400 17px/1.55 P; color: var(--mute); max-width: 1500px; }
+  .grid { display: flex; gap: 26px; margin-top: 30px; }
+  .col { width: 402px; }
+  .label { font: 700 18px/1 P; } .sub { margin-top: 6px; font: 400 14px/1.4 P; color: var(--mute); }
+  .phone { margin-top: 12px; height: 874px; background: var(--bg); border-radius: 44px; border: 6px solid #141413; overflow: hidden; position: relative; }
+  .status { height: 54px; }
+  .top { padding: 4px 20px 0; }
+  .display { font: 800 34px/40px P; letter-spacing: -1px; }
+  .seg { margin: 12px 20px 0; height: 46px; padding: 4px; border-radius: 999px; background: var(--fill); display: flex; gap: 2px; }
+  .seg span { flex: 1; border-radius: 999px; display: flex; align-items: center; justify-content: center; font: 500 14.5px/1 P; color: var(--mute); }
+  .seg span.on { background: #fff; color: var(--ink); font-weight: 700; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+  .utabs { margin: 12px 20px 0; display: flex; gap: 20px; border-bottom: 1px solid var(--line); }
+  .utabs span { padding: 12px 0; font: 500 16px/1 P; color: var(--mute); }
+  .utabs span.on { font-weight: 700; color: var(--ink); border-bottom: 2px solid var(--ink); margin-bottom: -1px; }
+  .filters { display: flex; gap: 8px; padding: 14px 20px 0; overflow: hidden; }
+  .f { height: 36px; padding: 0 15px; border-radius: 999px; border: 1px solid var(--line); display: inline-flex; align-items: center; font: 500 14px/1 P; color: var(--ink2); white-space: nowrap; }
+  .f.on { background: var(--ink); border-color: var(--ink); color: #fff; font-weight: 600; }
+  .sec { padding: 26px 20px 10px; display: flex; align-items: baseline; gap: 6px; }
+  .sec b { font: 700 18px/25px P; letter-spacing: -0.3px; } .sec small { font: 500 14px/1 P; color: var(--mute); }
+  .card { margin: 12px 16px 0; background: var(--card); border-radius: 22px; }
+  .dark { margin: 18px 16px 0; background: var(--ink); color: #fff; border-radius: 26px; padding: 22px; }
+  .dark .m { font: 400 14px/20px P; color: #B9B9B2; }
+  .row { display: flex; gap: 12px; padding: 15px 12px 15px 20px; border-top: 1px solid var(--div); align-items: flex-start; }
+  .card .row:first-child { border-top: 0; }
+  .bare .row { margin: 0 20px; padding: 15px 0; }
+  .bare .row:first-child { border-top: 0; }
+  .grow { flex: 1; min-width: 0; }
+  .head { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; font: 400 13.5px/19px P; color: var(--mute); }
+  .new { font: 700 12px/1 P; color: var(--newt); }
+  .t { margin-top: 6px; font: 600 16.5px/24px P; letter-spacing: -0.3px; }
+  .s { margin-top: 4px; font: 400 14.5px/22px P; color: var(--ink2); }
+  /* 칩: 높이 24, 알약, 12.5 600. 출처는 회사 대표 색, 주제·종류는 중립 */
+  .chip { height: 24px; padding: 0 9px; border-radius: 999px; display: inline-flex; align-items: center; font: 600 12.5px/1 P; white-space: nowrap; background: var(--fill); color: var(--ink2); }
+  .chip.an { background: var(--an); color: #fff; } .chip.oa { background: var(--oa); color: #fff; }
+  .chip.gg { background: var(--gg); color: #fff; } .chip.hf { background: var(--hf); color: var(--ink); }
+  .chip.ink { background: rgba(255,255,255,.14); color: #fff; }
+  .tag { height: 24px; padding: 0 9px; border-radius: 999px; display: inline-flex; align-items: center; font: 500 12.5px/1 P; background: var(--fill); color: var(--ink2); }
+  .bm { width: 44px; height: 44px; flex: none; display: flex; align-items: center; justify-content: center; margin-top: -4px; }
+  .bm i { width: 36px; height: 36px; border-radius: 50%; background: var(--fill); display: flex; align-items: center; justify-content: center; }
+  .bm.on i { background: var(--ink); }
+  .bm svg { width: 16px; height: 16px; stroke: var(--ink); fill: none; stroke-width: 2; stroke-linejoin: round; }
+  .bm.on svg { stroke: #fff; fill: #fff; }
+  .rank { width: 30px; flex: none; font: 800 28px/30px P; letter-spacing: -1px; color: var(--faint); }
+  .tabbar { position: absolute; left: 0; right: 0; bottom: 0; height: 86px; background: #fff; border-top: 1px solid var(--line); display: flex; padding-top: 8px; }
+  .tabbar span { flex: 1; text-align: center; font: 500 13px/1 P; color: var(--mute); }
+  .tabbar span.on { color: var(--ink); font-weight: 700; }
+  .tabbar span::before { content: ''; display: block; width: 22px; height: 22px; margin: 0 auto 6px; border-radius: 6px; border: 1.8px solid currentColor; }
+  .toast { position: absolute; left: 16px; right: 16px; bottom: 100px; height: 52px; border-radius: 16px; background: var(--ink); color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; font: 500 14.5px/1 P; }
+  .toast b { font-weight: 700; }
+  .more { display: flex; justify-content: flex-end; padding: 8px 20px 0; }
+  .pill { height: 34px; padding: 0 14px; border-radius: 999px; background: var(--fill); display: inline-flex; align-items: center; gap: 4px; font: 600 14px/1 P; }
+  /* 모션 판 */
+  .motion { margin-top: 36px; background: #fff; border-radius: 28px; padding: 28px 30px 30px; }
+  .motion h2 { font: 700 22px/1.2 P; }
+  .mgrid { margin-top: 18px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px 26px; }
+  .m h3 { font: 700 16px/1.3 P; } .m p { margin-top: 4px; font: 400 14px/1.5 P; color: var(--mute); }
+  .frames { margin-top: 10px; display: flex; gap: 10px; align-items: center; }
+  .fr { width: 236px; background: var(--card); border-radius: 16px; padding: 10px 6px; position: relative; }
+  .fr .cap { position: absolute; top: -9px; left: 10px; background: #fff; padding: 0 6px; font: 600 11.5px/18px P; color: var(--mute); border-radius: 6px; }
+  .arrow { color: var(--faint); font: 700 18px/1 P; }
+  .rules { margin-top: 20px; font: 400 14.5px/1.6 P; color: var(--ink2); }
+  .rules b { font-weight: 700; }
+</style><style>
+  body { width: 1760px; }
+  .phone { height: 874px; }
+  .wm { font: 800 15px/1 P; letter-spacing: .22em; }
+  .when { margin-top: 18px; font: 500 15px/1 P; color: var(--mute); }
+  .hero { margin-top: 8px; font: 800 30px/37px P; letter-spacing: -1px; }
+  .hero b { color: var(--ink); }
+  .stats { margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .stat { height: 28px; padding: 0 11px; border-radius: 999px; background: var(--card); display: inline-flex; align-items: center; gap: 5px; font: 600 13px/1 P; color: var(--ink2); }
+  .stat i { font-style: normal; color: var(--mute); font-weight: 500; }
+  .brief { margin: 18px 16px 0; background: var(--card); border-radius: 22px; padding: 6px 0; }
+  .brief h3 { display: flex; align-items: baseline; justify-content: space-between; padding: 14px 20px 6px; font: 700 17px/1 P; }
+  .brief h3 small { font: 500 12.5px/1 P; color: var(--mute); }
+  .item { display: flex; gap: 12px; padding: 12px 18px 12px 20px; border-top: 1px solid var(--div); }
+  .brief .item:first-of-type { border-top: 0; }
+  .n { width: 18px; flex: none; font: 800 17px/22px P; color: var(--ink); }
+  .item .head { font-size: 12.5px; }
+  .ago { color: var(--mute); }
+  .tt { margin-top: 5px; font: 650 15.5px/22px P; letter-spacing: -.3px; color: var(--ink); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .one { margin-top: 3px; font: 400 13.5px/19px P; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .two { margin-top: 4px; font: 400 14px/21px P; color: var(--ink2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .rel { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 999px; border: 1px solid var(--line); font: 600 11px/1 P; color: var(--mute); }
+  .morebar { display: flex; justify-content: center; padding: 10px 0 8px; border-top: 1px solid var(--div); font: 600 14px/1 P; color: var(--ink2); }
+  .chip.gm { background: #1A66D9; color: #fff; } .chip.mt { background: #0866FF; color: #fff; } .chip.nv { background: #76B900; color: var(--ink); }
+  .sec2 { padding: 22px 20px 8px; display: flex; align-items: baseline; justify-content: space-between; }
+  .sec2 b { font: 700 17px/1 P; } .sec2 small { font: 500 13px/1 P; color: var(--mute); }
+  .paper { margin: 0 16px; background: #2B2B29; color: #fff; border-radius: 22px; padding: 16px 18px; }
+  .paper .chip { background: #fff; color: var(--ink); }
+  .paper .tt { color: #fff; font-size: 16px; }
+  .paper .one { color: #B9B9B2; }
+  .compact { margin: 8px 16px 0; background: var(--card); border-radius: 20px; }
+  .compact .item { padding: 11px 16px; }
+  .readline { display: flex; align-items: center; gap: 8px; margin: 2px 20px; padding: 8px 0; font: 600 12px/1 P; color: var(--newt); }
+  .readline::before, .readline::after { content: ''; flex: 1; height: 1px; background: #F0C6C2; }
+  .day { padding: 16px 20px 4px; font: 700 13px/1 P; color: var(--mute); letter-spacing: .02em; }
+  .listrow { display: flex; gap: 10px; padding: 12px 12px 12px 20px; border-top: 1px solid var(--div); }
+  .listrow.read .tt { color: var(--ink2); font-weight: 500; }
+  .bm2 { width: 36px; height: 36px; border-radius: 50%; background: var(--fill); flex: none; display: flex; align-items: center; justify-content: center; margin-top: 2px; }
+  .bm2 svg { width: 15px; height: 15px; stroke: var(--ink); fill: none; stroke-width: 2; }
+  .note b { font-weight: 700; }
+</style><style>
+  .nav { height: 52px; display:flex; align-items:center; justify-content:space-between; padding: 0 16px; }
+  .circ { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); display:flex; align-items:center; justify-content:center; font: 700 15px/1 P; background:#fff; }
+  .ptitle { padding: 10px 20px 0; font: 800 27px/35px P; letter-spacing:-.8px; }
+  .chip.dom { background: var(--fill); color: var(--ink2); }
+  .chip.gh { background: var(--fill); color: var(--ink2); }
+  .hn { font: 600 12.5px/1 P; color: var(--ink2); }
+  .hn i { font-style: normal; color: var(--mute); font-weight: 500; }
+  .tag2 { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 6px; background: #FFF1E6; color: #A54A00; font: 700 11px/1 P; }
+  .talk { margin: 14px 16px 0; background: var(--card); border-radius: 22px; padding: 6px 0; }
+  .talk h3 { display: flex; align-items: baseline; justify-content: space-between; padding: 14px 20px 6px; font: 700 17px/1 P; }
+  .talk h3 small { font: 500 12.5px/1 P; color: var(--mute); }
+  .dbox { margin: 14px 16px 0; background: var(--card); border-radius: 22px; padding: 18px 20px; }
+  .dbox h4 { font: 700 17px/1 P; }
+  .dbody { margin-top: 10px; font: 400 15.5px/25px P; color: var(--ink2); }
+  .linkcard { margin: 12px 16px 0; background: var(--card); border-radius: 18px; }
+  .lrow { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-top: 1px solid var(--div); font: 500 15px/1 P; }
+  .lrow:first-child { border-top: 0; }
+  .lrow small { font: 400 13px/1 P; color: var(--mute); }
+  .orig { padding: 6px 20px 0; font: 400 15px/22px Georgia, serif; color: var(--mute); }
+</style></head><body><h1>화제 출처 추가 시안 · Hacker News · GitHub</h1>
+<div class="lead">실제 10월 29~30일 데이터예요. HN은 최근 24시간 60점 넘는 글 48개 중 AI 관련 10개, GitHub는 이번 주 생긴 LLM 저장소 중 별 수 위쪽이에요. 한국어 제목·요약은 시안용으로 옮겼어요.</div>
+<div class="grid"><div class="col"><div class="label">A · 홈 브리핑에 「개발자 화제」</div><div class="sub">공식 소식에 HN 반응을 붙이고, 화제 글 3개를 따로</div>
+<div class="phone"><div class="status"></div><div class="top"><div class="wm">ROOTGIST</div>
+<div class="when">10월 30일 금요일 오전 8시 · 아침 브리핑</div>
+<div class="hero">어제 이후 새 소식 <b>15건</b></div>
+<div class="stats"><span class="stat">주요 소식 <i>5</i></span><span class="stat">개발자 화제 <i>10</i></span><span class="stat">새 논문 <i>10편</i></span></div></div>
+<div class="brief"><h3>오늘의 주요 소식 <small>중요한 순</small></h3>
+<div class="item"><span class="n">1</span><div class="grow"><div class="head"><span class="chip dom">Mistral AI</span><span class="ago">어제 · <span class="hn">HN 1,314점</span></span> <span class="new">새 글</span></div><div class="tt">Mistral Large 4 가중치 공개</div><div class="one">1조 파라미터 멀티모달 모델을 오픈 가중치로 풀었어요</div></div></div>
+<div class="item"><span class="n">2</span><div class="grow"><div class="head"><span class="chip gm">Google DeepMind</span><span class="ago">어제 02:00 · 관련 2</span></div><div class="tt">Gemini 4 Carbon: 차세대 프런티어 모델</div><div class="one">Artificial Analysis 지능 지수 v5에서 1위(HN 331점)</div></div></div>
+<div class="item"><span class="n">3</span><div class="grow"><div class="head"><span class="chip oa">OpenAI</span><span class="ago">6시간 전</span></div><div class="tt">Model Spec 개정: 다섯 가지 핵심 가치</div><div class="one">건전한 판단력·인간의 주체성 등을 제시</div></div></div>
+</div>
+<div class="talk"><h3>개발자 화제 <small>Hacker News</small></h3>
+<div class="item"><span class="n">1</span><div class="grow"><div class="head"><span class="chip dom">martinfowler.com</span><span class="ago"><span class="hn">408점 <i>· 댓글 213</i></span></span></div><div class="tt">마틴 파울러: LLM 문체가 만드는 글의 거부감</div><div class="one">AI가 썼든 아니든 LLM 특유의 문체가 읽고 싶은 마음을 꺾는다는 글</div></div></div>
+<div class="item"><span class="n">2</span><div class="grow"><div class="head"><span class="chip dom">labs.ycombinator.com</span><span class="ago"><span class="hn">241점 <i>· 댓글 82</i></span></span></div><div class="tt">마인크래프트에서 AI 에이전트 무리를 돌려 봤다</div><div class="one">여러 에이전트가 함께 게임을 하며 생긴 일</div></div></div>
+<div class="morebar">화제 10건 모두 보기 ›</div></div>
+<div class="tabbar"><span class="on">홈</span><span class="">탐색</span><span class="">보관함</span><span class="">설정</span></div></div>
+<div class="note"><b>규칙</b> · 공식 발표와 같은 주소·제품을 다룬 HN 글은 따로 보이지 않고 그 소식에 「HN 1,314점」으로 붙여요(중복 없이 반응만). 공식 출처가 없던 Mistral 발표는 HN 덕에 주요 소식에 올라와요.</div></div><div class="col"><div class="label">B · 탐색 「소식」 · 화제 칸</div><div class="sub">발표 | 업데이트 | 화제. 화제는 HN 점수 순, GitHub 새 도구는 아래 묶음</div>
+<div class="phone"><div class="status"></div>
+<div class="seg" style="margin-top:6px"><span>논문</span><span class="on">소식</span><span>모델</span></div>
+<div class="utabs"><span>발표</span><span>업데이트</span><span class="on">화제</span></div>
+<div class="day">Hacker News · 최근 24시간</div>
+<div class="compact" style="margin-top:4px">
+<div class="listrow"><div class="grow"><div class="head"><span class="chip dom">martinfowler.com</span><span class="ago"><span class="hn">408점 <i>· 댓글 213 · 9시간 전</i></span></span></div><div class="tt">마틴 파울러: LLM 문체가 만드는 글의 거부감</div><div class="two">LLM 특유의 문체는 실제 AI 사용 여부와 상관없이 거부감을 일으킬 수 있다는 글이에요.</div></div><span class="bm2"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg></span></div>
+<div class="listrow"><div class="grow"><div class="head"><span class="chip dom">artificialanalysis.ai</span><span class="ago"><span class="hn">331점 <i>· 댓글 240 · 14시간 전</i></span></span></div><div class="tt">Gemini 4 Carbon, Artificial Analysis 지능 지수 v5 1위</div><div class="two">복잡한 추론·지식·과학 과제에서 59점으로 1위, 코딩 에이전트 부문은 2위예요.</div></div><span class="bm2"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg></span></div>
+<div class="listrow"><div class="grow"><div class="head"><span class="chip dom">trakkr.ai</span><span class="ago"><span class="hn">155점 <i>· 댓글 66 · 6시간 전</i></span></span></div><div class="tt">좀비 통계: AI가 인용하는 숫자는 어디서 오나</div><div class="two">AI 서비스 5곳의 통계 인용 1,285건을 추적하니 원 연구와 맞는 건 40%였어요.</div></div><span class="bm2"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg></span></div>
+</div>
+<div class="day">GitHub · 이번 주 새 AI 도구</div>
+<div class="compact" style="margin-top:4px">
+<div class="listrow"><div class="grow"><div class="head"><span class="chip gh">GitHub</span><span class="ago"><span class="hn">★ 179 <i>· 5일 전 공개</i></span></span></div><div class="tt">grim-prompter: AI 코딩 에이전트용 위협 모델링</div><div class="two">Claude Code·Codex 같은 에이전트에 붙여 쓰는 보안 점검 도구예요.</div></div><span class="bm2"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg></span></div>
+</div>
+<div class="tabbar"><span class="">홈</span><span class="on">탐색</span><span class="">보관함</span><span class="">설정</span></div></div>
+<div class="note"><b>바뀌는 것</b> · 「공식 소식」 칸 이름을 「소식」으로, 밑줄 탭에 「화제」. 칩은 글이 실린 사이트 주소(회사 색 없이 회색). GitHub는 별 수가 적은 저장소·중국어 전용 저장소가 많아 「AI·LLM 주제 + 별 150개 이상」만.</div></div><div class="col"><div class="label">C · 화제 상세</div><div class="sub">AI 요약은 원문이 허용할 때만, 토론은 HN 링크로</div>
+<div class="phone"><div class="status"></div><div class="nav"><span style="font:400 26px/1 P">‹</span><span class="circ">가</span></div>
+<div style="padding:4px 20px 0" class="head"><span class="chip dom">martinfowler.com</span><span class="hn">HN 408점 <i>· 댓글 213</i></span></div>
+<div class="ptitle" style="font-size:24px;line-height:32px">마틴 파울러: LLM 문체가 만드는 글의 거부감</div>
+<div class="orig">LLM Voice</div>
+<div class="dbox"><h4>AI 요약 <small style="font:400 13px/1 P;color:var(--mute);float:right">원문 기반</small></h4>
+<div class="dbody">LLM 특유의 문체는 실제로 AI를 썼는지와 상관없이 읽고 싶은 마음을 꺾고 거부감을 줄 수 있어요. 판별 도구가 사람 글이라고 해도 문체만으로 독자는 AI 글로 느낀다는 점을 짚어요.</div></div>
+<div class="linkcard"><div class="lrow">원문 읽기 <small>martinfowler.com ↗</small></div><div class="lrow">Hacker News 토론 <small>댓글 213 ↗</small></div></div>
+<div class="note" style="margin:12px 16px 0;background:transparent;padding:0">원문을 자동으로 읽을 수 없는 사이트(로봇 차단·유료 기사)는 요약 없이 제목·점수·링크만 보여요.</div>
+<div class="tabbar"><span class="">홈</span><span class="on">탐색</span><span class="">보관함</span><span class="">설정</span></div></div>
+<div class="note"><b>권리</b> · HN은 공식 API(Firebase·Algolia), GitHub는 공식 검색 API를 써요. 글은 원문 사이트의 것이라 공식 소식과 같은 기준(짧은 요약 + 링크, 원문 옮기지 않음)에 robots.txt 확인을 더해요.</div></div></div><div class="motion"><h2>움직임 · 진동</h2><div class="mgrid">
+<div class="m"><h3>「발표 | 업데이트 | 화제」</h3><p>지금 밑줄 탭과 같아요. 밑줄이 미끄러지고(220ms) 목록이 떠오르며 바뀌어요(160ms). 옆으로 밀기 순서에 「화제」 칸도 들어가요.</p></div>
+<div class="m"><h3>HN 점수 붙임</h3><p>공식 소식 행의 「HN 1,314점」은 글자만(색·움직임 없음). 점수는 배치 때만 바뀌어 화면에서 숫자가 움직이지 않아요.</p></div>
+<div class="m"><h3>상세의 링크 줄</h3><p>행 눌림 98% + 4% 어두워짐, 외부 브라우저로 열기. 「토론」은 HN 페이지로 바로.</p></div>
+</div><div class="rules"><b>공통</b> · 150~260ms, 「동작 줄이기」면 바로 바뀜. 목록이 차례로 나타나는 효과는 넣지 않아요.</div></div></body></html>

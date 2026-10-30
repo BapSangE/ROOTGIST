@@ -425,6 +425,59 @@ class OfficialNewsTest(unittest.TestCase):
         # 재포장판(Comfy)보다 원본이 대표, 미세 조정판(Nb-33B)은 바탕 모델보다 앞 순위면 그대로 대표, 혼자 남은 재포장판은 그대로
         self.assertEqual(groups, [("bfl/flux-klein", ["bfl/flux-klein-comfy"]), ("nb/Nb-33B", ["nb/Nb-33B-Base"]), ("x/only-GGUF", [])])
 
+    def test_hn_keeps_ai_stories_by_points(self):
+        hits = {"hits": [
+            {"objectID": "1", "title": "We&#x27;re releasing the weights of Mistral Large 4", "url": "https://mistral.ai/news/x", "points": 1314, "num_comments": 360, "created_at": "2026-10-29T12:00:00Z"},
+            {"objectID": "2", "title": "Emacs turns 50", "url": "https://example.com/emacs", "points": 900, "num_comments": 10, "created_at": "2026-10-29T11:00:00Z"},
+            {"objectID": "3", "title": "Ask HN: How do you review LLM agents' code?", "url": None, "points": 80, "num_comments": 40, "created_at": "2026-10-29T10:00:00Z"},
+        ]}
+        with mock.patch.object(official_news, "fetch", return_value=json.dumps(hits).encode()):
+            got = official_news.from_hn(datetime(2026, 10, 30, tzinfo=timezone.utc))
+        self.assertEqual([g["title_en"] for g in got], ["We're releasing the weights of Mistral Large 4", "Ask HN: How do you review LLM agents' code?"])
+        self.assertEqual((got[0]["source_label"], got[0]["kind"], got[0]["points"], got[0]["comments"]), ("Mistral AI", "hot", 1314, 360))
+        self.assertEqual(got[1]["url"], "https://news.ycombinator.com/item?id=3")  # 본문이 HN에 있으면 토론 주소가 원문
+
+    def test_github_drops_cjk_and_empty_descriptions(self):
+        repos = {"items": [
+            {"name": "grim-prompter", "html_url": "https://github.com/a/grim-prompter", "description": "Threat modeling for AI coding agents", "stargazers_count": 179, "created_at": "2026-10-25T00:00:00Z"},
+            {"name": "dsh-go", "html_url": "https://github.com/b/dsh-go", "description": "DeepSeek Harness 装进口袋：手机本机运行，也能遥控你的电脑。", "stargazers_count": 729, "created_at": "2026-10-26T00:00:00Z"},
+            {"name": "empty", "html_url": "https://github.com/c/empty", "description": None, "stargazers_count": 500, "created_at": "2026-10-26T00:00:00Z"},
+        ]}
+        with mock.patch.object(official_news, "fetch", return_value=json.dumps(repos).encode()):
+            got = official_news.from_github(datetime(2026, 10, 30, tzinfo=timezone.utc))
+        self.assertEqual([g["url"] for g in got], ["https://github.com/a/grim-prompter"])
+        self.assertEqual((got[0]["points"], got[0]["category"]), (179, "GitHub"))
+
+    def test_hn_reaction_attaches_to_same_official_story(self):
+        official = [{"id": "g", "url": "https://deepmind.google/blog/gemini-4-carbon/", "title_en": "Gemini 4 Carbon: our next frontier model"}]
+        hot = [{"source": "hn", "url": "https://www.deepmind.google/blog/gemini-4-carbon", "title_en": "Gemini 4 Carbon", "points": 300, "comments": 90, "discussion_url": "d1"},
+               {"source": "hn", "url": "https://artificialanalysis.ai/a", "title_en": "Gemini-4-carbon is #1 on the index", "points": 331, "comments": 240, "discussion_url": "d2"},
+               {"source": "hn", "url": "https://mistral.ai/news/x", "title_en": "Mistral Large 4 weights", "points": 1314, "comments": 360, "discussion_url": "d3"},
+               {"source": "github", "url": "https://github.com/a/b", "title_en": "b", "points": 200}]
+        left = official_news.attach_hn(official, hot)
+        # 같은 주소(www·끝 / 차이)와 같은 모델 이름(gemini-4-carbon)을 다룬 글은 공식 소식에 점수만 붙고, 더 높은 점수를 남긴다
+        self.assertEqual(official[0]["points"], 331)
+        self.assertEqual(official[0]["discussion_url"], "d2")
+        self.assertEqual([h["url"] for h in left], ["https://mistral.ai/news/x", "https://github.com/a/b"])
+        # 문장 속 모델 이름으로도 같은 사건을 잇는다(「We're releasing the weights of Mistral Large 4」 ↔ HF 「Mistral Large 4 on Hugging Face」)
+        hf = [{"id": "m", "url": "https://huggingface.co/blog/mistral", "title_en": "Welcome Le Chonk: Mistral Large 4 on Hugging Face"}]
+        left = official_news.attach_hn(hf, [{"source": "hn", "url": "https://mistral.ai/news/x", "title_en": "We're releasing the weights of Mistral Large 4",
+                                             "points": 1314, "comments": 360, "discussion_url": "d3"}])
+        self.assertEqual((left, hf[0]["points"]), ([], 1314))
+        self.assertEqual(official_news.model_keys("Introducing GPT-6.1 Terra · Gemini 4 Carbon"), {"gpt-6.1", "gemini-4"})
+
+    def test_hot_summary_respects_robots(self):
+        item = {"source": "hn", "kind": "hot", "url": "https://blocked.example/post", "_desc": ""}
+        official_news._robots.clear()
+        robots = b"User-agent: *\nDisallow: /"
+        with mock.patch.object(official_news, "fetch", side_effect=lambda u: robots if u.endswith("robots.txt") else b"<p>" + b"x" * 300 + b"</p>"):
+            self.assertEqual(official_news.body_paragraphs(item), [])  # 막힌 사이트는 요약 없이
+            official_news._robots.clear()
+            open_robots = b"User-agent: *\nAllow: /"
+            with mock.patch.object(official_news, "fetch", side_effect=lambda u: open_robots if u.endswith("robots.txt") else ("<p>" + "word " * 20 + "</p>").encode()):
+                self.assertEqual(len(official_news.body_paragraphs(item)), 1)
+        self.assertEqual(official_news.body_paragraphs({"source": "github", "kind": "hot", "url": "u", "_desc": "A tool"}), ["A tool"])
+
     def test_save_db_upserts_news_and_replaces_models(self):
         calls = []
         class FakeDb:

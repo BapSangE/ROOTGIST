@@ -88,7 +88,12 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
       padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s12, RgSpace.gutterText, 0),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         // 머리 줄(출처 칩 · 분류 · 날짜) → 제목 → 원제. 목록 행과 같은 머리 줄(열었으니 「새 글」은 없다)
-        RgRowHead(chip: RgChip(n.sourceLabel, source: n.source), meta: newsMetaShort(n)),
+        RgRowHead(
+          chip: RgChip(n.sourceLabel, source: n.source),
+          meta: n.isHot
+              ? [n.isGithub ? 'GitHub' : 'Hacker News', ?n.reaction, newsDate(n)].join(' · ')
+              : [newsMetaShort(n), ?n.reaction].join(' · '),
+        ),
         const SizedBox(height: RgSpace.s12),
         HeadingTextScale(child: Semantics(header: true, child: KeepAllText(n.titleKo ?? n.titleEn, style: RgText.titleDetail))),
         if (n.titleKo != null) ...[
@@ -103,13 +108,15 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
       RgCard(
         padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s18),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Semantics(header: true, child: Text('원문 소개문', style: RgText.titleCard)),
+          Semantics(header: true, child: Text(n.isGithub ? '저장소 설명' : '원문 소개문', style: RgText.titleCard)),
           const SizedBox(height: RgSpace.s8),
           TermText(summary!, highlights: marks.first, style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
         ]),
       ),
       const SizedBox(height: RgSpace.s12),
-      _Note('${n.sourceLabel} 글은 자동으로 본문을 읽을 수 없어 소개문만 옮겼어요. 자세한 내용은 원문에서 확인해 주세요.'),
+      _Note(n.isGithub
+          ? '저장소에 적힌 설명을 AI가 한국어로 옮겼어요. 별 수는 GitHub 기준이고, 도구를 검증한 결과가 아니에요.'
+          : '${n.sourceLabel} 글은 자동으로 본문을 읽을 수 없어 소개문만 옮겼어요. 자세한 내용은 원문에서 확인해 주세요.'),
     ] else if (n.summaryKo != null || n.keyPoints.isNotEmpty)
       RgCard(
         padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s18),
@@ -130,9 +137,13 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
     else
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
-        child: KeepAllText('이 글은 요약을 만들지 못했어요. 원문에서 읽어 주세요.', style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
+        child: KeepAllText(
+          n.isHot ? '요약이 없는 글이에요. 원문 사이트가 자동 읽기를 막았거나 아직 정리하지 못했어요. 원문에서 읽어 주세요.' : '이 글은 요약을 만들지 못했어요. 원문에서 읽어 주세요.',
+          perSentence: true,
+          style: RgText.bodySmall.copyWith(color: RgColors.textSecondary),
+        ),
       ),
-    if (!n.thin) ...[
+    if (!n.thin && (n.summaryKo != null || n.keyPoints.isNotEmpty)) ...[
       const SizedBox(height: RgSpace.s12),
       const _Note('원문만 보고 AI가 한국어로 정리했어요. 글 전체를 옮기지 않으니 자세한 내용은 원문에서 읽어요.'),
     ],
@@ -144,7 +155,16 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
       ),
     ],
     const SizedBox(height: RgSpace.s28),
-    _LinkCard(label: '원문', value: n.sourceLabel, url: n.url),
+    // 화제·HN 반응이 붙은 소식은 Hacker News 토론으로도(댓글 수)
+    _LinkCard(
+      label: n.isGithub ? 'GitHub 저장소' : '원문',
+      value: n.sourceLabel,
+      url: n.url,
+      extra: n.discussionUrl == null || n.discussionUrl == n.url
+          ? null
+          : ('Hacker News 토론', n.comments == null ? 'Hacker News' : '댓글 ${countKo(n.comments!)}', n.discussionUrl!),
+      extraLast: true,
+    ),
     ];
   }
 }
@@ -446,16 +466,20 @@ class _Note extends StatelessWidget {
 
 // 외부 링크 행(S02 정보 카드와 같은 모양, ↗)
 class _LinkCard extends StatelessWidget {
-  const _LinkCard({required this.label, required this.value, required this.url, this.extra});
+  const _LinkCard({required this.label, required this.value, required this.url, this.extra, this.extraLast = false});
   final String label, value, url;
   final (String, String, String)? extra;
+  final bool extraLast; // 소식: 원문 먼저, HN 토론은 아래
 
   @override
   Widget build(BuildContext context) => RgCard(
     padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s4),
     child: Column(children: [
-      if (extra case (final l, final v, final u)) _row(l, v, u, divider: true),
-      _row(label, value, url),
+      if (!extraLast)
+        if (extra case (final l, final v, final u)) _row(l, v, u, divider: true),
+      _row(label, value, url, divider: extraLast && extra != null),
+      if (extraLast)
+        if (extra case (final l, final v, final u)) _row(l, v, u),
     ]),
   );
 

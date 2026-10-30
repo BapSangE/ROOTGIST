@@ -169,25 +169,26 @@ class _WithTabBar extends StatelessWidget {
 }
 
 // 옆으로 밀어 탭 넘기기(실기기 QA 요청). 한 줄로 이어진 자리를 차례로 넘는다:
-// 홈 → 탐색·논문 → 탐색·공식 소식(발표) → 공식 소식(업데이트) → 탐색·모델(트렌딩) → 모델(새로 나옴) → 보관함 → 설정.
+// 홈 → 탐색·논문 → 탐색·소식(발표) → 소식(업데이트) → 소식(화제) → 탐색·모델(트렌딩) → 모델(새로 나옴) → 보관함 → 설정.
 // 왼쪽으로 밀면 다음, 오른쪽으로 밀면 이전. 하단 탭바 선택도 같이 옮겨 간다.
 // 탭의 첫 화면에서만: 지난 날짜·설정 하위 화면에서는 가장자리 밀기(뒤로)가 먼저다. 가로로 넘기는 칩 목록은 칩이 먼저 넘어간다.
-typedef TabStop = (int branch, int exploreTab, bool second); // second: 공식 소식은 업데이트, 모델은 새로 나옴
+typedef TabStop = (int branch, int exploreTab, int sub); // sub: 소식은 발표·업데이트·화제, 모델은 트렌딩·새로 나옴
 
 const tabStops = <TabStop>[
-  (0, 0, false),
-  (1, 0, false),
-  (1, 1, false),
-  (1, 1, true),
-  (1, 2, false),
-  (1, 2, true),
-  (2, 0, false),
-  (3, 0, false),
+  (0, 0, 0),
+  (1, 0, 0),
+  (1, 1, 0),
+  (1, 1, 1),
+  (1, 1, 2),
+  (1, 2, 0),
+  (1, 2, 1),
+  (2, 0, 0),
+  (3, 0, 0),
 ];
 
 // 지금 자리. 탐색이 아니면 탐색 칸 값은 보지 않는다.
-int currentStop(int branch, int tab, bool second) => tabStops.indexWhere(
-  (s) => s.$1 == branch && (branch != 1 || (s.$2 == tab && (tab == 0 || s.$3 == second))),
+int currentStop(int branch, int tab, int sub) => tabStops.indexWhere(
+  (s) => s.$1 == branch && (branch != 1 || (s.$2 == tab && (tab == 0 || s.$3 == sub))),
 );
 
 class _TabSwipe extends StatefulWidget {
@@ -236,13 +237,13 @@ class _TabSwipeState extends State<_TabSwipe> with SingleTickerProviderStateMixi
     // 살짝 밀거나(60pt) 빠르게 튕기면(초당 300pt) 넘긴다
     if (dx.abs() < 60 && v.abs() < 300) return;
     final shell = widget.shell;
-    final at = currentStop(shell.currentIndex, exploreTab.value, exploreTab.value == 2 ? modelsFresh.value : newsUpdates.value);
+    final at = currentStop(shell.currentIndex, exploreTab.value, exploreTab.value == 2 ? (modelsFresh.value ? 1 : 0) : newsTab.value);
     final next = at + ((dx != 0 ? dx : v) < 0 ? 1 : -1);
     if (at < 0 || next < 0 || next >= tabStops.length) return;
-    final (branch, tab, second) = tabStops[next];
+    final (branch, tab, sub) = tabStops[next];
     HapticFeedback.selectionClick();
     if (branch == 1) {
-      exploreJump.value = ExploreJump(tab, updates: tab == 1 && second, fresh: tab == 2 && second, animate: shell.currentIndex == 1);
+      exploreJump.value = ExploreJump(tab, updates: tab == 1 && sub == 1, hot: tab == 1 && sub == 2, fresh: tab == 2 && sub == 1, animate: shell.currentIndex == 1);
     }
     if (branch != shell.currentIndex) {
       shell.goBranch(branch);

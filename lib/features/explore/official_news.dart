@@ -28,7 +28,8 @@ class OfficialNewsSection extends StatefulWidget {
 
 class _OfficialNewsSectionState extends State<OfficialNewsSection> {
   final _req = Reloadable(repository.listOfficialNews);
-  late var _updates = newsUpdates.value = exploreJump.value?.updates ?? false; // false = 발표, true = 업데이트
+  late var _tab = newsTab.value = exploreJump.value?.newsTab ?? 0; // 0 발표, 1 업데이트, 2 화제
+  bool get _updates => _tab == 1;
   String? _source; // null = 전체
 
   // 홈 「업데이트 더 보기」로 들어오면 업데이트를, 「공식 발표 더 보기」면 발표를 고른다
@@ -36,7 +37,7 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
     final j = exploreJump.value;
     if (j != null && j.tab == 1 && mounted) {
       setState(() {
-        _updates = newsUpdates.value = j.updates;
+        _tab = newsTab.value = j.newsTab;
         _source = null;
       });
     }
@@ -69,7 +70,7 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
     exploreJump.addListener(_jump);
     // 목록을 받으면 이번 맨 위 발표 시각을 기록(다음에 열 때 선 자리). 그리는 도중이 아니라 다음 프레임에
     _req.future.then((all) {
-      final newest = all.where((n) => !n.isUpdate).map((n) => n.publishedAt).fold<DateTime?>(null, (a, b) => a == null || b.isAfter(a) ? b : a);
+      final newest = all.where((n) => !n.isUpdate && !n.isHot).map((n) => n.publishedAt).fold<DateTime?>(null, (a, b) => a == null || b.isAfter(a) ? b : a);
       if (newest != null) WidgetsBinding.instance.addPostFrameCallback((_) => newsSeenAt.value = newest);
     }, onError: (_) {});
   }
@@ -93,10 +94,10 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
             const SizedBox(height: RgSpace.s12),
             // 밑줄 탭: 위 알약 세그먼트(논문·공식 소식·모델)와 위계를 나눈다
             RgUnderlineTabs(
-              labels: const ['발표', '업데이트'],
-              selected: _updates ? 1 : 0,
+              labels: const ['발표', '업데이트', '화제'],
+              selected: _tab,
               onTap: (i) => setState(() {
-                _updates = newsUpdates.value = i == 1;
+                _tab = newsTab.value = i;
                 _source = null;
               }),
             ),
@@ -117,7 +118,8 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
   }
 
   List<Widget> _list(BuildContext context, List<OfficialNews> all) {
-    final kind = [for (final n in all) if (n.isUpdate == _updates) n];
+    if (_tab == 2) return _hotList(context, all);
+    final kind = [for (final n in all) if (!n.isHot && n.isUpdate == _updates) n];
     if (kind.isEmpty) {
       return [
         Padding(
@@ -149,7 +151,7 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
       // 발표는 논문 목록처럼 짧은 행, 누르면 상세(실기기 QA: 한 화면이 너무 길었다). 업데이트는 4~5개라 카드 그대로.
       // 발표·업데이트나 출처 칩을 바꾸면 목록이 떠오르며 바뀐다(RgFilterSwitch)
       RgFilterSwitch(
-        switchKey: (_updates, _source),
+        switchKey: (_tab, _source),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           if (_updates)
             for (final n in shown) ...[const SizedBox(height: RgSpace.s12), _NewsCard(news: n)]
@@ -188,6 +190,47 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
       ),
     ];
   }
+
+  // 화제 칸(시안 B): Hacker News(최근 24시간, 점수 순) → GitHub 이번 주 새 AI 도구(별 순). 칩 거르기 없음
+  List<Widget> _hotList(BuildContext context, List<OfficialNews> all) {
+    final now = clock();
+    final hn = [for (final n in all) if (n.isHot && !n.isGithub && now.difference(n.publishedAt).inHours < 48) n]
+      ..sort((a, b) => (b.points ?? 0).compareTo(a.points ?? 0));
+    final gh = [for (final n in all) if (n.isGithub) n]..sort((a, b) => (b.points ?? 0).compareTo(a.points ?? 0));
+    Widget group(String title, List<OfficialNews> rows) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s20, RgSpace.gutterText, RgSpace.s8),
+        child: Semantics(header: true, child: Text(title, style: RgText.meta.copyWith(fontWeight: FontWeight.w700, color: RgColors.textSecondary))),
+      ),
+      RgCard(child: Column(children: [for (final (i, n) in rows.indexed) NewsRow(news: n, last: i == rows.length - 1, summary: true)])),
+    ]);
+    return [
+      RgFilterSwitch(
+        switchKey: _tab,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          if (hn.isEmpty && gh.isEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s24, RgSpace.gutterText, 0),
+              child: KeepAllText('아직 모은 화제가 없어요', style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
+            ),
+          if (hn.isNotEmpty) group('Hacker News · 최근 이틀', hn),
+          if (gh.isNotEmpty) group('GitHub · 이번 주 새 AI 도구', gh),
+        ]),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s12, RgSpace.gutterText, 0),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s6, children: [
+          const Padding(padding: EdgeInsets.only(top: 2), child: RgIcon('info', size: 14, color: RgColors.textSecondary)),
+          Expanded(
+            child: KeepAllText(
+              '개발자들이 많이 본 글과 새 도구예요. 공식 발표가 아니라 각 사이트의 글이고, 점수는 Hacker News 추천 수·GitHub 별 수예요. 요약은 원문 사이트가 허용할 때만 AI가 만들어요.',
+              perSentence: true, style: RgText.caption.copyWith(color: RgColors.textSecondary),
+            ),
+          ),
+        ]),
+      ),
+    ];
+  }
 }
 
 // 발표 한 줄(탐색 목록, 홈 하이라이트): 머리 줄(출처 칩 · 분류 · 날짜 · 새 글) + 제목, 누르면 상세. 오른쪽에 북마크.
@@ -213,7 +256,7 @@ class NewsRow extends StatelessWidget {
           const SizedBox(height: RgSpace.s4),
           KeepAllText(s, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.bodySmall.copyWith(color: RgColors.textBody)),
         ],
-        if (n.thin) ...[
+        if (n.thin && !n.isHot) ...[
           const SizedBox(height: RgSpace.s8),
           const RgTag(label: '원문 소개문만'),
         ],
@@ -279,9 +322,11 @@ class NewsHead extends StatelessWidget {
     valueListenable: readItems,
     builder: (context, _, _) => RgRowHead(
       chip: RgChip(news.sourceLabel, source: news.source),
-      meta: release
-          ? [releaseTag(news), relativeKo(news.publishedAt, clock())].join(' · ')
-          : [?news.categoryKo, relativeKo(news.publishedAt, clock())].join(' · '),
+      meta: news.isHot
+          ? [?news.reaction, relativeKo(news.publishedAt, clock())].join(' · ')
+          : release
+              ? [releaseTag(news), relativeKo(news.publishedAt, clock()), ?news.reaction].join(' · ')
+              : [?news.categoryKo, relativeKo(news.publishedAt, clock()), ?news.reaction].join(' · '),
       isNew: isNew(newsKey(news), news.publishedAt),
     ),
   );

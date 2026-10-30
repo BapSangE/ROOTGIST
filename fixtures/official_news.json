@@ -113,6 +113,55 @@
       "related": [
         "https://example.com/fixture/releases"
       ]
+    },
+    {
+      "id": "hot-hn-1",
+      "source": "hn",
+      "source_label": "example.dev",
+      "kind": "hot",
+      "category": "Hacker News",
+      "title_en": "An example essay about LLM writing style",
+      "title_ko": "LLM 글쓰기 문체에 관한 가상 글",
+      "url": "https://example.dev/llm-style",
+      "published_at": "2026-10-18T09:00:00+00:00",
+      "summary_ko": "가상의 화제 글 요약이에요.",
+      "key_points": [],
+      "points": 408,
+      "comments": 213,
+      "discussion_url": "https://news.ycombinator.com/item?id=1"
+    },
+    {
+      "id": "hot-hn-2",
+      "source": "hn",
+      "source_label": "Example AI",
+      "kind": "hot",
+      "category": "Hacker News",
+      "title_en": "We're releasing the weights of Example-4",
+      "title_ko": "Example-4 가중치 공개",
+      "url": "https://example.ai/weights",
+      "published_at": "2026-10-18T12:00:00+00:00",
+      "summary_ko": null,
+      "key_points": [],
+      "points": 1314,
+      "comments": 360,
+      "discussion_url": "https://news.ycombinator.com/item?id=2"
+    },
+    {
+      "id": "hot-gh-1",
+      "source": "github",
+      "source_label": "GitHub",
+      "kind": "hot",
+      "category": "GitHub",
+      "title_en": "example-tool: A fictional agent tool",
+      "title_ko": "example-tool: 가상의 에이전트 도구",
+      "url": "https://github.com/example/example-tool",
+      "published_at": "2026-10-16T00:00:00+00:00",
+      "summary_ko": "가상의 저장소 설명이에요.",
+      "thin": true,
+      "key_points": [],
+      "points": 179,
+      "comments": null,
+      "discussion_url": null
     }
   ]
 }

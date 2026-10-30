@@ -3,31 +3,39 @@ import '../../data/models.dart';
 // 홈 「오늘의 브리핑」(design-preview/src/briefing_preview.html): 최근 24시간 소식을 모아 주요 소식 5개를 고른다.
 // 화면과 떼어 테스트한다. 사건 묶기·중요도 점수를 배치(LLM)로 옮기기 전까지는 아래 간단한 규칙으로 고른다.
 class Briefing {
-  Briefing(List<OfficialNews> news, DateTime now, {int top = 5}) {
+  Briefing(List<OfficialNews> all, DateTime now, {int top = 5}) {
     bool within(OfficialNews n, Duration d) => now.difference(n.publishedAt) <= d;
+    final news = [for (final n in all) if (!n.isHot) n];
+    final hot = [for (final n in all) if (n.isHot && within(n, const Duration(hours: 48))) n];
     final day = [for (final n in news) if (within(n, const Duration(hours: 24))) n];
     final days3 = [for (final n in news) if (within(n, const Duration(days: 3))) n];
-    // 「새 소식 N건」은 24시간 기준. 3건도 안 되면(주말·조용한 날) 3일로 넓혀 빈 홈을 만들지 않는다
+    // 「새 소식 N건」은 24시간 기준(공식 소식 + 화제). 공식 소식이 3건도 안 되면(주말·조용한 날) 3일로 넓힌다
     wide = day.length < 3;
     final counted = wide ? days3 : day;
-    total = counted.length;
-    // 주요 소식은 늘 3일 안에서 고른다: 어제 나온 큰 발표(Gemini 4 Carbon 등)가 24시간이 지났다고 빠지지 않게.
-    // 오래될수록 점수가 깎여(하루 1점) 새 소식이 앞선다. 3일 안에도 없으면 최근 소식으로 빈 카드를 피한다
-    stale = days3.isEmpty;
-    final pool = stale ? news.take(10).toList() : days3;
+    total = counted.length + hot.where((n) => within(n, const Duration(hours: 24))).length;
+    // 주요 소식은 3일 안의 공식 소식 + 크게 화제가 된 글(HN 500점 이상이거나 모델 출시)에서 고른다.
+    // 공식 출처가 없는 발표(예: Mistral 가중치 공개)도 화제 덕에 올라온다. 오래될수록 하루 1점씩 깎인다.
+    stale = days3.isEmpty && hot.isEmpty;
+    final big = [for (final n in hot) if (!n.isGithub && ((n.points ?? 0) >= 500 || _launch.hasMatch(n.titleEn))) n];
+    final pool = stale ? news.take(10).toList() : [...days3, ...big];
     final ranked = [...pool]..sort((a, b) => importance(b, now).compareTo(importance(a, now)));
     stories = ranked.take(top).toList();
     // 나머지 = 세어진 새 소식 중 주요 소식에 안 든 것(최신순, 받은 순서 그대로). 최근 소식 모드면 남은 최근 소식
     rest = [for (final n in stale ? pool : counted) if (!stories.contains(n)) n];
     updates = counted.where((n) => n.isUpdate).length;
+    // 개발자 화제: 주요 소식에 오르지 않은 Hacker News 글, 점수 순(GitHub 새 도구는 탐색의 화제 칸에)
+    talk = [for (final n in hot) if (!n.isGithub && !stories.contains(n)) n]..sort((a, b) => (b.points ?? 0).compareTo(a.points ?? 0));
+    hotCount = hot.length;
   }
 
   late final bool wide; // true면 「최근 3일」
   late final bool stale; // true면 3일 안에 새 소식이 없어 최근 소식을 대신 보인다(새 소식 0건)
   late final List<OfficialNews> stories; // 오늘의 주요 소식(중요한 순)
   late final List<OfficialNews> rest; // 나머지 새 소식(최신순)
+  late final List<OfficialNews> talk; // 개발자 화제(점수 순)
   late final int total;
   late final int updates; // 그중 바뀐 도구(공지·릴리스)
+  late final int hotCount; // 화제 칸의 글 수(최근 이틀)
 }
 
 // 모델 출시: 이름 뒤에 번호가 붙은 모델(GPT-6.1, Gemini 4, Claude 5, Mistral Large 4, Qwen3.8, DeepSeek-V4 …).
@@ -38,9 +46,10 @@ final _launch = RegExp(
 );
 const _majors = {'openai', 'anthropic', 'deepmind', 'google_research', 'meta', 'google'};
 
-/// 중요도: 글(발표) > 공지 > 릴리스, 큰 연구소, 모델 출시 표현, 같은 사건을 다룬 다른 글 수, 그리고 새로울수록.
+/// 중요도: 글(발표) > 공지 > 릴리스(화제는 HN 점수), 큰 연구소, 번호 붙은 모델 출시, 같은 사건을 다룬 다른 글 수, 새로울수록.
 double importance(OfficialNews n, DateTime now) {
-  final kind = switch (n.kind) { 'post' => 3.0, 'notice' => 2.0, _ => 1.0 };
+  // 화제 글은 HN 점수로(300점마다 1점, 최대 4점). 공식 소식은 글 종류로
+  final kind = n.isHot ? 1 + ((n.points ?? 0) / 300).clamp(0, 4) : switch (n.kind) { 'post' => 3.0, 'notice' => 2.0, _ => 1.0 };
   final major = _majors.contains(n.source) ? 2.0 : 0.0;
   final launch = _launch.hasMatch(n.titleEn) ? 3.0 : 0.0;
   final related = n.related.length.clamp(0, 2).toDouble();
