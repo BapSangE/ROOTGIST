@@ -13,6 +13,7 @@ import '../../design/widgets/rg_pressable.dart';
 import '../../design/widgets/rg_underline_tabs.dart';
 import '../../design/widgets/rg_states.dart';
 import '../../data/unread.dart';
+import '../home/briefing.dart';
 import '../../design/widgets/rg_row_head.dart';
 import '../common/item_actions.dart';
 
@@ -41,10 +42,36 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
     }
   }
 
+  // 「여기까지 봤어요」: 이 화면을 열기 전 값(이번에 연 뒤에는 맨 위 글 시각으로 바꾼다)
+  final DateTime? _seenBefore = newsSeenAt.value;
+
+  // 날짜 머리별로 나눈다(받은 순서 = 최신순 유지)
+  List<(String, List<OfficialNews>)> _byDay(List<OfficialNews> list, DateTime now) {
+    final out = <(String, List<OfficialNews>)>[];
+    for (final n in list) {
+      final day = dayHeaderKo(n.publishedAt, now);
+      if (out.isNotEmpty && out.last.$1 == day) {
+        out.last.$2.add(n);
+      } else {
+        out.add((day, [n]));
+      }
+    }
+    return out;
+  }
+
+  // 지난번에 본 글 중 가장 새것(선은 그 글 바로 위에)
+  OfficialNews? _firstSeen(List<OfficialNews> list) =>
+      _seenBefore == null ? null : list.where((n) => n.publishedAt.compareTo(_seenBefore) <= 0).firstOrNull;
+
   @override
   void initState() {
     super.initState();
     exploreJump.addListener(_jump);
+    // 목록을 받으면 이번 맨 위 발표 시각을 기록(다음에 열 때 선 자리). 그리는 도중이 아니라 다음 프레임에
+    _req.future.then((all) {
+      final newest = all.where((n) => !n.isUpdate).map((n) => n.publishedAt).fold<DateTime?>(null, (a, b) => a == null || b.isAfter(a) ? b : a);
+      if (newest != null) WidgetsBinding.instance.addPostFrameCallback((_) => newsSeenAt.value = newest);
+    }, onError: (_) {});
   }
 
   @override
@@ -99,9 +126,11 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
         ),
       ];
     }
-    // 칩은 이름순으로 고정(글 순서대로면 날마다 칩 자리가 바뀐다)
-    final sources = {for (final n in kind) n.source: n.sourceLabel}.entries.toList()..sort((a, b) => a.value.compareTo(b.value));
-    final shown = [for (final n in kind) if (_source == null || n.source == _source) n];
+    // 칩은 회사 묶음(출처 19개 → 6개, 시안 C). 순서는 고정(글 순서대로면 날마다 칩 자리가 바뀐다)
+    final present = {for (final n in kind) newsGroup(n.source)};
+    final sources = [for (final g in newsGroups) if (present.contains(g)) MapEntry(g, g)];
+    final shown = [for (final n in kind) if (_source == null || newsGroup(n.source) == _source) n];
+    final now = clock();
     return [
       const SizedBox(height: RgSpace.s14),
       SizedBox(
@@ -124,10 +153,23 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           if (_updates)
             for (final n in shown) ...[const SizedBox(height: RgSpace.s12), _NewsCard(news: n)]
-          else ...[
-            const SizedBox(height: RgSpace.s12),
-            RgCard(child: Column(children: [for (final (i, n) in shown.indexed) NewsRow(news: n, last: i == shown.length - 1)])),
-          ],
+          else
+            // 날짜 머리(오늘·어제·날짜)마다 카드 하나. 지난번에 본 맨 위 글 앞에 「여기까지 봤어요」 선
+            for (final (day, rows) in _byDay(shown, now)) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s20, RgSpace.gutterText, RgSpace.s8),
+                child: Semantics(header: true, child: Text(day, style: RgText.meta.copyWith(fontWeight: FontWeight.w700, color: RgColors.textSecondary))),
+              ),
+              RgCard(
+                child: Column(children: [
+                  for (final (i, n) in rows.indexed) ...[
+                    if (_seenBefore case final seen? when n.publishedAt.compareTo(seen) <= 0 && shown.first.publishedAt.isAfter(seen) && _firstSeen(shown) == n)
+                      const _ReadLine(),
+                    NewsRow(news: n, last: i == rows.length - 1, summary: true),
+                  ],
+                ]),
+              ),
+            ],
         ]),
       ),
       Padding(
@@ -150,9 +192,10 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
 
 // 발표 한 줄(탐색 목록, 홈 하이라이트): 머리 줄(출처 칩 · 분류 · 날짜 · 새 글) + 제목, 누르면 상세. 오른쪽에 북마크.
 class NewsRow extends StatelessWidget {
-  const NewsRow({super.key, required this.news, required this.last});
+  const NewsRow({super.key, required this.news, required this.last, this.summary = false});
   final OfficialNews news;
   final bool last;
+  final bool summary; // 탐색 발표 목록: 제목 아래 두 줄 요약
 
   @override
   Widget build(BuildContext context) {
@@ -165,6 +208,11 @@ class NewsRow extends StatelessWidget {
         NewsHead(news: n),
         const SizedBox(height: RgSpace.s6),
         KeepAllText(n.titleKo ?? n.titleEn, style: RgText.titleList),
+        // 두 줄 요약(시안 C): 목록만 훑어도 무슨 소식인지. 요약·핵심 내용·근거 전체는 상세에서
+        if ((summary ? (n.summaryKo ?? n.keyPoints.firstOrNull?.text) : null) case final s?) ...[
+          const SizedBox(height: RgSpace.s4),
+          KeepAllText(s, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.bodySmall.copyWith(color: RgColors.textBody)),
+        ],
         if (n.thin) ...[
           const SizedBox(height: RgSpace.s8),
           const RgTag(label: '원문 소개문만'),
@@ -231,7 +279,9 @@ class NewsHead extends StatelessWidget {
     valueListenable: readItems,
     builder: (context, _, _) => RgRowHead(
       chip: RgChip(news.sourceLabel, source: news.source),
-      meta: release ? [releaseTag(news), newsDate(news)].join(' · ') : newsMetaShort(news),
+      meta: release
+          ? [releaseTag(news), relativeKo(news.publishedAt, clock())].join(' · ')
+          : [?news.categoryKo, relativeKo(news.publishedAt, clock())].join(' · '),
       isNew: isNew(newsKey(news), news.publishedAt),
     ),
   );
@@ -490,4 +540,22 @@ class EvidencePill extends StatelessWidget {
       ]),
     ),
   );
+}
+
+// 「지난번에 여기까지 봤어요」 선: 새 글 색의 가는 선 + 가운데 글자. 화면 안에서는 움직이지 않는다(다음에 열 때만 옮겨 간다).
+class _ReadLine extends StatelessWidget {
+  const _ReadLine();
+
+  @override
+  Widget build(BuildContext context) {
+    final line = Expanded(child: Container(height: 1, color: RgColors.newText.withValues(alpha: 0.3)));
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s8),
+      child: Row(spacing: RgSpace.s8, children: [
+        line,
+        Text('지난번에 여기까지 봤어요', style: RgText.caption.copyWith(fontSize: 12, fontWeight: FontWeight.w600, color: RgColors.newText)),
+        line,
+      ]),
+    );
+  }
 }

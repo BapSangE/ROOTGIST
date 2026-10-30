@@ -14,8 +14,10 @@ import '../../design/widgets/rg_states.dart';
 import '../common/item_actions.dart';
 import '../explore/official_news.dart';
 import '../explore/trending_models.dart';
+import 'briefing_section.dart';
 
-// S01 홈 (HANDOFF 7.1, 실기기 QA 요청으로 하이라이트 허브로): 오늘의 논문 3편 → 공식 발표 → 업데이트 → 주목받는 모델.
+// S01 홈 (HANDOFF 7.1 → 2026-10-30 「오늘의 브리핑」 시안): 맨 위 브리핑(최근 24시간 소식·주요 소식 5개) → 오늘의 논문 3편
+// → 바뀐 도구 → 주목받는 모델. 아침에 홈만 보고 밤사이 소식을 한눈에 보게 소식이 주인공이고 논문은 아래로.
 // 묶음마다 「더 보기」는 탐색의 그 칸으로. 로딩·오류·지연·빈 상태는 8.1.
 // S04에서 지난 날짜로 들어오면(date) 그날의 논문 전체를 칩과 함께 보여 주고 뒤로 버튼을 더한다(7.6).
 class HomeScreen extends StatefulWidget {
@@ -90,7 +92,14 @@ class _HomeScreenState extends State<HomeScreen> {
               _topBar(context),
               ...?children,
               if (children == null) ...[
-                _headline(digest, fallback),
+                if (widget.date == null) ...[
+                  FutureBuilder(
+                    future: _extras,
+                    builder: (context, s) => BriefingSection(news: s.data?.$1, paperCount: (fallback == null ? digest : null)?.papers.length ?? 0),
+                  ),
+                  _paperHeader(digest, fallback),
+                ] else
+                  _headline(digest, fallback),
                 DigestPapers(digest: digest, fallback: fallback, limit: widget.date == null ? 3 : null, pastDay: widget.date != null),
                 if (widget.date == null) ...[
                   if ((fallback ?? digest)?.papers case final ps? when ps.isNotEmpty)
@@ -124,6 +133,40 @@ class _HomeScreenState extends State<HomeScreen> {
     ),
   );
 
+  // 홈(브리핑 아래) 논문 칸 머리: 큰 헤드라인 대신 칸 제목. 비었거나 지연이면 안내 카드는 그대로.
+  Widget _paperHeader(Digest? digest, Digest? fallback) {
+    final total = digest?.papers.length ?? 0;
+    final status = digest?.status;
+    final date = digest?.date ?? DateTime.now();
+    final weekend = status == 'empty' && (date.weekday == DateTime.sunday || date.weekday == DateTime.monday);
+    final title = switch (status) {
+      'delayed' => '오늘 논문을 모으는 중이에요',
+      _ when fallback != null => '최근 논문',
+      _ when total == 0 => '아직 올라온 논문이 없어요',
+      _ => '오늘의 논문',
+    };
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      SectionTitle(title, count: fallback == null && total > 0 ? '$total편' : null),
+      if (fallback != null)
+        RgCard(
+          padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s16),
+          child: KeepAllText(
+            [if (weekend) '주말에는 새 논문이 발표되지 않아요.', '가장 최근인 ${koreanDate(fallback.date)} 논문을 보여 드려요.'].join(' '),
+            perSentence: true, style: RgText.bodySmall.copyWith(color: RgColors.textSecondary),
+          ),
+        ),
+      if (status == 'delayed')
+        RgCard(
+          padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s16),
+          child: KeepAllText(
+            [if (digest?.lastSuccessAt case final t?) '마지막 정상 수집 ${kstDateTime(t)}.', '모이는 대로 이 화면에 올라와요.'].join(' '),
+            perSentence: true, style: RgText.bodySmall.copyWith(color: RgColors.textSecondary),
+          ),
+        ),
+    ]);
+  }
+
+  // 지난 날짜 화면(S04에서 연 그날): 날짜와 큰 표제.
   // fallback: 오늘이 비었을 때 대신 보여 줄 가장 최근 다이제스트(헤드라인은 오늘 기준 그대로).
   Widget _headline(Digest? digest, Digest? fallback) {
     final total = digest?.papers.length ?? 0;
@@ -176,27 +219,15 @@ class _HomeScreenState extends State<HomeScreen> {
     ]);
   }
 
-  // 피드백 3차(A안 + C안의 대표 카드, 제목 문구 ① 담백한 설명형):
-  // 연구소 소식 = 대표 1개(요약 한 줄) + 한 줄 1개, 바뀐 도구 = 버전 태그 한 줄 2개, 모델 = 큰 순위 숫자 2개.
+  // 브리핑 아래 칸들(시안 B): 연구소 소식은 브리핑이 맡고, 바뀐 도구 = 버전 태그 한 줄 2개, 모델 = 큰 순위 숫자 2개.
   Widget _extrasSection(BuildContext context, (List<OfficialNews>, List<TrendingModel>)? data) {
     if (data == null) return const SizedBox.shrink();
     final (news, models) = data;
-    final posts = news.where((n) => !n.isUpdate).take(2).toList();
     final updates = news.where((n) => n.isUpdate).take(2).toList();
     final top = models.take(2).toList();
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      if (posts.isNotEmpty) ...[
-        const SectionTitle('연구소 소식', eyebrow: 'OpenAI · Anthropic · Google 외'),
-        RgCard(
-          child: Column(children: [
-            FeaturedNews(news: posts.first, divider: posts.length > 1),
-            for (final (i, n) in posts.skip(1).indexed) NewsRow(news: n, last: i == posts.length - 2),
-          ]),
-        ),
-        MoreLink(label: '소식 더 보기', onTap: () => openExplore(context, const ExploreJump(1))),
-      ],
       if (updates.isNotEmpty) ...[
-        const SectionTitle('이번 주 바뀐 도구'),
+        const SectionTitle('바뀐 도구'),
         RgCard(child: Column(children: [for (final (i, n) in updates.indexed) UpdateRow(news: n, last: i == updates.length - 1)])),
         MoreLink(label: '업데이트 더 보기', onTap: () => openExplore(context, const ExploreJump(1, updates: true))),
       ],
@@ -344,6 +375,7 @@ class _DigestPapersState extends State<DigestPapers> {
           SizedBox(height: chips.isEmpty ? RgSpace.s24 : RgSpace.s16),
           _FeaturedCard(
             paper: p,
+            compact: limit != null,
             label: day == null ? '오늘의 주요 논문' : '${day.date.month}월 ${day.date.day}일 주요 논문',
           ),
         ],
@@ -425,13 +457,14 @@ class _HomeSkeleton extends StatelessWidget {
 }
 
 class _FeaturedCard extends StatelessWidget {
-  const _FeaturedCard({required this.paper, required this.label});
+  const _FeaturedCard({required this.paper, required this.label, this.compact = false});
   final PaperItem paper;
   final String label;
+  final bool compact; // 홈(브리핑 아래): 저자·불릿 대신 한 줄 요약(시안 B)
 
   @override
   Widget build(BuildContext context) {
-    final bullets = paper.keyPoints.take(2); // G11
+    final bullets = compact ? const <String>[] : paper.keyPoints.take(2); // G11
     // iOS QA P5: 「자세히 읽기」 버튼 없이 카드 전체가 S02로(목록 행과 같은 방식). 북마크는 오른쪽 위에 따로.
     // 다크 카드(레퍼런스 007·016): 그날 가장 중요한 논문 하나만 검정 면으로 띄운다.
     return Semantics(
@@ -480,7 +513,10 @@ class _FeaturedCard extends StatelessWidget {
               const SizedBox(height: RgSpace.s8),
               HeadingTextScale(child: KeepAllText(paper.title, style: RgText.titleFeatured.copyWith(color: RgColors.onAction))),
               const SizedBox(height: RgSpace.s8),
-              KeepAllText('${paper.authors} · ${paper.date}', style: RgText.meta.copyWith(color: RgColors.onInkSecondary)),
+              if (compact && paper.keyPoints.isNotEmpty)
+                Text(paper.keyPoints.first, maxLines: 1, overflow: TextOverflow.ellipsis, style: RgText.meta.copyWith(color: RgColors.onInkSecondary))
+              else
+                KeepAllText('${paper.authors} · ${paper.date}', style: RgText.meta.copyWith(color: RgColors.onInkSecondary)),
               if (bullets.isNotEmpty) ...[
                 const SizedBox(height: RgSpace.s16),
                 Column(

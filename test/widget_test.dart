@@ -33,6 +33,8 @@ import 'package:rootgist/features/explore/explore_screen.dart';
 import 'package:rootgist/features/explore/official_news.dart';
 import 'package:rootgist/features/common/term_text.dart';
 import 'package:rootgist/features/home/home_screen.dart';
+import 'package:rootgist/features/home/briefing_section.dart';
+import 'package:rootgist/features/home/briefing.dart';
 import 'package:rootgist/features/paper/paper_screen.dart';
 import 'package:rootgist/features/reader/reader_screen.dart';
 import 'package:rootgist/features/reader/term_sheet.dart';
@@ -56,6 +58,7 @@ Future<void> pumpApp(WidgetTester tester) async {
   newSince = DateTime.utc(2100);
   readItems.value = {};
   modelsSeen.value = {};
+  newsSeenAt.value = null;
   clock = DateTime.now;
   await tester.runAsync(() async {
     await tester.pumpWidget(const RootgistApp());
@@ -385,8 +388,9 @@ void main() {
     expect(find.text('OpenAI'), findsWidgets);
     expect(find.text(keepAll('제품 · 10월 18일')), findsWidgets); // UTC 17시 = KST 다음 날
     expect(find.text(keepAll('가상의 예시 API를 소개합니다')), findsOneWidget);
-    expect(find.text('Introducing a fictional example API'), findsNothing); // 발표 목록은 논문처럼 짧게(제목만)
-    expect(find.text(keepAll('가상의 예시 API를 소개하는 가상 글이에요. 실제 내용이 아니에요.')), findsNothing);
+    expect(find.text('Introducing a fictional example API'), findsNothing); // 발표 목록은 원제 없이 제목 + 두 줄 요약(브리핑 시안 C)
+    expect(find.text(keepAll('가상의 예시 API를 소개하는 가상 글이에요. 실제 내용이 아니에요.')), findsOneWidget);
+    expect(find.text('10월 18일'), findsWidgets); // 날짜 머리(오늘·어제가 아니면 날짜만)
     expect(find.text(keepAll('10월 16일')), findsWidgets); // 한국어로 옮기지 않는 분류는 숨김(날짜만)
     expect(find.text(keepAll('Fictional screening research for tests')), findsOneWidget); // 번역 없으면 원문만
     expect(find.text('Claude Code'), findsNothing); // 릴리스는 「업데이트」에
@@ -485,24 +489,27 @@ void main() {
     await pumpApp(tester);
     await settle(tester);
     expect(find.text('오늘의 주요 논문'), findsOneWidget);
-    // 묶음 제목 문구 ①(피드백 3차), 연구소 소식만 출처 머리말
-    expect(find.text('OPENAI · ANTHROPIC · GOOGLE 외'), findsOneWidget); // 영문 대문자 머리말
-    expect(find.text('연구소 소식'), findsOneWidget);
-    expect(find.text('이번 주 바뀐 도구'), findsOneWidget);
+    // 홈 맨 위는 「오늘의 브리핑」(시안 A): 표제 → 주요 소식 카드. fixture 소식은 오래돼 「새 소식이 없어요」 + 최근 소식
+    expect(find.text(keepAll('새 소식이 없어요')), findsOneWidget);
+    expect(find.text('최근 소식'), findsOneWidget);
+    expect(find.byType(BriefRow), findsNWidgets(5));
+    expect(find.textContaining('더 보기'), findsWidgets);
+    // 브리핑 아래(시안 B): 오늘의 논문 → 바뀐 도구 → 모델. 연구소 소식 칸은 브리핑이 맡는다
+    expect(find.text('오늘의 논문'), findsOneWidget);
+    expect(find.text('연구소 소식'), findsNothing);
+    expect(find.text('바뀐 도구'), findsOneWidget);
     expect(find.text('요즘 많이 쓰는 모델'), findsOneWidget);
-    expect(find.byType(FeaturedNews), findsOneWidget); // 대표 소식 1 + 한 줄 1
-    expect(find.byType(NewsRow), findsOneWidget);
     // 바뀐 도구도 통일 머리 줄: 출처 칩 + 버전·건수 · 날짜(공지는 「공지」)
     expect(find.text(keepAll('v0.0.3 · 3건 · 10월 18일')), findsOneWidget);
     expect(find.text(keepAll('공지 · 10월 17일')), findsOneWidget);
     expect(find.text('example-coder'), findsOneWidget);
     // 홈 논문은 추천 1 + 행 2 = 3편
-    // 목록·카드에는 북마크만(공유는 상세 화면에서). 논문 3 + 발표 2 + 업데이트 2 + 모델 2
+    // 목록·카드에는 북마크만(공유는 상세 화면에서). 브리핑 행은 훑어보기용이라 북마크 없이 누르면 상세
     expect(find.bySemanticsLabel('공유'), findsNothing);
-    expect(find.bySemanticsLabel('북마크에 저장'), findsNWidgets(3 + 2 + 2 + 2)); // 논문 3 + 소식 2 + 바뀐 도구 2 + 모델 2(통일 행: 모든 행 오른쪽에 북마크)
+    expect(find.bySemanticsLabel('북마크에 저장'), findsNWidgets(3 + 2 + 2)); // 논문 3 + 바뀐 도구 2 + 모델 2
 
-    // 공식 발표를 저장하면 보관함에 「공식 소식」으로
-    await tester.tap(find.descendant(of: find.byType(NewsRow).first, matching: find.bySemanticsLabel('북마크에 저장')));
+    // 바뀐 도구를 저장하면 보관함에 「공식 소식」으로
+    await tester.tap(find.descendant(of: find.byType(UpdateRow).first, matching: find.bySemanticsLabel('북마크에 저장')));
     await tester.pump();
     expect(bookmarks.value.values.last.kind, 'news');
 
@@ -568,10 +575,10 @@ void main() {
 
     // 홈의 공식 발표 행: 7일 안의 안 연 글에 「새 글」 글자(출처 배지가 회사 색이라 점 대신), 상세를 열면 그 글만 사라진다
     // 읽으면 「새 글」은 작아지며 사라진다(위젯은 남고 visible만 꺼진다)
-    final dots = find.descendant(of: find.byType(NewsRow), matching: find.byWidgetPredicate((w) => w is RgNewLabel && w.visible));
+    final dots = find.descendant(of: find.byType(BriefRow), matching: find.byWidgetPredicate((w) => w is RgNewLabel && w.visible));
     final before = dots.evaluate().length;
     expect(before, greaterThan(0));
-    await tester.tap(find.byType(NewsRow).first);
+    await tester.tap(find.descendant(of: find.byType(BriefRow), matching: find.byWidgetPredicate((w) => w is RgNewLabel && w.visible)).first);
     await settle(tester);
     router.pop();
     await settle(tester);
@@ -913,8 +920,7 @@ void main() {
     });
     await tester.pumpAndSettle();
 
-    expect(find.textContaining(keepAll('오늘은 새 논문이 없어요'), findRichText: true), findsOneWidget);
-    expect(find.textContaining(keepAll('10월 19일 월요일'), findRichText: true), findsOneWidget); // 헤드라인 날짜는 오늘
+    expect(find.text('최근 논문'), findsOneWidget); // 홈 논문 칸 머리(브리핑 아래)
     expect(find.text(keepAll(byLine('주말에는 새 논문이 발표되지 않아요. 가장 최근인 10월 18일 일요일 논문을 보여 드려요.'))), findsOneWidget);
     expect(find.text('10월 18일 주요 논문'), findsOneWidget);
     expect(find.textContaining('편 모두 보기'), findsOneWidget);
@@ -962,7 +968,7 @@ void main() {
     expect(find.textContaining(keepAll('05:09.')), findsOneWidget); // 마지막 정상 수집 10월 18일 05:09 (KST)
 
     await switchTo(FixtureMode.empty);
-    expect(find.textContaining(keepAll('없어요'), findRichText: true), findsWidgets);
+    expect(find.text('최근 논문'), findsOneWidget);
     expect(find.text('10월 18일 주요 논문'), findsOneWidget); // P4: 가장 최근 다이제스트로 대신
 
     // 「다시 시도」는 다시 부른다(아직 error 모드라 또 실패). 정상으로 돌리면 복구된다.
@@ -1007,6 +1013,60 @@ void main() {
     expect(find.text('AI 요약'), findsNothing);
   });
 
+  test('브리핑: 24시간 안 소식에서 주요 소식 5개(큰 연구소·모델 출시·관련 글 우선), 적으면 3일, 없으면 최근 소식', () {
+    final now = DateTime.utc(2026, 10, 29, 23); // KST 10월 30일 08시
+    OfficialNews n(String id, String source, String kind, String title, int hoursAgo, {List<String> related = const []}) => OfficialNews.fromJson({
+      'id': id, 'source': source, 'source_label': source, 'kind': kind, 'title_en': title, 'url': 'https://e.com/$id',
+      'published_at': now.subtract(Duration(hours: hoursAgo)).toIso8601String(), 'related': related,
+    });
+    final news = [
+      n('blog', 'huggingface', 'post', 'Profiling on Trainium', 2),
+      n('sdk', 'openai_sdk', 'release', 'OpenAI Python SDK v3.41.0', 3),
+      n('gemini', 'deepmind', 'post', 'Gemini 4 Carbon: our next frontier model', 20, related: ['x']),
+      n('spec', 'openai', 'post', 'An updated Model Spec', 6),
+      n('meta', 'meta', 'post', 'Catching bugs before they ship', 7),
+      n('ibm', 'ibm', 'post', 'Granite Switch 4.1.1', 10),
+      n('old', 'anthropic', 'post', 'Introducing Claude 5', 60),
+    ];
+    final b = Briefing(news, now);
+    expect(b.wide, isFalse);
+    expect(b.total, 6); // 「새 소식」 숫자는 24시간 기준(60시간 전 글은 세지 않는다)
+    expect(b.stories.first.id, 'gemini'); // 큰 연구소 + 모델 출시 + 관련 글
+    expect(b.stories.length, 5);
+    expect(b.stories.map((x) => x.id), contains('old')); // 주요 소식은 3일 안에서: 어제·그제 큰 발표도 남는다
+    expect(b.rest.length, 2); // 새 소식 6건 중 주요 소식에 안 든 것
+    expect(b.updates, 1);
+    final quiet = Briefing([news.last], now);
+    expect((quiet.wide, quiet.total, quiet.stories.length), (true, 1, 1)); // 3일 안
+    final stale = Briefing([n('older', 'openai', 'post', 'x', 200)], now);
+    expect((stale.stale, stale.total, stale.stories.length), (true, 0, 1)); // 새 소식 0건이어도 최근 소식은 보인다
+    expect(relativeKo(now.subtract(const Duration(minutes: 5)), now), '5분 전');
+    expect(relativeKo(now.subtract(const Duration(hours: 6)), now), '6시간 전');
+    expect(relativeKo(DateTime.utc(2026, 10, 28, 17), now), '어제 02:00'); // KST 10월 29일 02시
+    expect(relativeKo(DateTime.utc(2026, 10, 26, 3), now), '10월 26일');
+    expect(dayHeaderKo(now.subtract(const Duration(hours: 1)), now), '오늘 · 10월 30일');
+    expect(briefingLabel(now), '아침 브리핑');
+    expect([newsGroup('claude_api'), newsGroup('nvidia_dev'), newsGroup('ai2')], ['Anthropic', 'NVIDIA', '기타']);
+  });
+
+  testWidgets('공식 소식(발표): 회사 묶음 칩, 날짜 머리, 지난번 본 곳에 「여기까지 봤어요」 선', (tester) async {
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+    newsSeenAt.value = DateTime.utc(2026, 10, 17, 12); // 지난번엔 10월 17일 낮 글까지 봤다
+    router.go('/explore');
+    await settle(tester);
+    await tester.tap(find.text('공식 소식'));
+    await slide(tester);
+    await settle(tester);
+    expect(find.text('지난번에 여기까지 봤어요'), findsOneWidget);
+    expect(find.widgetWithText(RgFilterChip, 'OpenAI'), findsOneWidget);
+    expect(find.widgetWithText(RgFilterChip, 'OpenAI 커뮤니티'), findsNothing); // 같은 회사는 한 칩
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(newsSeenAt.value!.isAfter(DateTime.utc(2026, 10, 17, 12)), isTrue); // 이번 맨 위 글로 옮겨 둔다
+  });
+
   test('S02 요약 문단 나누기: 한국어 문장 끝에서만', () {
     expect(
       summaryParagraphs('첫 문장이다. Exact Match를 3.0배 높인다(예: GPT). 마지막이에요! '),
@@ -1020,6 +1080,10 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await pumpApp(tester);
+    // 홈은 한 줄 요약(브리핑 시안 B), 불릿은 탐색 논문 칸의 추천 카드에
+    expect(find.text(keepAll('입력 복잡도에 따른 추론 연산의 동적 배분')), findsNothing);
+    router.go('/explore');
+    await settle(tester);
     final bullet = tester.widget<Text>(find.text(keepAll('입력 복잡도에 따른 추론 연산의 동적 배분')));
     expect(bullet.maxLines, 2);
     expect(bullet.overflow, TextOverflow.ellipsis);
@@ -1150,7 +1214,8 @@ void main() {
     await tester.drag(find.byType(Scrollable).first, const Offset(0, 20000)); // 앞에서 내려 둔 홈을 맨 위로
     await tester.pumpAndSettle();
     expect(MediaQuery.textScalerOf(tester.element(find.text('홈'))).scale(1), 1.35);
-    expect(MediaQuery.textScalerOf(tester.element(find.textContaining(keepAll('올라왔어요'), findRichText: true))).scale(1), 2);
+    // 브리핑 표제(날짜 다음 글자)
+    expect(MediaQuery.textScalerOf(tester.element(find.descendant(of: find.byType(BriefingSection), matching: find.byType(Text)).at(1))).scale(1), 2);
     await tester.scrollUntilVisible(find.textContaining('편 모두 보기'), 300, scrollable: find.byType(Scrollable).first);
     expect(MediaQuery.textScalerOf(tester.element(find.textContaining('편 모두 보기'))).scale(1), 3.12);
   });

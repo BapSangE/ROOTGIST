@@ -30,3 +30,7 @@ bool enteredModel(String id) {
   final seen = DateTime.tryParse(modelsSeen.value[id] ?? '');
   return seen != null && !readItems.value.contains('model:$id') && clock().difference(seen) < newFor;
 }
+
+// 공식 소식(발표) 목록의 「지난번에 여기까지 봤어요」: 지난번 목록을 열었을 때 맨 위 글의 게시 시각(UTC ISO).
+// 목록을 열면 이번 맨 위 글 시각으로 바꾼다. 처음이면 선을 그리지 않는다.
+final newsSeenAt = ValueNotifier<DateTime?>(null);

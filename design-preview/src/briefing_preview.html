@@ -1,0 +1,162 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<!-- 홈 「오늘의 브리핑」 시안(2026-10-30). 실제 10월 28~29일 소식으로 채움. -->
+<style>
+  @font-face { font-family: P; font-weight: 400; src: url(../../assets/fonts/Pretendard-Regular.otf); }
+  @font-face { font-family: P; font-weight: 500; src: url(../../assets/fonts/Pretendard-Medium.otf); }
+  @font-face { font-family: P; font-weight: 600; src: url(../../assets/fonts/Pretendard-SemiBold.otf); }
+  @font-face { font-family: P; font-weight: 700; src: url(../../assets/fonts/Pretendard-Bold.otf); }
+  @font-face { font-family: P; font-weight: 800; src: url(../../assets/fonts/Pretendard-Bold.otf); }
+  :root { --bg:#FFFFFF; --card:#F4F4F2; --fill:#E7E7E3; --line:#E6E6E3; --div:#E3E3E0; --ink:#0E0E0D; --ink2:#33332F; --mute:#6B6B65; --faint:#9B9B94; --newt:#D42A20;
+          --an:#B5522B; --oa:#0E0E0D; --gg:#1A66D9; --hf:#FFD21E; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { width: 2620px; background: #E9E9E6; font-family: P, sans-serif; color: var(--ink); padding: 44px 44px 56px; word-break: keep-all; }
+  h1 { font: 800 34px/1.2 P; letter-spacing: -0.8px; }
+  .lead { margin-top: 10px; font: 400 17px/1.55 P; color: var(--mute); max-width: 1500px; }
+  .grid { display: flex; gap: 26px; margin-top: 30px; }
+  .col { width: 402px; }
+  .label { font: 700 18px/1 P; } .sub { margin-top: 6px; font: 400 14px/1.4 P; color: var(--mute); }
+  .phone { margin-top: 12px; height: 874px; background: var(--bg); border-radius: 44px; border: 6px solid #141413; overflow: hidden; position: relative; }
+  .status { height: 54px; }
+  .top { padding: 4px 20px 0; }
+  .display { font: 800 34px/40px P; letter-spacing: -1px; }
+  .seg { margin: 12px 20px 0; height: 46px; padding: 4px; border-radius: 999px; background: var(--fill); display: flex; gap: 2px; }
+  .seg span { flex: 1; border-radius: 999px; display: flex; align-items: center; justify-content: center; font: 500 14.5px/1 P; color: var(--mute); }
+  .seg span.on { background: #fff; color: var(--ink); font-weight: 700; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+  .utabs { margin: 12px 20px 0; display: flex; gap: 20px; border-bottom: 1px solid var(--line); }
+  .utabs span { padding: 12px 0; font: 500 16px/1 P; color: var(--mute); }
+  .utabs span.on { font-weight: 700; color: var(--ink); border-bottom: 2px solid var(--ink); margin-bottom: -1px; }
+  .filters { display: flex; gap: 8px; padding: 14px 20px 0; overflow: hidden; }
+  .f { height: 36px; padding: 0 15px; border-radius: 999px; border: 1px solid var(--line); display: inline-flex; align-items: center; font: 500 14px/1 P; color: var(--ink2); white-space: nowrap; }
+  .f.on { background: var(--ink); border-color: var(--ink); color: #fff; font-weight: 600; }
+  .sec { padding: 26px 20px 10px; display: flex; align-items: baseline; gap: 6px; }
+  .sec b { font: 700 18px/25px P; letter-spacing: -0.3px; } .sec small { font: 500 14px/1 P; color: var(--mute); }
+  .card { margin: 12px 16px 0; background: var(--card); border-radius: 22px; }
+  .dark { margin: 18px 16px 0; background: var(--ink); color: #fff; border-radius: 26px; padding: 22px; }
+  .dark .m { font: 400 14px/20px P; color: #B9B9B2; }
+  .row { display: flex; gap: 12px; padding: 15px 12px 15px 20px; border-top: 1px solid var(--div); align-items: flex-start; }
+  .card .row:first-child { border-top: 0; }
+  .bare .row { margin: 0 20px; padding: 15px 0; }
+  .bare .row:first-child { border-top: 0; }
+  .grow { flex: 1; min-width: 0; }
+  .head { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; font: 400 13.5px/19px P; color: var(--mute); }
+  .new { font: 700 12px/1 P; color: var(--newt); }
+  .t { margin-top: 6px; font: 600 16.5px/24px P; letter-spacing: -0.3px; }
+  .s { margin-top: 4px; font: 400 14.5px/22px P; color: var(--ink2); }
+  /* 칩: 높이 24, 알약, 12.5 600. 출처는 회사 대표 색, 주제·종류는 중립 */
+  .chip { height: 24px; padding: 0 9px; border-radius: 999px; display: inline-flex; align-items: center; font: 600 12.5px/1 P; white-space: nowrap; background: var(--fill); color: var(--ink2); }
+  .chip.an { background: var(--an); color: #fff; } .chip.oa { background: var(--oa); color: #fff; }
+  .chip.gg { background: var(--gg); color: #fff; } .chip.hf { background: var(--hf); color: var(--ink); }
+  .chip.ink { background: rgba(255,255,255,.14); color: #fff; }
+  .tag { height: 24px; padding: 0 9px; border-radius: 999px; display: inline-flex; align-items: center; font: 500 12.5px/1 P; background: var(--fill); color: var(--ink2); }
+  .bm { width: 44px; height: 44px; flex: none; display: flex; align-items: center; justify-content: center; margin-top: -4px; }
+  .bm i { width: 36px; height: 36px; border-radius: 50%; background: var(--fill); display: flex; align-items: center; justify-content: center; }
+  .bm.on i { background: var(--ink); }
+  .bm svg { width: 16px; height: 16px; stroke: var(--ink); fill: none; stroke-width: 2; stroke-linejoin: round; }
+  .bm.on svg { stroke: #fff; fill: #fff; }
+  .rank { width: 30px; flex: none; font: 800 28px/30px P; letter-spacing: -1px; color: var(--faint); }
+  .tabbar { position: absolute; left: 0; right: 0; bottom: 0; height: 86px; background: #fff; border-top: 1px solid var(--line); display: flex; padding-top: 8px; }
+  .tabbar span { flex: 1; text-align: center; font: 500 13px/1 P; color: var(--mute); }
+  .tabbar span.on { color: var(--ink); font-weight: 700; }
+  .tabbar span::before { content: ''; display: block; width: 22px; height: 22px; margin: 0 auto 6px; border-radius: 6px; border: 1.8px solid currentColor; }
+  .toast { position: absolute; left: 16px; right: 16px; bottom: 100px; height: 52px; border-radius: 16px; background: var(--ink); color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; font: 500 14.5px/1 P; }
+  .toast b { font-weight: 700; }
+  .more { display: flex; justify-content: flex-end; padding: 8px 20px 0; }
+  .pill { height: 34px; padding: 0 14px; border-radius: 999px; background: var(--fill); display: inline-flex; align-items: center; gap: 4px; font: 600 14px/1 P; }
+  /* 모션 판 */
+  .motion { margin-top: 36px; background: #fff; border-radius: 28px; padding: 28px 30px 30px; }
+  .motion h2 { font: 700 22px/1.2 P; }
+  .mgrid { margin-top: 18px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px 26px; }
+  .m h3 { font: 700 16px/1.3 P; } .m p { margin-top: 4px; font: 400 14px/1.5 P; color: var(--mute); }
+  .frames { margin-top: 10px; display: flex; gap: 10px; align-items: center; }
+  .fr { width: 236px; background: var(--card); border-radius: 16px; padding: 10px 6px; position: relative; }
+  .fr .cap { position: absolute; top: -9px; left: 10px; background: #fff; padding: 0 6px; font: 600 11.5px/18px P; color: var(--mute); border-radius: 6px; }
+  .arrow { color: var(--faint); font: 700 18px/1 P; }
+  .rules { margin-top: 20px; font: 400 14.5px/1.6 P; color: var(--ink2); }
+  .rules b { font-weight: 700; }
+</style><style>
+  body { width: 1760px; }
+  .phone { height: 874px; }
+  .wm { font: 800 15px/1 P; letter-spacing: .22em; }
+  .when { margin-top: 18px; font: 500 15px/1 P; color: var(--mute); }
+  .hero { margin-top: 8px; font: 800 30px/37px P; letter-spacing: -1px; }
+  .hero b { color: var(--ink); }
+  .stats { margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .stat { height: 28px; padding: 0 11px; border-radius: 999px; background: var(--card); display: inline-flex; align-items: center; gap: 5px; font: 600 13px/1 P; color: var(--ink2); }
+  .stat i { font-style: normal; color: var(--mute); font-weight: 500; }
+  .brief { margin: 18px 16px 0; background: var(--card); border-radius: 22px; padding: 6px 0; }
+  .brief h3 { display: flex; align-items: baseline; justify-content: space-between; padding: 14px 20px 6px; font: 700 17px/1 P; }
+  .brief h3 small { font: 500 12.5px/1 P; color: var(--mute); }
+  .item { display: flex; gap: 12px; padding: 12px 18px 12px 20px; border-top: 1px solid var(--div); }
+  .brief .item:first-of-type { border-top: 0; }
+  .n { width: 18px; flex: none; font: 800 17px/22px P; color: var(--ink); }
+  .item .head { font-size: 12.5px; }
+  .ago { color: var(--mute); }
+  .tt { margin-top: 5px; font: 650 15.5px/22px P; letter-spacing: -.3px; color: var(--ink); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .one { margin-top: 3px; font: 400 13.5px/19px P; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .two { margin-top: 4px; font: 400 14px/21px P; color: var(--ink2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .rel { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 999px; border: 1px solid var(--line); font: 600 11px/1 P; color: var(--mute); }
+  .morebar { display: flex; justify-content: center; padding: 10px 0 8px; border-top: 1px solid var(--div); font: 600 14px/1 P; color: var(--ink2); }
+  .chip.gm { background: #1A66D9; color: #fff; } .chip.mt { background: #0866FF; color: #fff; } .chip.nv { background: #76B900; color: var(--ink); }
+  .sec2 { padding: 22px 20px 8px; display: flex; align-items: baseline; justify-content: space-between; }
+  .sec2 b { font: 700 17px/1 P; } .sec2 small { font: 500 13px/1 P; color: var(--mute); }
+  .paper { margin: 0 16px; background: #2B2B29; color: #fff; border-radius: 22px; padding: 16px 18px; }
+  .paper .chip { background: #fff; color: var(--ink); }
+  .paper .tt { color: #fff; font-size: 16px; }
+  .paper .one { color: #B9B9B2; }
+  .compact { margin: 8px 16px 0; background: var(--card); border-radius: 20px; }
+  .compact .item { padding: 11px 16px; }
+  .readline { display: flex; align-items: center; gap: 8px; margin: 2px 20px; padding: 8px 0; font: 600 12px/1 P; color: var(--newt); }
+  .readline::before, .readline::after { content: ''; flex: 1; height: 1px; background: #F0C6C2; }
+  .day { padding: 16px 20px 4px; font: 700 13px/1 P; color: var(--mute); letter-spacing: .02em; }
+  .listrow { display: flex; gap: 10px; padding: 12px 12px 12px 20px; border-top: 1px solid var(--div); }
+  .listrow.read .tt { color: var(--ink2); font-weight: 500; }
+  .bm2 { width: 36px; height: 36px; border-radius: 50%; background: var(--fill); flex: none; display: flex; align-items: center; justify-content: center; margin-top: 2px; }
+  .bm2 svg { width: 15px; height: 15px; stroke: var(--ink); fill: none; stroke-width: 2; }
+  .note b { font-weight: 700; }
+</style></head><body><h1>홈 「오늘의 브리핑」 시안</h1>
+<div class="lead">아침에 홈만 보고 밤사이 소식을 한눈에. 내용은 실제 10월 28~29일 수집분이에요(주요 소식 5개는 손으로 골랐어요).</div>
+<div class="grid"><div class="col"><div class="label">A · 홈 맨 위 「오늘의 브리핑」</div><div class="sub">열자마자 밤사이 무엇이 나왔는지. 주요 소식 5개를 한 줄 요약으로</div>
+<div class="phone"><div class="status"></div><div class="top"><div class="wm">ROOTGIST</div>
+<div class="when">10월 30일 목요일 오전 8시 · 아침 브리핑</div>
+<div class="hero">어제 이후 새 소식 <b>12건</b></div>
+<div class="stats"><span class="stat">주요 소식 <i>5</i></span><span class="stat">새 논문 <i>10편</i></span><span class="stat">바뀐 도구 <i>3</i></span></div></div>
+<div class="brief"><h3>오늘의 주요 소식 <small>중요한 순</small></h3>
+<div class="item"><span class="n">1</span><div class="grow"><div class="head"><span class="chip gm">Google DeepMind</span><span class="ago">어제 02:00</span> <span class="rel">관련 2</span> <span class="new">새 글</span></div><div class="tt">Gemini 4 Carbon: 차세대 프런티어 모델</div><div class="one">사이버보안·장기 작업에 강한 가장 강력한 모델, 단계적 출시와 가격 공개</div></div></div>
+<div class="item"><span class="n">2</span><div class="grow"><div class="head"><span class="chip hf">Hugging Face</span><span class="ago">어제</span> <span class="new">새 글</span></div><div class="tt">Mistral Large 4(Le Chonk) 가중치 공개</div><div class="one">1조 파라미터 멀티모달 모델의 구조·성능과 배포·미세 조정 지원</div></div></div>
+<div class="item"><span class="n">3</span><div class="grow"><div class="head"><span class="chip oa">OpenAI</span><span class="ago">6시간 전</span> <span class="new">새 글</span></div><div class="tt">더 유능하고 유익한 AI를 위한 Model Spec 개정</div><div class="one">건전한 판단력·인간의 주체성 등 다섯 가지 핵심 가치를 제시</div></div></div>
+<div class="item"><span class="n">4</span><div class="grow"><div class="head"><span class="chip an">Claude API</span><span class="ago">어제</span></div><div class="tt">Claude API 변경 사항 20건</div><div class="one">사용량·비용 분석 API 베타 출시 외 19건</div></div></div>
+<div class="item"><span class="n">5</span><div class="grow"><div class="head"><span class="chip nv">NVIDIA</span><span class="ago">어제</span></div><div class="tt">Nemotron 3.5 Transcribe · Granary v2 공개</div><div class="one">프롬프트로 조정하는 오픈웨이트 다국어 전사 모델과 데이터 파이프라인</div></div></div>
+<div class="morebar">나머지 새 소식 7건 보기 ›</div></div>
+<div class="tabbar"><span class="on">홈</span><span class="">탐색</span><span class="">보관함</span><span class="">설정</span></div></div>
+<div class="note"><b>바뀌는 것</b> · 홈 첫 화면의 주인공이 논문 → 소식. 「새 논문 N편이 올라왔어요」는 아래 논문 칸 머리로 내려가요. 주요 소식 선정(사건 묶기·중요도)은 2단계 배치 작업이고, 시안의 5개는 손으로 골랐어요.</div></div><div class="col"><div class="label">B · 홈을 내리면</div><div class="sub">논문·바뀐 도구·모델은 짧게. 각 칸은 「더 보기」로 탐색에</div>
+<div class="phone"><div class="status"></div>
+<div class="sec2" style="padding-top:8px"><b>오늘의 논문</b><small>10편 · 논문 모두 보기 ›</small></div>
+<div class="paper"><div class="head"><span class="chip">멀티모달</span><span class="ago" style="color:#B9B9B2">오늘의 주요 논문</span></div>
+<div class="tt">실제 음향 장면을 위한 효율적인 스트리밍 오디오-비주얼 목표 화자 추출</div><div class="one">영상과 소리를 함께 써서 원하는 화자 목소리만 실시간으로 뽑아요</div></div>
+<div class="compact">
+<div class="item"><div class="grow"><div class="head"><span class="chip">에이전트</span><span class="ago">오늘</span></div><div class="tt">TAO: LLM 기반 에이전트 서비스를 위한 도구 인식 공동 스케줄링</div></div></div>
+<div class="item"><div class="grow"><div class="head"><span class="chip">멀티모달</span><span class="ago">오늘</span></div><div class="tt">OmniShowcase: 다시점 이미지로부터 전방위 영상 생성</div></div></div></div>
+<div class="sec2"><b>바뀐 도구</b><small>업데이트 더 보기 ›</small></div>
+<div class="compact">
+<div class="item"><div class="grow"><div class="head"><span class="chip an">Claude API</span><span class="ago">어제 · 20건</span></div><div class="one" style="color:var(--ink2)">사용량·비용 분석 API 베타 출시 외 19건</div></div></div>
+<div class="item"><div class="grow"><div class="head"><span class="chip oa">OpenAI Python SDK</span><span class="ago">어제 · v3.41.0</span></div><div class="one" style="color:var(--ink2)">Realtime 응답 입력에 typed references 지원</div></div></div></div>
+<div class="sec2"><b>요즘 많이 쓰는 모델</b><small>Hugging Face 트렌딩 ›</small></div>
+<div class="compact"><div class="item"><span class="n">1</span><div class="grow"><div class="head"><span class="chip">DeepSeek</span><span class="ago">텍스트 생성</span></div><div class="tt">DeepSeek-V4.1-Flash-1017</div></div></div></div>
+<div class="tabbar"><span class="on">홈</span><span class="">탐색</span><span class="">보관함</span><span class="">설정</span></div></div>
+<div class="note"><b>밀도</b> · 칸마다 1~2줄만. 논문 다크 카드도 불릿 2개 → 한 줄 요약으로 줄여 한 화면에 칸 세 개가 들어와요.</div></div><div class="col"><div class="label">C · 탐색 · 공식 소식(발표)</div><div class="sub">두 줄 요약 목록, 「몇 시간 전」, 어디까지 봤는지, 회사 묶음 칩</div>
+<div class="phone"><div class="status"></div>
+<div class="seg" style="margin-top:6px"><span>논문</span><span class="on">공식 소식</span><span>모델</span></div>
+<div class="utabs"><span class="on">발표</span><span>업데이트</span></div>
+<div class="filters"><span class="f on">전체</span><span class="f">OpenAI</span><span class="f">Anthropic</span><span class="f">Google</span><span class="f">Meta</span><span class="f">기타</span></div>
+<div class="day">오늘 · 10월 30일</div>
+<div class="listrow"><div class="grow"><div class="head"><span class="chip oa">OpenAI</span><span class="ago">6시간 전</span> <span class="new">새 글</span></div><div class="tt">더 유능하고 유익한 AI를 위한 업데이트된 Model Spec</div><div class="two">Model Spec이 더 유능한 AI가 건전한 판단력·인간의 주체성·의도 충실성을 향하도록 다섯 가지 핵심 가치를 제시해요.</div></div><span class="bm2"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg></span></div>
+<div class="listrow"><div class="grow"><div class="head"><span class="chip mt">Meta</span><span class="ago">7시간 전</span> <span class="new">새 글</span></div><div class="tt">버그가 배포되기 전에 잡기: JiTTesting</div><div class="two">LLM으로 코드 변경 전에 버그를 잡는 테스트를 프로덕션에 배포한 결과와 human-on-the-loop 방식을 공유해요.</div></div><span class="bm2"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg></span></div>
+<div class="readline">지난번에 여기까지 봤어요 · 어제 21:40</div>
+<div class="day">어제 · 10월 29일</div>
+<div class="listrow read"><div class="grow"><div class="head"><span class="chip gm">Google DeepMind</span><span class="ago">어제 02:00</span></div><div class="tt">Gemini 4 Carbon: 우리의 차세대 프런티어 모델</div><div class="two">사이버보안과 장기 작업에 강한 가장 강력한 모델로 소개하고, 벤치마크와 단계적 출시·가격을 정리해요.</div></div><span class="bm2"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg></span></div>
+<div class="tabbar"><span class="">홈</span><span class="on">탐색</span><span class="">보관함</span><span class="">설정</span></div></div>
+<div class="note"><b>바뀌는 것</b> · 카드 → 두 줄 행(한 화면 2개 → 5~6개). 출처 칩 19개 → 회사 묶음 6개. 날짜 머리(오늘·어제)와 「여기까지 봤어요」 선. 요약·핵심 내용·근거는 상세에서.</div></div></div><div class="motion"><h2>움직임 · 진동</h2><div class="mgrid">
+<div class="m"><h3>「나머지 새 소식 N건 보기」</h3><p>누르면 같은 카드 안에서 아래로 펼쳐져요(220ms, 보관함 접힘과 같은 SizeTransition). 다시 누르면 접혀요. 선택 틱.</p></div>
+<div class="m"><h3>읽은 소식</h3><p>상세에서 돌아오면 그 행의 「새 글」이 작아지며 사라지고(180ms) 제목이 한 단계 옅어져요(150ms). 브리핑 숫자 「12건」도 하나 줄어요(숫자만 바뀜, 튀지 않게).</p></div>
+<div class="m"><h3>「여기까지 봤어요」 선</h3><p>앱을 다시 열 때 지난번 맨 위 항목 아래로 옮겨 가요. 화면 안에서는 움직이지 않고, 지나치면 그대로 둬요(조용한 읽기 앱).</p></div>
+</div><div class="rules"><b>공통</b> · 행·카드 눌림 98% + 4% 어두워짐, 길이 150~260ms, iOS 「동작 줄이기」면 바로 바뀜. 목록이 차례로 나타나는 효과는 넣지 않아요.</div></div></body></html>
