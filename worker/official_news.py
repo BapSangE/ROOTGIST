@@ -505,9 +505,13 @@ def _parent(tags: list[str]) -> tuple[str | None, bool]:
     return next((t.split(":", 1)[1] for t in tags if t.startswith("base_model:") and t.count(":") == 1), None), False
 
 
+# 이름으로 알 수 있는 재포장판(같은 가중치를 다른 형식으로 다시 올린 것). 태그가 finetune이어도 대표로 올리지 않는다
+REPACK = re.compile(r"gguf|comfy|fp8|fp4|nvfp4|awq|gptq|mlx|bnb|int4|int8|exl2|onnx|quant", re.I)
+
+
 def group_variants(models: list[dict]) -> list[tuple[dict, list[dict]]]:
     """트렌딩 순 목록 → [(대표, 변형들)]. 양자화판(GGUF·FP8…)은 원래 모델 쪽으로, 같은 회사가 같은 바탕 모델에서
-    만든 것(LFM3-1.7B · LFM3-VL-2B)은 한 묶음으로. 다른 회사의 미세 조정은 따로 둔다. 대표는 묶음에서 가장 높은 순위."""
+    만든 것(LFM3-1.7B · LFM3-VL-2B)은 한 묶음으로. 다른 회사의 미세 조정은 따로 둔다. 묶음 순서는 가장 높은 순위."""
     ids = {m["id"] for m in models}
     parent = {m["id"]: _parent(m.get("tags") or []) for m in models}
 
@@ -522,7 +526,13 @@ def group_variants(models: list[dict]) -> list[tuple[dict, list[dict]]]:
     groups: dict[str, list[dict]] = {}
     for m in models:
         groups.setdefault(key(m["id"]), []).append(m)
-    return [(g[0], g[1:]) for g in groups.values()]
+    out = []
+    for g in groups.values():
+        # 대표: 양자화·재포장판(GGUF·Comfy·FP8…)이 아닌 것 중 가장 높은 순위. 원본이 묶음에 있으면 원본이 위로 온다
+        # (flux-3-image-klein-comfy보다 flux-3-image-klein). 모두 재포장판이면 가장 높은 순위.
+        rep = next((m for m in g if not parent[m["id"]][1] and not REPACK.search(m["id"].split("/")[-1])), g[0])
+        out.append((rep, [m for m in g if m is not rep]))
+    return out
 
 
 def from_hf_trending(now: datetime | None = None) -> list[dict]:

@@ -415,6 +415,16 @@ class OfficialNewsTest(unittest.TestCase):
         self.assertEqual(ids[-1], "fresh/late16")
         self.assertEqual([m["rank"] for m in got], list(range(1, 28)))
 
+    def test_original_model_leads_its_group_over_repacks(self):
+        f = lambda base: [f"base_model:{base}", f"base_model:finetune:{base}"]
+        q = lambda base: [f"base_model:{base}", f"base_model:quantized:{base}"]
+        models = [{"id": "bfl/flux-klein-comfy", "tags": f("bfl/flux-klein")}, {"id": "bfl/flux-klein", "tags": []},
+                  {"id": "nb/Nb-33B", "tags": f("nb/Nb-33B-Base")}, {"id": "nb/Nb-33B-Base", "tags": []},
+                  {"id": "x/only-GGUF", "tags": q("y/absent")}]
+        groups = [(rep["id"], [v["id"] for v in vs]) for rep, vs in official_news.group_variants(models)]
+        # 재포장판(Comfy)보다 원본이 대표, 미세 조정판(Nb-33B)은 바탕 모델보다 앞 순위면 그대로 대표, 혼자 남은 재포장판은 그대로
+        self.assertEqual(groups, [("bfl/flux-klein", ["bfl/flux-klein-comfy"]), ("nb/Nb-33B", ["nb/Nb-33B-Base"]), ("x/only-GGUF", [])])
+
     def test_save_db_upserts_news_and_replaces_models(self):
         calls = []
         class FakeDb:
