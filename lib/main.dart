@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'app_shell.dart';
+import 'data/licenses.dart';
 import 'data/storage.dart';
 import 'design/theme.dart';
 import 'design/tokens.dart';
@@ -17,6 +18,7 @@ Future<void> main() async {
     SystemUiOverlayStyle.dark.copyWith(statusBarColor: Colors.transparent),
   );
   await initStorage();
+  registerAppLicenses(); // 설정 → 오픈소스 라이선스(글꼴·아이콘 고지)
   runApp(const RootgistApp());
 }
 

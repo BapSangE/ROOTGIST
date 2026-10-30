@@ -68,6 +68,7 @@ final router = GoRouter(
               GoRoute(path: 'reading', pageBuilder: (_, state) => _page(state, const ReadingSettingsScreen())),
               GoRoute(path: 'source', pageBuilder: (_, state) => _page(state, const DataSourceScreen())),
               GoRoute(path: 'privacy', pageBuilder: (_, state) => _page(state, const PrivacyScreen())),
+              GoRoute(path: 'terms', pageBuilder: (_, state) => _page(state, const TermsScreen())),
               GoRoute(path: 'notices', pageBuilder: (_, state) => _page(state, const NoticesScreen())),
             ],
           ),

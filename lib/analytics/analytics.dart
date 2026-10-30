@@ -38,6 +38,8 @@ abstract interface class AnalyticsSink {
   Future<void> setup(AnalyticsConfig config);
   Future<void> setEnabled(bool value);
   Future<void> capture(String name, Map<String, Object> properties);
+  Future<String?> installId(); // 지금 설치 식별자(삭제 요청 메일에 적는다)
+  Future<void> resetInstallId(); // 새 임의 식별자로 바꾼다(이전 기록과 끊는다)
 }
 
 /// Typed entry points deliberately cannot accept body, title, translation or email.
@@ -84,6 +86,30 @@ class AppAnalytics {
           _ready = false;
           // No exception text is logged or forwarded; app functionality is independent.
         });
+  }
+
+  /// 「분석 데이터 삭제 요청」: 수집을 끄고 설치 식별자를 새로 바꾼다. 이전 식별자를 돌려줘 삭제 요청 메일에 적는다.
+  /// 한 번도 수집을 켜지 않아 SDK를 시작하지 않은 설치는 보낸 기록이 없으므로 null.
+  Future<String?> forgetInstall() {
+    _enabled = false;
+    _generation++;
+    _ready = false;
+    _readingSince = null;
+    // SDK를 시작한 적 없으면 보낸 기록도 없다: 앞선 동의 작업을 기다리지 않고 바로 끝낸다
+    if (!_initialized) return Future.value(null);
+    final done = Completer<String?>();
+    _consentWork = _consentWork
+        .then((_) async {
+          if (!_initialized) return done.complete(null);
+          await sink.setEnabled(false);
+          final id = await sink.installId();
+          await sink.resetInstallId();
+          done.complete(id);
+        })
+        .catchError((Object _) {
+          if (!done.isCompleted) done.complete(null);
+        });
+    return done.future;
   }
 
   void _send(String name, [Map<String, Object> properties = const {}]) {

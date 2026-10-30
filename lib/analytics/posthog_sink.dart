@@ -35,6 +35,12 @@ class PosthogSink implements AnalyticsSink {
   @override
   Future<void> capture(String name, Map<String, Object> properties) =>
       Posthog().capture(eventName: name, properties: properties);
+
+  @override
+  Future<String?> installId() => Posthog().getDistinctId();
+
+  @override
+  Future<void> resetInstallId() => Posthog().reset();
 }
 
 @visibleForTesting

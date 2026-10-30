@@ -28,6 +28,17 @@ class MemorySink implements AnalyticsSink {
     if (fail) throw StateError('offline');
     events.add((name, properties));
   }
+
+  String id = 'install-1';
+  int resets = 0;
+  @override
+  Future<String?> installId() async => id;
+
+  @override
+  Future<void> resetInstallId() async {
+    resets++;
+    id = 'install-${resets + 1}';
+  }
 }
 
 const config = AnalyticsConfig(
@@ -225,5 +236,22 @@ void main() {
     expect(sink.events[1].$2.containsKey('content_id'), false);
     expect(sink.events.toString(), isNot(contains('secret')));
     expect(sink.events[3].$2['highlighted'], true);
+  });
+
+  test('삭제 요청: 수집을 끄고 이전 설치 식별자를 돌려준 뒤 새 식별자로 바꾼다. 켠 적 없으면 null', () async {
+    final sink = MemorySink();
+    final a = AppAnalytics(config, sink);
+    expect(await a.forgetInstall(), isNull); // SDK를 시작한 적 없음 → 보낸 기록도 없음
+    expect(sink.resets, 0);
+    a.setEnabled(true);
+    await drain();
+    expect(await a.forgetInstall(), 'install-1');
+    expect(sink.resets, 1);
+    expect(sink.consent.last, false);
+    expect(a.enabled, false);
+    final before = sink.events.length;
+    a.bookmark('1234.56789', 'paper', true); // 삭제 뒤에는 이벤트가 나가지 않는다
+    await drain();
+    expect(sink.events.length, before);
   });
 }

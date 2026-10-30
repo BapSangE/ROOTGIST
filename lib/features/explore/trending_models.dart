@@ -152,7 +152,7 @@ class ModelRow extends StatelessWidget {
       onTap: () => context.push('/model/${Uri.encodeComponent(m.id)}'),
       trailing: modelActions(m),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s12, children: [
-        // 큰 순위 숫자(피드백 3차 A안). 1위만 검정, 나머지는 회색
+        // 큰 순위 숫자(피드백 3차 A안). 1위만 검정, 나머지는 회색(정보라 대비 4.5:1 이상인 textSecondary)
         // 「10」·큰 글자에서도 칸(36)을 넘지 않게 줄여 넣는다
         SizedBox(
           width: 36,
@@ -161,7 +161,7 @@ class ModelRow extends StatelessWidget {
             alignment: Alignment.topLeft,
             child: Text(
               '${number ?? m.rank}',
-              style: RgText.rank.copyWith(height: 1.0, color: (number ?? m.rank) == 1 ? RgColors.textPrimary : RgColors.textTertiary),
+              style: RgText.rank.copyWith(height: 1.0, color: (number ?? m.rank) == 1 ? RgColors.textPrimary : RgColors.textSecondary),
             ),
           ),
         ),

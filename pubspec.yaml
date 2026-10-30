@@ -68,6 +68,9 @@ flutter:
     - fixtures/papers/
     - docs/privacy.md # 개인정보 처리방침 원본(GitHub Pages와 같은 파일)
     - docs/notices.md # 공지사항(설정 → 공지사항)
+    - docs/terms.md # 이용 안내(설정 → 이용 안내, GitHub Pages /terms/)
+    - assets/fonts/OFL-Pretendard.txt # 오픈소스 라이선스 화면
+    - assets/fonts/OFL-SourceSerif4.md
   fonts:
     - family: Pretendard
       fonts:

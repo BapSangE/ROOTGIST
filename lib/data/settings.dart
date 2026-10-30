@@ -18,6 +18,7 @@ String readerScaleLabel(double s) => readerScales.firstWhere((e) => e.$1 == s, o
 
 // G13. 처리방침 원본은 docs/privacy.md 하나이고, 앱은 그 파일을 화면으로, 웹은 GitHub Pages로 보여 준다.
 const privacyPolicyUrl = 'https://bapsange.github.io/ROOTGIST/privacy/';
+const termsUrl = 'https://bapsange.github.io/ROOTGIST/terms/';
 // 문의 전용 메일. 바꾸면 docs/privacy.md 7장도 같이 고친다.
 const contactEmail = 'help.rootgist@gmail.com';
 

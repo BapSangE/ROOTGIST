@@ -805,6 +805,40 @@ void main() {
     expect(find.text(keepAll('메일: $contactEmail')), findsOneWidget); // 처리방침 7장과 「문의하기」가 같은 주소
   });
 
+  testWidgets('설정: 이용 안내·오픈소스 라이선스·분석 데이터 삭제 요청(보낸 기록이 없으면 알리고 끝)', (tester) async {
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+    router.go('/settings');
+    await settle(tester);
+    expect(find.text(keepAll('만 14세 미만이라면 켜지 말아 주세요.'), findRichText: true), findsNothing); // 부제는 한 덩어리
+    expect(find.textContaining('만 14세 미만이라면 켜지 말아 주세요'), findsOneWidget);
+
+    await tester.tap(find.text('이용 안내'));
+    await settle(tester);
+    expect(find.text(keepAll('ROOTGIST 이용 안내')), findsOneWidget);
+    expect(find.text(keepAll('1. AI가 만든 내용')), findsOneWidget);
+    expect(find.text('웹에서 보기 · $termsUrl'), findsOneWidget);
+    router.go('/settings');
+    await settle(tester);
+
+    await tester.tap(find.text('분석 데이터 삭제 요청'));
+    await tester.pumpAndSettle();
+    expect(find.text('끄고 삭제 요청하기'), findsOneWidget);
+    await tester.tap(find.text('끄고 삭제 요청하기'));
+    await tester.pumpAndSettle();
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50))); // 동의 작업 줄(_consentWork)이 끝나게
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('이 기기에서 보낸 분석 데이터가 없어요. 수집은 꺼져 있어요.'), findsOneWidget); // 테스트 빌드는 분석 미설정
+    expect(analyticsCollectionEnabled.value, isFalse);
+
+    await tester.tap(find.text('오픈소스 라이선스'));
+    await tester.pumpAndSettle();
+    expect(find.byType(LicensePage), findsOneWidget);
+  });
+
   testWidgets('G13: 메일 앱을 열 수 없으면 「문의하기」가 주소를 복사하고 알린다', (tester) async {
     tester.view.physicalSize = const Size(390, 2400);
     tester.view.devicePixelRatio = 1;

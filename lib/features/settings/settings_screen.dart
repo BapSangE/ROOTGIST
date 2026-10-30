@@ -12,6 +12,7 @@ import 'notices.dart';
 import '../../design/widgets/rg_new_dot.dart';
 import '../../design/tokens.dart';
 import '../../design/typography.dart';
+import '../../design/widgets/rg_bottom_sheet.dart';
 import '../../design/widgets/rg_buttons.dart';
 import '../../design/widgets/rg_card.dart';
 import '../../design/widgets/rg_pressable.dart';
@@ -86,7 +87,7 @@ class SettingsScreen extends StatelessWidget {
                 contentPadding: const EdgeInsets.symmetric(vertical: RgSpace.s8),
                 title: Text('사용 분석 데이터 수집', style: RgText.bodySummary),
                 subtitle: Text(
-                  '선택 사항 · 기본 꺼짐\n화면 방문·기능 사용·활성 독서 시간과 임의의 앱 식별자를 PostHog에 보내 앱을 개선해요. 본문·번역문·이메일은 보내지 않아요. 언제든 끌 수 있어요.',
+                  '선택 사항 · 기본 꺼짐\n화면 방문·기능 사용·활성 독서 시간과 임의의 앱 식별자를 PostHog에 보내 앱을 개선해요. 본문·번역문·이메일은 보내지 않아요. 언제든 끌 수 있어요.\n만 14세 미만이라면 켜지 말아 주세요.',
                   style: RgText.caption.copyWith(color: RgColors.textSecondary),
                 ),
                 activeThumbColor: RgColors.textPrimary,
@@ -100,10 +101,13 @@ class SettingsScreen extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: RgSpace.s12),
               child: Text('이 빌드에는 분석 연결이 설정되어 있지 않아 전송하지 않아요.', style: RgText.caption),
             ),
+          _Row(icon: 'trash', label: '분석 데이터 삭제 요청', onTap: () => _requestAnalyticsDeletion(context)),
         ]),
         group('정보'),
         _SettingsCard(children: [
           _Row(icon: 'file-text', label: '개인정보 처리방침', onTap: () => context.go('/settings/privacy')),
+          _Row(icon: 'scale', label: '이용 안내', onTap: () => context.go('/settings/terms')),
+          _Row(icon: 'book', label: '오픈소스 라이선스', onTap: () => _licenses(context)),
           // 주소를 값으로 두면 좁은 칸에서 「gmail.c / om」처럼 갈라져, 원래처럼 셰브론만(누르면 메일 앱)
           _Row(icon: 'mail', label: '문의하기', onTap: () => _contact(context)),
           _Row(icon: 'info', label: '앱 버전', value: appVersion, chevron: false),
@@ -184,19 +188,72 @@ class _Row extends StatelessWidget {
 }
 
 // 메일 앱이 없거나(시뮬레이터, 기본 메일 앱 삭제) 열리지 않으면 주소를 복사해 알린다.
-Future<void> _contact(BuildContext context) async {
-  final opened = await launchUrl(Uri(scheme: 'mailto', path: contactEmail)).catchError((_) => false);
+Future<void> _contact(BuildContext context, {String? subject, String? body}) async {
+  // mailto 쿼리는 공백을 +가 아니라 %20으로(iOS 메일이 +를 그대로 보인다)
+  final query = [
+    if (subject != null) 'subject=${Uri.encodeComponent(subject)}',
+    if (body != null) 'body=${Uri.encodeComponent(body)}',
+  ].join('&');
+  final opened = await launchUrl(Uri.parse('mailto:$contactEmail${query.isEmpty ? '' : '?$query'}')).catchError((_) => false);
   if (opened || !context.mounted) return;
-  await Clipboard.setData(const ClipboardData(text: contactEmail));
+  await Clipboard.setData(ClipboardData(text: body ?? contactEmail));
   if (!context.mounted) return;
   // 탭바 위 검정 알림(S05 해제 알림과 같은 자리·모양, 테마 snackBarTheme)
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
-    ..showSnackBar(const SnackBar(
-      content: Text('메일 앱을 열 수 없어 주소를 복사했어요 · $contactEmail'),
-      duration: Duration(seconds: 4),
+    ..showSnackBar(SnackBar(
+      content: Text(body == null
+          ? '메일 앱을 열 수 없어 주소를 복사했어요 · $contactEmail'
+          : '메일 앱을 열 수 없어 요청 내용을 복사했어요. $contactEmail로 보내 주세요'),
+      duration: const Duration(seconds: 4),
     ));
 }
+
+// 처리방침 7장: 수집을 끄고 설치 식별자를 새로 바꾼 뒤, 이전 식별자를 적은 삭제 요청 메일을 준비한다.
+// 한 번도 수집을 켜지 않았으면 보낸 기록이 없다고 알리고 끝낸다. 되돌릴 수 없는 동작이라 시트에서 한 번 더 묻는다.
+Future<void> _requestAnalyticsDeletion(BuildContext context) async {
+  final go = await showRgBottomSheet<bool>(
+    context,
+    builder: (sheet) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      const SizedBox(height: RgSpace.s4),
+      Semantics(header: true, child: Text('분석 데이터 삭제 요청', style: RgText.titleSection)),
+      const SizedBox(height: RgSpace.s10),
+      KeepAllText(
+        '사용 분석을 끄고 이 기기의 앱 식별자를 새로 바꿔요. 이전 식별자로 쌓인 기록은 이어서 열리는 메일을 보내 주시면 찾아서 지워요. 북마크와 읽기 설정은 그대로예요.',
+        perSentence: true,
+        style: RgText.bodySummary.copyWith(color: RgColors.textBody),
+      ),
+      const SizedBox(height: RgSpace.s20),
+      RgPrimaryButton(label: '끄고 삭제 요청하기', onTap: () => Navigator.pop(sheet, true)),
+      const SizedBox(height: RgSpace.s8),
+      TextButton(onPressed: () => Navigator.pop(sheet, false), child: Text('취소', style: RgText.bodySmall)),
+    ]),
+  );
+  if (go != true || !context.mounted) return;
+  HapticFeedback.mediumImpact();
+  analyticsCollectionEnabled.value = false;
+  final id = await analytics.forgetInstall();
+  if (!context.mounted) return;
+  if (id == null) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(content: Text('이 기기에서 보낸 분석 데이터가 없어요. 수집은 꺼져 있어요.'), duration: Duration(seconds: 4)));
+    return;
+  }
+  await _contact(
+    context,
+    subject: 'ROOTGIST 분석 데이터 삭제 요청',
+    body: '아래 앱 식별자로 수집된 사용 분석 데이터를 지워 주세요.\n\n앱 식별자: $id\n요청 시각: ${DateTime.now().toIso8601String()}\n',
+  );
+}
+
+// 오픈소스 라이선스: Flutter 패키지 고지 + 글꼴(OFL)·아이콘(Lucide, ISC). 글꼴·아이콘 고지는 main에서 등록한다.
+void _licenses(BuildContext context) => showLicensePage(
+  context: context,
+  applicationName: 'ROOTGIST',
+  applicationVersion: appVersion,
+  useRootNavigator: true,
+);
 
 // 읽기 설정(피드백 13 가안): 초록 기본 보기와 글자 크기(예시와 함께).
 class ReadingSettingsScreen extends StatelessWidget {
@@ -416,6 +473,10 @@ class DataSourceScreen extends StatelessWidget {
 // 개인정보 처리방침(G13): docs/privacy.md를 그대로 읽어 보여 준다. 같은 파일이 GitHub Pages 페이지다.
 class PrivacyScreen extends DocScreen {
   const PrivacyScreen({super.key}) : super(asset: 'docs/privacy.md', webUrl: privacyPolicyUrl);
+}
+
+class TermsScreen extends DocScreen {
+  const TermsScreen({super.key}) : super(asset: 'docs/terms.md', webUrl: termsUrl);
 }
 
 // 레포의 마크다운 문서 하나를 텍스트 화면으로(처리방침·공지사항).
