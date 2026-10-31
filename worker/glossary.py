@@ -225,6 +225,60 @@ def fill_paper_full_forms(db: Db) -> int:
     return len(rows)
 
 
+NOUN_RULES = """한국어 용어 정의의 문장 끝맺음만 명사형으로 바꾼다. 아래 규칙을 지킨다.
+- 뜻·용어·수치·괄호 속 원어는 한 글자도 바꾸거나 빼거나 더하지 않는다. 끝맺음과 그에 필요한 최소한의 조사·어미만 고친다.
+- 「~이다」는 「~.」(예: 「모델 구조이다.」→「모델 구조.」), 「~를 뜻한다/의미한다」는 「~를 의미.」 또는 자연스러운 명사구(예: 「입력을 압축하는 것을 뜻한다.」→「입력을 압축하는 것.」), 「~를 가리킨다」는 「~를 가리키는 말.」, 「~에 쓰인다」는 「~에 쓰이는 ○○.」처럼 앞의 명사를 살려 끝낸다.
+- 두 번째 문장부터는 「~함」「~음」「~임」으로 끝낸다(예: 「판단하기 어렵다.」→「판단하기 어려움.」).
+- 각 문장 끝에는 마침표를 둔다. 한자·가나를 쓰지 않는다.
+- 입력의 모든 id를 입력 순서대로 정확히 한 번씩.
+출력은 JSON 하나만: {"items": [{"id": "...", "text": "..."}]}"""
+
+
+def needs_noun(text: str | None) -> bool:
+    """「~이다」「~뜻한다」「~해요」처럼 서술형으로 끝나는 정의(사용자 결정 2026-10-31: 정의는 명사형으로 끝낸다)."""
+    t = (text or "").strip().rstrip(".").strip()
+    return bool(t) and t[-1] in "다요"
+
+
+def check_noun(out, batch: list[dict]) -> list[str]:
+    from .validate import FOREIGN
+
+    items = out.get("items") if isinstance(out, dict) else None
+    if not isinstance(items, list) or [i.get("id") for i in items] != [b["id"] for b in batch]:
+        return ["ids: 입력과 순서·id가 다름"]
+    bad = [b["id"] for b, i in zip(batch, items)
+           if not isinstance(i.get("text"), str) or needs_noun(i["text"]) or FOREIGN.search(i["text"])
+           or not 0.5 <= len(i["text"]) / len(b["text"]) <= 1.3]  # 뜻을 줄이거나 덧붙이면 길이가 크게 바뀐다
+    return [f"text: {bad}"] if bad else []
+
+
+def noun_definitions(db: Db, api_key: str, limit: int = 400, batch: int = 30) -> int:
+    """논문 용어·후보·사전 의미의 정의 끝맺음을 명사형으로. 구글 번역 참고본(공개 안 함)은 검토 때 바꿀 원문이라 두고,
+    사람이 검수한 항목은 DB 트리거가 그대로 둔다(검수 화면에서 직접 고친다)."""
+    from . import llm
+
+    tables = (("paper_glossary", ("paper_id", "idx")), ("term_candidates", ("normalized_form",)),
+              ("term_senses", ("sense_id",)))
+    rows = {t: [r for r in db.select_all(t, "select=" + ",".join((*k, "definition_ko")) + (",definition_kind" if t == "term_senses" else ""))
+                if needs_noun(r["definition_ko"]) and r.get("definition_kind") != "source_machine_translation_verbatim"]
+            for t, k in tables}
+    texts = sorted({r["definition_ko"].strip() for rs in rows.values() for r in rs})[:limit]
+    new = {}
+    for n in range(0, len(texts), batch):
+        part = [{"id": str(i), "text": t} for i, t in enumerate(texts[n:n + batch])]
+        messages = [{"role": "system", "content": NOUN_RULES}, {"role": "user", "content": json.dumps(part, ensure_ascii=False)}]
+        out, _ = llm.generate(api_key, messages, lambda o: check_noun(o, part), lambda r: None)
+        if out is None:
+            print(f"  정의 명사형 실패({len(part)}개), 다음 실행에서 다시")
+            continue
+        new.update({p["text"]: i["text"].strip() for p, i in zip(part, out["items"])})
+    for t, keys in tables:
+        for r in rows[t]:
+            if (v := new.get(r["definition_ko"].strip())):
+                db.update(t, {"definition_ko": v}, **{k: r[k] for k in keys})
+    return len(new)
+
+
 def draft_full_forms(db: Db, api_key: str | None) -> int:
     """약어 후보의 정식 명칭 초안: 처음 본 논문 초록에 풀이가 있으면 그것, 없으면 LLM(글자 대조 통과만). 없으면 빈 문자열."""
     todo = [c for c in db.select_all("term_candidates", "review_status=eq.pending&full_form_en_draft=is.null"
@@ -508,9 +562,10 @@ def sync(db: Db, api_key: str | None = None):
     # api_key가 없으면 LLM이 필요 없는 부분만(사전 대응어가 번역문에 그대로 있는 위치, 초록 속 약어 풀이) 한다.
     # 매일 배치는 다이제스트를 먼저 끝내고, LLM 부분은 워크플로 마지막 단계에서 따로 돌린다(무료 등급이 느려 시간 초과로 배치 전체가 끊긴 일, 2026-10-24).
     drafted = draft_korean(db, api_key) if api_key else 0
+    nouned = noun_definitions(db, api_key) if api_key else 0
     draft_full_forms(db, api_key)
     aligned = align_spans(db, api_key)
-    print(f"용어: 번역문 표기 위치 확인 {aligned}")
+    print(f"용어: 번역문 표기 위치 확인 {aligned}, 정의 명사형 {nouned}")
     print(f"용어: 후보→사전 {promoted}, 새 연결 {len(links)}, 사전에 없는 표기 {len(candidates)}, 대응어 초안 {drafted}")
 
 

@@ -237,6 +237,37 @@ class NewsTermsTest(unittest.TestCase):
         self.assertEqual(deleted, ["old term"])  # 논문에 없어진 논문 후보만 지우고 소식 후보는 남긴다
 
 
+class NounDefinitionTest(unittest.TestCase):
+    def test_only_declarative_endings_change(self):
+        from unittest import mock
+
+        from . import glossary, llm
+        self.assertTrue(glossary.needs_noun("입력을 압축하는 기법이다."))
+        self.assertTrue(glossary.needs_noun("성능이 좋아요"))
+        self.assertFalse(glossary.needs_noun("입력을 압축하는 기법."))
+        # 뜻을 줄이거나 서술형이 남으면 거른다
+        part = [{"id": "0", "text": "입력을 작게 압축하는 기법이다."}]
+        self.assertEqual(glossary.check_noun({"items": [{"id": "0", "text": "입력을 작게 압축하는 기법."}]}, part), [])
+        self.assertTrue(glossary.check_noun({"items": [{"id": "0", "text": "기법이다."}]}, part))
+        self.assertTrue(glossary.check_noun({"items": [{"id": "0", "text": "압축."}]}, part))
+        updated = []
+
+        class FakeDb:
+            def select_all(self, table, q):
+                return {"paper_glossary": [{"paper_id": "p", "idx": 0, "definition_ko": "모델 구조이다."},
+                                           {"paper_id": "p", "idx": 1, "definition_ko": "이미 명사형 정의."}],
+                        "term_candidates": [{"normalized_form": "moe", "definition_ko": "모델 구조이다."}],
+                        "term_senses": [{"sense_id": "s1", "definition_ko": "구글 번역 원문입니다.",
+                                         "definition_kind": "source_machine_translation_verbatim"}]}[table]
+
+            def update(self, table, values, **eq): updated.append((table, values["definition_ko"], eq))
+
+        with mock.patch.object(llm, "generate", lambda key, msgs, check, log: ({"items": [{"id": "0", "text": "모델 구조."}]}, "m")):
+            self.assertEqual(glossary.noun_definitions(FakeDb(), "k"), 1)
+        self.assertEqual(updated, [("paper_glossary", "모델 구조.", {"paper_id": "p", "idx": 0}),
+                                   ("term_candidates", "모델 구조.", {"normalized_form": "moe"})])
+
+
 class MergePluralsTest(unittest.TestCase):
     def test_merge_only_when_singular_exists(self):
         from .glossary import merge_plurals
