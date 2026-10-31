@@ -408,6 +408,9 @@ export function TermsWorkbench() {
           {fixture ? "가상 데이터 · 로컬 검토본" : writable ? "실제 데이터 · 저장 가능" : "실제 데이터 · 조회 전용"}
         </span>
         <div className="header-actions">
+          <a className="quiet glossary-link" href="/admin/terms/all">
+            전체 용어
+          </a>
           <button
             className="quiet list-open"
             aria-haspopup="dialog"
