@@ -4,22 +4,15 @@ import '../tokens.dart';
 import '../typography.dart';
 import 'rg_new_dot.dart';
 
-// 칩: 높이 24 알약, 12.5/600. 출처는 회사 대표 색(RgBrand), 주제·종류는 중립 fill. onInk는 다크 카드 위(흰 알약 + 잉크 글자).
+// 칩: 높이 24 알약, 12.5/600. 출처는 회사 대표 색(RgBrand), 주제·종류는 중립 fill.
 class RgChip extends StatelessWidget {
-  const RgChip(this.label, {super.key, this.source, this.onInk = false});
+  const RgChip(this.label, {super.key, this.source});
   final String label;
   final String? source; // 공식 소식 출처 id 또는 이름. 대표 색이 있으면 그 색
-  final bool onInk;
 
   @override
   Widget build(BuildContext context) {
-    // 다크 카드 위에서 검정 대표 색(OpenAI)은 카드에 묻혀 흰 칩으로
-    final brand = switch (brandOf(source)) {
-      (final bg, _) when onInk && bg.computeLuminance() < 0.05 => null,
-      final b => b,
-    };
-    final (bg, fg) = brand ??
-        (onInk ? (RgColors.chipOnInk, RgColors.ink) : (RgColors.fillNeutral, RgColors.textBody));
+    final (bg, fg) = brandOf(source) ?? (RgColors.fillNeutral, RgColors.textBody);
     return Container(
       constraints: const BoxConstraints(minHeight: 24), // 고정 높이면 큰 글자에서 잘린다
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
@@ -34,26 +27,25 @@ class RgChip extends StatelessWidget {
 // 로고·글꼴은 따라 하지 않고 이름 글자만(docs/RIGHTS.md 4장 「출처 배지 색」).
 (Color, Color)? brandOf(String? source) => switch (source) {
   'anthropic' || 'claude_code' || 'claude_api' || 'anthropic_sdk' ||
-  'Anthropic' || 'Claude Code' || 'Claude API' || 'Anthropic Python SDK' => (RgBrand.anthropic, RgColors.onInk),
-  'openai' || 'openai_community' || 'openai_sdk' || 'OpenAI' || 'OpenAI 커뮤니티' || 'OpenAI Python SDK' => (RgBrand.openai, RgColors.onInk),
+  'Anthropic' || 'Claude Code' || 'Claude API' || 'Anthropic Python SDK' => (RgBrand.anthropic, RgColors.onBrand),
+  'openai' || 'openai_community' || 'openai_sdk' || 'OpenAI' || 'OpenAI 커뮤니티' || 'OpenAI Python SDK' => (RgBrand.openai, RgColors.onBrand),
   // 모델 칩은 발표한 회사 이름(makerName). 대표 색이 있는 회사만 그 색, 나머지는 중립
-  'deepmind' || 'google_research' || 'google' || 'Google DeepMind' || 'Google Research' || 'Google' => (RgBrand.google, RgColors.onInk),
-  'huggingface' || 'Hugging Face' => (RgBrand.huggingface, RgColors.ink),
-  'nvidia' || 'nvidia_dev' || 'NVIDIA' || 'NVIDIA 개발자' => (RgBrand.nvidia, RgColors.ink),
-  'meta' || 'Meta' => (RgBrand.meta, RgColors.onInk),
-  'xai' || 'xai_sdk' || 'xAI' || 'xAI Python SDK' => (RgBrand.xai, RgColors.onInk),
+  'deepmind' || 'google_research' || 'google' || 'Google DeepMind' || 'Google Research' || 'Google' => (RgBrand.google, RgColors.onBrand),
+  'huggingface' || 'Hugging Face' => (RgBrand.huggingface, RgColors.onBrandLight),
+  'nvidia' || 'nvidia_dev' || 'NVIDIA' || 'NVIDIA 개발자' => (RgBrand.nvidia, RgColors.onBrandLight),
+  'meta' || 'Meta' => (RgBrand.meta, RgColors.onBrand),
+  'xai' || 'xai_sdk' || 'xAI' || 'xAI Python SDK' => (RgBrand.xai, RgColors.onBrand),
   _ => null,
 };
 
 // 목록 행의 머리 줄: [칩] 보조 글자 [새 글]. 앱의 모든 목록 행이 이 모양을 쓴다(논문·공식 소식·모델·보관함).
 // 줄이 넘치면 칩 다음에서 줄을 바꾼다. 「새 글」은 읽으면 작아지며 사라진다(RgNewLabel).
 class RgRowHead extends StatelessWidget {
-  const RgRowHead({super.key, this.chip, this.meta, this.isNew = false, this.newLabel = '새 글', this.onInk = false});
+  const RgRowHead({super.key, this.chip, this.meta, this.isNew = false, this.newLabel = '새 글'});
   final Widget? chip;
   final String? meta;
   final bool isNew;
   final String newLabel;
-  final bool onInk;
 
   @override
   Widget build(BuildContext context) => Wrap(
@@ -63,7 +55,7 @@ class RgRowHead extends StatelessWidget {
     children: [
       ?chip,
       if (meta != null && meta!.isNotEmpty)
-        KeepAllText(meta!, style: RgText.meta.copyWith(fontSize: 13.5, height: 19 / 13.5, color: onInk ? RgColors.onInkSecondary : RgColors.textSecondary)),
+        KeepAllText(meta!, style: RgText.meta.copyWith(fontSize: 13.5, height: 19 / 13.5, color: RgColors.textSecondary)),
       RgNewLabel(visible: isNew, label: newLabel),
     ],
   );

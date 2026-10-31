@@ -24,7 +24,7 @@ class ItemActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final compact = variant == RgCircleVariant.neutral || variant == RgCircleVariant.glass; // 목록·카드(다크 카드 포함)
+    final compact = variant == RgCircleVariant.neutral; // 목록·카드
     final visual = compact ? 36.0 : null;
     return Row(mainAxisSize: MainAxisSize.min, spacing: compact ? 0 : 8, children: [
       if (share)

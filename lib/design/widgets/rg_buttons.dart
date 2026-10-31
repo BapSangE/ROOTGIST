@@ -83,7 +83,7 @@ class RgNeutralButton extends StatelessWidget {
   }
 }
 
-enum RgCircleVariant { outline, neutral, filled, plain, glass }
+enum RgCircleVariant { outline, neutral, filled, plain }
 
 // RgCircleButton: 44×44(추천 카드 북마크 48), 아이콘 20. plain은 목록 행 북마크(배경 없음).
 class RgCircleButton extends StatelessWidget {
@@ -113,11 +113,7 @@ class RgCircleButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fg = iconColor ??
-        switch (variant) {
-          RgCircleVariant.filled => RgColors.onAction,
-          RgCircleVariant.glass => RgColors.onInk,
-          _ => RgColors.textPrimary,
-        };
+        (variant == RgCircleVariant.filled ? RgColors.onAction : RgColors.textPrimary);
     return Semantics(
       container: true, // 행 탭 영역 안에 있어도 별도 노드로(행 이동과 북마크를 따로 조작)
       button: true,
@@ -144,7 +140,6 @@ class RgCircleButton extends StatelessWidget {
                 RgCircleVariant.neutral => RgColors.fillNeutral,
                 RgCircleVariant.filled => RgColors.actionPrimary,
                 RgCircleVariant.plain => null,
-                RgCircleVariant.glass => RgColors.glassOnInk,
               },
               border: variant == RgCircleVariant.outline ? Border.all(color: RgColors.borderDefault) : null,
             ),
@@ -228,7 +223,6 @@ class _RgBookmarkButtonState extends State<RgBookmarkButton> with SingleTickerPr
     final saved = widget.saved;
     final variant = widget.variant;
     final plain = variant == RgCircleVariant.plain;
-    final glass = variant == RgCircleVariant.glass; // 다크 카드 위: 저장되면 채운 아이콘만 바뀐다
     return ScaleTransition(
       scale: _scale.animate(_pop),
       child: RgCircleButton(
@@ -238,7 +232,7 @@ class _RgBookmarkButtonState extends State<RgBookmarkButton> with SingleTickerPr
         icon: saved ? 'bookmark-filled' : 'bookmark',
         size: widget.size,
         visualSize: widget.visualSize,
-        variant: plain || glass ? variant : (saved ? RgCircleVariant.filled : variant),
+        variant: plain ? variant : (saved ? RgCircleVariant.filled : variant),
         iconColor: plain ? (saved ? RgColors.textPrimary : RgColors.textTertiary) : null,
       ),
     );

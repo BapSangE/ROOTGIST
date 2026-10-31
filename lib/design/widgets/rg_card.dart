@@ -81,41 +81,40 @@ class RgListRow extends StatelessWidget {
   }
 }
 
-// 다크 카드(레퍼런스 007·016): 화면에서 가장 중요한 것 하나만 차콜 면으로. 오늘의 주요 논문, 트렌딩 1위.
-class RgDarkCard extends StatelessWidget {
-  const RgDarkCard({super.key, required this.child, this.padding = const EdgeInsets.all(RgSpace.s22), this.ink = true});
+// 대표 카드: 화면에서 가장 중요한 것 하나(그날 주요 논문, 트렌딩 1위). 면은 일반 카드와 같고 모서리·여백만 크다.
+// 예전엔 차콜 면이었는데 다른 밝은 카드 사이에서 튀어 2026-10-31 통일했다(사용자 피드백).
+class RgFeaturedCard extends StatelessWidget {
+  const RgFeaturedCard({super.key, required this.child, this.padding = const EdgeInsets.all(RgSpace.s22)});
   final Widget child;
   final EdgeInsetsGeometry padding;
-  final bool ink; // false면 같은 모양의 일반 카드 면(홈: 다른 섹션 카드와 맞춘다)
 
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
     child: Container(
       padding: padding,
-      decoration: BoxDecoration(color: ink ? RgColors.surfaceInk : RgColors.surfaceCard, borderRadius: BorderRadius.circular(RgRadius.cardDark)),
+      decoration: BoxDecoration(color: RgColors.surfaceCard, borderRadius: BorderRadius.circular(RgRadius.cardDark)),
       child: child,
     ),
   );
 }
 
-// 태그: 높이 24, fill 알약, 아이콘 + 글자(주제·라이선스·반응·버전·「지연」). onInk면 다크 카드 위(흰 12%).
+// 태그: 높이 24, fill 알약, 아이콘 + 글자(주제·라이선스·반응·버전·「지연」).
 class RgTag extends StatelessWidget {
-  const RgTag({super.key, required this.label, this.icon, this.onInk = false, this.inverted = false, this.height = 24});
+  const RgTag({super.key, required this.label, this.icon, this.inverted = false, this.height = 24});
   final String label;
   final String? icon;
-  final bool onInk;
   final bool inverted; // 검정 면 흰 글자(상세 화면 머리의 주제)
   final double height;
 
   @override
   Widget build(BuildContext context) {
-    final fg = onInk ? RgColors.onInk : (inverted ? RgColors.onAction : RgColors.textBody);
+    final fg = inverted ? RgColors.onAction : RgColors.textBody;
     return Container(
       constraints: BoxConstraints(minHeight: height), // 고정 높이면 큰 글자에서 잘린다
       padding: const EdgeInsets.symmetric(horizontal: RgSpace.s10, vertical: RgSpace.s4),
       decoration: BoxDecoration(
-        color: inverted ? RgColors.actionPrimary : (onInk ? RgColors.tagOnInk : RgColors.fillNeutral),
+        color: inverted ? RgColors.actionPrimary : RgColors.fillNeutral,
         borderRadius: BorderRadius.circular(RgRadius.pill),
       ),
       // 아이콘도 글자 안에 넣는다: Row + Flexible이면 목록 행 오른쪽처럼 폭 제한이 없는 자리에서 배치가 깨진다

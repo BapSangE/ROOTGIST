@@ -192,7 +192,7 @@ class ModelRow extends StatelessWidget {
 ItemActions modelActions(TrendingModel m, {RgCircleVariant variant = RgCircleVariant.neutral, bool share = false}) =>
     ItemActions(id: m.id, title: m.name, url: m.url, source: 'Hugging Face', kind: 'model', variant: variant, share: share);
 
-// 트렌딩 1위 다크 카드: 머리말 · 이름 · 한 줄 설명 · 라이선스·좋아요·다운로드 3칸. 누르면 모델 상세.
+// 트렌딩 1위 대표 카드: 머리말 · 이름 · 한 줄 설명 · 라이선스·좋아요·다운로드 3칸. 누르면 모델 상세.
 class TopModelCard extends StatelessWidget {
   const TopModelCard({super.key, required this.model});
   final TrendingModel model;
@@ -200,14 +200,14 @@ class TopModelCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final m = model;
-    final sub = RgText.meta.copyWith(color: RgColors.onInkSecondary);
+    final sub = RgText.meta.copyWith(color: RgColors.textSecondary);
     Widget stat(String label, String value, {bool first = false}) => Expanded(
       child: Container(
         padding: EdgeInsets.only(left: first ? 0 : RgSpace.s14),
-        decoration: BoxDecoration(border: first ? null : const Border(left: BorderSide(color: RgColors.lineOnInk))),
+        decoration: BoxDecoration(border: first ? null : Border(left: BorderSide(color: RgColors.dividerCard))),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s2, children: [
           Text(label, style: sub.copyWith(fontSize: 12.5)),
-          KeepAllText(value, style: RgText.titleList.copyWith(color: RgColors.onInk)),
+          KeepAllText(value, style: RgText.titleList),
         ]),
       ),
     );
@@ -216,30 +216,30 @@ class TopModelCard extends StatelessWidget {
       child: RgPressable(
         row: true,
         onTap: () => context.push('/model/${Uri.encodeComponent(m.id)}'),
-        child: RgDarkCard(
+        child: RgFeaturedCard(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Expanded(
-                // 다크 카드도 같은 머리 줄: 발표한 곳 칩 · HF 트렌딩 순위
+                // 목록 행과 같은 머리 줄: 발표한 곳 칩 · HF 트렌딩 순위
                 child: Padding(
                   padding: const EdgeInsets.only(top: RgSpace.s6),
-                  child: RgRowHead(chip: RgChip(m.maker, source: m.maker, onInk: true), meta: 'Hugging Face 트렌딩 ${m.rank}위', onInk: true),
+                  child: RgRowHead(chip: RgChip(m.maker, source: m.maker), meta: 'Hugging Face 트렌딩 ${m.rank}위'),
                 ),
               ),
               Transform.translate(
                 offset: const Offset(RgSpace.s10, -RgSpace.s10),
-                child: modelActions(m, variant: RgCircleVariant.glass),
+                child: modelActions(m, variant: RgCircleVariant.neutral),
               ),
             ]),
             const SizedBox(height: RgSpace.s8),
-            Text(m.name, style: RgText.titleFeatured.copyWith(color: RgColors.onInk)),
+            Text(m.name, style: RgText.titleFeatured),
             const SizedBox(height: RgSpace.s4),
             KeepAllText(modelSpec(m), style: sub),
-            if (m.variants.isNotEmpty) ...[const SizedBox(height: RgSpace.s4), VariantsLine(model: m, onInk: true)],
+            if (m.variants.isNotEmpty) ...[const SizedBox(height: RgSpace.s4), VariantsLine(model: m)],
             const SizedBox(height: RgSpace.s20),
             Container(
               padding: const EdgeInsets.only(top: RgSpace.s16),
-              decoration: const BoxDecoration(border: Border(top: BorderSide(color: RgColors.lineOnInk))),
+              decoration: BoxDecoration(border: Border(top: BorderSide(color: RgColors.dividerCard))),
               child: IntrinsicHeight(
                 child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                   stat('라이선스', m.licenseKo ?? '정보 없음', first: true),
@@ -258,9 +258,8 @@ class TopModelCard extends StatelessWidget {
 // 「변형 2개 · Omni-2B, VL-2B ›」: 누르면 아래로 펼쳐 변형마다 이름 · 만든 곳 · 양자화판/형제 모델(220ms 접힘,
 // 보관함과 같은 SizeTransition). 행 전체 누르기(상세)와 겹치지 않게 이 줄만 따로 누른다. 선택 틱.
 class VariantsLine extends StatefulWidget {
-  const VariantsLine({super.key, required this.model, this.onInk = false});
+  const VariantsLine({super.key, required this.model});
   final TrendingModel model;
-  final bool onInk; // 트렌딩 1위 다크 카드 위
 
   @override
   State<VariantsLine> createState() => _VariantsLineState();
@@ -272,7 +271,7 @@ class _VariantsLineState extends State<VariantsLine> {
   @override
   Widget build(BuildContext context) {
     final vs = widget.model.variants;
-    final fg = widget.onInk ? RgColors.onInkSecondary : RgColors.textSecondary;
+    final fg = RgColors.textSecondary;
     final style = RgText.meta.copyWith(color: fg);
     final d = RgMotion.of(context, RgMotion.base);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

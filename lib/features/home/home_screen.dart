@@ -466,17 +466,14 @@ class _FeaturedCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final bullets = compact ? const <String>[] : paper.keyPoints.take(2); // G11
     // iOS QA P5: 「자세히 읽기」 버튼 없이 카드 전체가 S02로(목록 행과 같은 방식). 북마크는 오른쪽 위에 따로.
-    // 다크 카드(레퍼런스 007·016): 그날 가장 중요한 논문 하나만 검정 면으로 띄운다.
-    // 홈(compact)은 소식·화제·도구·모델이 모두 밝은 카드라 논문만 차콜이면 튄다 → 같은 밝은 카드. 차콜은 탐색 › 논문에만.
-    final ink = !compact;
-    final sub = RgText.meta.copyWith(color: ink ? RgColors.onInkSecondary : RgColors.textSecondary);
+    // 대표 카드: 그날 가장 중요한 논문 하나. 면은 다른 카드와 같고(차콜은 밝은 카드 사이에서 튀었다) 큰 제목·불릿으로 띄운다.
+    final sub = RgText.meta.copyWith(color: RgColors.textSecondary);
     return Semantics(
       button: true,
       child: RgPressable(
         row: true,
         onTap: () => context.push('/paper/${paper.id}'),
-        child: RgDarkCard(
-          ink: ink,
+        child: RgFeaturedCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -493,8 +490,8 @@ class _FeaturedCard extends StatelessWidget {
                         runSpacing: RgSpace.s4,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          if (paper.topicLabel != null) RgChip(paper.topicLabel!, onInk: ink),
-                          Text(label, style: RgText.caption.copyWith(color: ink ? RgColors.onInkSecondary : RgColors.textSecondary)),
+                          if (paper.topicLabel != null) RgChip(paper.topicLabel!),
+                          Text(label, style: RgText.caption.copyWith(color: RgColors.textSecondary)),
                         ],
                       ),
                     ),
@@ -506,7 +503,7 @@ class _FeaturedCard extends StatelessWidget {
                       valueListenable: bookmarks,
                       builder: (_, saved, _) => RgBookmarkButton(
                         saved: saved.containsKey(paper.id),
-                        variant: ink ? RgCircleVariant.glass : RgCircleVariant.neutral,
+                        variant: RgCircleVariant.neutral,
                         visualSize: 36,
                         onTap: () => toggleBookmark(paper.id, paper.title),
                       ),
@@ -515,7 +512,7 @@ class _FeaturedCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: RgSpace.s8),
-              HeadingTextScale(child: KeepAllText(paper.title, style: RgText.titleFeatured.copyWith(color: ink ? RgColors.onInk : RgColors.textPrimary))),
+              HeadingTextScale(child: KeepAllText(paper.title, style: RgText.titleFeatured)),
               const SizedBox(height: RgSpace.s8),
               if (compact && paper.keyPoints.isNotEmpty)
                 Text(paper.keyPoints.first, maxLines: 1, overflow: TextOverflow.ellipsis, style: sub)
@@ -537,7 +534,7 @@ class _FeaturedCard extends StatelessWidget {
                             height: 4,
                             // 첫 줄(행간 22 × 글자 배율)의 가운데. 고정 10이면 큰 글자에서 점이 위로 뜬다(에뮬레이터 QA)
                             margin: EdgeInsets.only(top: (MediaQuery.textScalerOf(context).scale(22) - 4) / 2),
-                            decoration: const BoxDecoration(color: RgColors.onInkSecondary, shape: BoxShape.circle),
+                            decoration: BoxDecoration(color: RgColors.textTertiary, shape: BoxShape.circle),
                           ),
                           Expanded(
                             // 실제 핵심 내용은 3~5줄짜리 문장이라 카드가 길어진다(2026-10-22 실데이터). 항목당 2줄, 전문은 S02.
@@ -545,7 +542,7 @@ class _FeaturedCard extends StatelessWidget {
                               b,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              style: RgText.bodySmall.copyWith(color: RgColors.onInkBody),
+                              style: RgText.bodySmall.copyWith(color: RgColors.textBody),
                             ),
                           ),
                         ],

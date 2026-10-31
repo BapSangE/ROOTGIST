@@ -80,13 +80,12 @@ class RgInk {
     required this.highlightActive,
     required this.actionPrimary,
     required this.onAction,
-    required this.surfaceInk,
     required this.overlayDim,
     required this.pressOverlay,
     required this.thumb,
   });
   final Color surfaceRaised, textPrimary, textBody, textSecondary, textTertiary, highlight, highlightActive,
-      actionPrimary, onAction, surfaceInk, overlayDim, pressOverlay, thumb;
+      actionPrimary, onAction, overlayDim, pressOverlay, thumb;
 
   static const light = RgInk(
     surfaceRaised: Color(0xFFFFFFFF), // 늘 흰 면: 탭바, 시트, 세그먼트 선택 알약, 외곽선 버튼, 하단 버튼 줄
@@ -98,7 +97,6 @@ class RgInk {
     highlightActive: Color(0xFFFFE27A),
     actionPrimary: Color(0xFF0E0E0D),
     onAction: Color(0xFFFFFFFF),
-    surfaceInk: Color(0xFF2B2B29), // 다크 카드 면(차콜). 순검정은 흰 바탕에서 너무 튄다
     overlayDim: Color(0x520E0E0D), // 0.32
     pressOverlay: Color(0x0A000000),
     thumb: Color(0xFFFFFFFF),
@@ -114,7 +112,6 @@ class RgInk {
     highlightActive: Color(0xFF66561A),
     actionPrimary: Color(0xFFEDEDE9),
     onAction: Color(0xFF111110),
-    surfaceInk: Color(0xFF2E2E2B), // 강조 카드는 일반 카드보다 한 단계 밝게
     overlayDim: Color(0x99000000),
     pressOverlay: Color(0x14FFFFFF),
     thumb: Color(0xFF45453F), // 세그먼트 선택 알약·슬라이더 손잡이: 칩 면보다 한 단계 밝게
@@ -147,21 +144,14 @@ abstract class RgColors {
   static Color get highlightActive => _i.highlightActive;
   static Color get actionPrimary => _i.actionPrimary; // 주 버튼 면(밝은 화면 검정, 어두운 화면 밝은 회색)
   static Color get onAction => _i.onAction; // 주 버튼 위 글자
-  static Color get surfaceInk => _i.surfaceInk;
   static Color get overlayDim => _i.overlayDim;
   static Color get pressOverlay => _i.pressOverlay; // 눌림 덮개
   static Color get thumb => _i.thumb; // 세그먼트 선택 알약·슬라이더 손잡이
 
-  // 두 모드에 같은 색: 차콜 카드·출처 배지 위
-  static const onInk = Color(0xFFFFFFFF); // 차콜 카드·색 배지 위 글자
-  static const ink = Color(0xFF0E0E0D); // 흰 알약·밝은 색 배지(HF 노랑, NVIDIA 초록) 위 글자
-  static const chipOnInk = Color(0xFFFFFFFF); // 다크 카드 위 칩: 흰 알약 + 잉크 글자(카드 대비 14.2:1)
-  static const onInkBody = Color(0xFFE6E6E3); // 다크 카드 위 본문(핵심 내용)
-  static const onInkSecondary = Color(0xFFB9B9B2); // 다크 카드 위 보조 글자(8.6:1)
-  static const onInkMuted = Color(0xFFA9A9A2); // 검정 세그먼트의 고르지 않은 칸
-  static const glassOnInk = Color(0x24FFFFFF); // 다크 카드 위 원형 버튼(흰 14%)
-  static const lineOnInk = Color(0x24FFFFFF);
-  static const tagOnInk = Color(0x1FFFFFFF); // 다크 카드 위 태그(흰 12%)
+  // 두 모드에 같은 색: 출처 배지(회사 대표 색) 위 글자
+  static const onBrand = Color(0xFFFFFFFF); // 진한 배지(Anthropic·OpenAI·Google·Meta·xAI) 위
+  static const onBrandLight = Color(0xFF0E0E0D); // 밝은 배지(HF 노랑, NVIDIA 초록) 위
+  static const onInkMuted = Color(0xFFA9A9A2); // 리더 검정 조절 알약의 고르지 않은 칸
 }
 
 // 공식 소식 출처 배지의 대표 색. 회사당 한 가지, 흰 글자 대비 4.5:1 이상으로 맞춘 앱용 색(정확한 브랜드 HEX 아님).
