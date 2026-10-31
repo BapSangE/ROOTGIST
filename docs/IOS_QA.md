@@ -9,7 +9,7 @@ Windows PC에서 할 수 없어 맥북으로 미뤄 둔 일이다. 끝나면 줄
 - [x] **아이폰 다크 모드 확인:** (2026-10-31 실기기에서 확인, 이상 없음) 3.2의 「다크 모드」 줄. 기기 설정 다크/라이트 전환, 읽기 설정 › 화면 모드 「밝게」·「어둡게」, 전환할 때 화면이 부드럽게 바뀌는지(손쉬운 사용 › 동작 줄이기를 켜면 바로 바뀜), 홈·탐색·상세·리더·용어 시트·보관함·설정에서 안 보이는 글자가 없는지.
 - [x] **TestFlight 업로드:** (2026-10-31 업로드, 「제출 준비 완료」) 빌드 명령은 [ANALYTICS.md](ANALYTICS.md)의 TestFlight 빌드(`POSTHOG_ENVIRONMENT=testflight`, Host `https://eu.i.posthog.com`). PostHog 토큰은 `.env`에서 옮겨 쓰고 커밋·채팅에 남기지 않는다. 빌드 번호는 이전 업로드보다 크게.
 - [x] **개인정보처리방침 시행일:** (2026-10-31로 적음) 업로드한 날을 [privacy.md](privacy.md)에 시행일로 적고, 맨 위 「개정 초안」 문단을 지운 뒤 커밋·푸시. 처리 지역(EU, 프랑크푸르트)은 이미 적혀 있다.
-- [ ] **업로드 뒤 확인:** TestFlight 빌드에서 사용 분석을 켜고 PostHog에 `environment = testflight` 이벤트가 들어오는지.
+- [x] **업로드 뒤 확인:** (2026-10-31 PostHog EU Activity에서 testflight 이벤트 수신 확인) TestFlight 빌드에서 사용 분석을 켜고 PostHog에 `environment = testflight` 이벤트가 들어오는지.
 
 ## 1. 준비 (처음 한 번)
 
