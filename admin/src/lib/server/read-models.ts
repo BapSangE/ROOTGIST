@@ -191,6 +191,9 @@ export function termRows(s: Snapshot): TermRow[] {
         ({ deferred: 0, pending: 1, unreviewed: 1, approved: 2, checked: 2, rejected: 3 }[
           b.status
         ] ?? 4) ||
+      // 같은 상태 안에서는 앱에 많이 나오는 용어 먼저(논문 수 → 등장 횟수)
+      b.paper_count - a.paper_count ||
+      (b.seen_count ?? 0) - (a.seen_count ?? 0) ||
       a.id.localeCompare(b.id),
   );
 }
