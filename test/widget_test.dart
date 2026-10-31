@@ -1452,18 +1452,23 @@ void main() {
     expect(text['Anthropic'], RgColors.onAction);
   });
 
-  testWidgets('다크 카드: 차콜 면 위 주제 칩은 흰 알약 + 잉크 글자', (tester) async {
+  testWidgets('다크 카드: 홈은 다른 섹션과 같은 밝은 카드, 탐색 › 논문은 차콜 면 + 흰 알약 칩·잉크 글자', (tester) async {
     tester.view.physicalSize = const Size(390, 2400);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await pumpApp(tester);
+    Color face() => (tester.widget<Container>(find.descendant(of: find.byType(RgDarkCard).first, matching: find.byType(Container)).first)
+            .decoration as BoxDecoration)
+        .color!;
+    expect(face(), RgColors.surfaceCard); // 홈: 논문만 차콜이면 튄다
+    router.go('/explore');
+    await settle(tester);
     final card = find.byType(RgDarkCard).first;
-    final face = tester.widget<Container>(find.descendant(of: card, matching: find.byType(Container)).first);
-    expect((face.decoration as BoxDecoration).color, RgColors.surfaceInk);
+    expect(face(), RgColors.surfaceInk);
     final chip = find.descendant(of: card, matching: find.byType(RgChip)).first;
     final box = tester.widget<Container>(find.descendant(of: chip, matching: find.byType(Container)).first);
     expect((box.decoration as BoxDecoration).color, RgColors.chipOnInk);
-    expect(tester.widget<Text>(find.descendant(of: chip, matching: find.byType(Text))).style!.color, RgColors.textPrimary);
+    expect(tester.widget<Text>(find.descendant(of: chip, matching: find.byType(Text))).style!.color, RgColors.ink);
   });
 
   testWidgets('논문 상세 카드: AI 요약·핵심 내용에도 용어 강조, 카드 안에서 용어당 처음 1번, 누르면 진동과 시트', (tester) async {

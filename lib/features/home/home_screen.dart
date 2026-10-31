@@ -467,12 +467,16 @@ class _FeaturedCard extends StatelessWidget {
     final bullets = compact ? const <String>[] : paper.keyPoints.take(2); // G11
     // iOS QA P5: 「자세히 읽기」 버튼 없이 카드 전체가 S02로(목록 행과 같은 방식). 북마크는 오른쪽 위에 따로.
     // 다크 카드(레퍼런스 007·016): 그날 가장 중요한 논문 하나만 검정 면으로 띄운다.
+    // 홈(compact)은 소식·화제·도구·모델이 모두 밝은 카드라 논문만 차콜이면 튄다 → 같은 밝은 카드. 차콜은 탐색 › 논문에만.
+    final ink = !compact;
+    final sub = RgText.meta.copyWith(color: ink ? RgColors.onInkSecondary : RgColors.textSecondary);
     return Semantics(
       button: true,
       child: RgPressable(
         row: true,
         onTap: () => context.push('/paper/${paper.id}'),
         child: RgDarkCard(
+          ink: ink,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -489,8 +493,8 @@ class _FeaturedCard extends StatelessWidget {
                         runSpacing: RgSpace.s4,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          if (paper.topicLabel != null) RgChip(paper.topicLabel!, onInk: true),
-                          Text(label, style: RgText.caption.copyWith(color: RgColors.onInkSecondary)),
+                          if (paper.topicLabel != null) RgChip(paper.topicLabel!, onInk: ink),
+                          Text(label, style: RgText.caption.copyWith(color: ink ? RgColors.onInkSecondary : RgColors.textSecondary)),
                         ],
                       ),
                     ),
@@ -502,7 +506,7 @@ class _FeaturedCard extends StatelessWidget {
                       valueListenable: bookmarks,
                       builder: (_, saved, _) => RgBookmarkButton(
                         saved: saved.containsKey(paper.id),
-                        variant: RgCircleVariant.glass,
+                        variant: ink ? RgCircleVariant.glass : RgCircleVariant.neutral,
                         visualSize: 36,
                         onTap: () => toggleBookmark(paper.id, paper.title),
                       ),
@@ -511,12 +515,12 @@ class _FeaturedCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: RgSpace.s8),
-              HeadingTextScale(child: KeepAllText(paper.title, style: RgText.titleFeatured.copyWith(color: RgColors.onInk))),
+              HeadingTextScale(child: KeepAllText(paper.title, style: RgText.titleFeatured.copyWith(color: ink ? RgColors.onInk : RgColors.textPrimary))),
               const SizedBox(height: RgSpace.s8),
               if (compact && paper.keyPoints.isNotEmpty)
-                Text(paper.keyPoints.first, maxLines: 1, overflow: TextOverflow.ellipsis, style: RgText.meta.copyWith(color: RgColors.onInkSecondary))
+                Text(paper.keyPoints.first, maxLines: 1, overflow: TextOverflow.ellipsis, style: sub)
               else
-                KeepAllText('${paper.authors} · ${paper.date}', style: RgText.meta.copyWith(color: RgColors.onInkSecondary)),
+                KeepAllText('${paper.authors} · ${paper.date}', style: sub),
               if (bullets.isNotEmpty) ...[
                 const SizedBox(height: RgSpace.s16),
                 Column(

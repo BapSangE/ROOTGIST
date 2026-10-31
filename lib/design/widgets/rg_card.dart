@@ -83,16 +83,17 @@ class RgListRow extends StatelessWidget {
 
 // 다크 카드(레퍼런스 007·016): 화면에서 가장 중요한 것 하나만 차콜 면으로. 오늘의 주요 논문, 트렌딩 1위.
 class RgDarkCard extends StatelessWidget {
-  const RgDarkCard({super.key, required this.child, this.padding = const EdgeInsets.all(RgSpace.s22)});
+  const RgDarkCard({super.key, required this.child, this.padding = const EdgeInsets.all(RgSpace.s22), this.ink = true});
   final Widget child;
   final EdgeInsetsGeometry padding;
+  final bool ink; // false면 같은 모양의 일반 카드 면(홈: 다른 섹션 카드와 맞춘다)
 
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
     child: Container(
       padding: padding,
-      decoration: BoxDecoration(color: RgColors.surfaceInk, borderRadius: BorderRadius.circular(RgRadius.cardDark)),
+      decoration: BoxDecoration(color: ink ? RgColors.surfaceInk : RgColors.surfaceCard, borderRadius: BorderRadius.circular(RgRadius.cardDark)),
       child: child,
     ),
   );
