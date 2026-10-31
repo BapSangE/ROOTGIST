@@ -148,24 +148,29 @@ abstract class RgColors {
   static Color get pressOverlay => _i.pressOverlay; // 눌림 덮개
   static Color get thumb => _i.thumb; // 세그먼트 선택 알약·슬라이더 손잡이
 
-  // 두 모드에 같은 색: 출처 배지(회사 대표 색) 위 글자
-  static const onBrand = Color(0xFFFFFFFF); // 진한 배지(Anthropic·OpenAI·Google·Meta·xAI) 위
-  static const onBrandLight = Color(0xFF0E0E0D); // 밝은 배지(HF 노랑, NVIDIA 초록) 위
+  static Color get hotScore => isDark ? const Color(0xFFF59E5B) : const Color(0xFFC2410C); // 화제 점수(카드 위 4.6:1·7:1)
   static const onInkMuted = Color(0xFFA9A9A2); // 리더 검정 조절 알약의 고르지 않은 칸
 }
 
-// 공식 소식 출처 배지의 대표 색. 회사당 한 가지, 흰 글자 대비 4.5:1 이상으로 맞춘 앱용 색(정확한 브랜드 HEX 아님).
-// Google은 4색 조합을 흉내 내지 않고 파랑 하나만(Google 가이드: 「distinctive color combinations」을 따라 하지 말 것).
-// 로고 모양·글꼴은 따라 하지 않고 Pretendard 머리글자만 쓴다. 권리 검토: docs/RIGHTS.md 4장.
+// 출처 칩 색(디자인 피드백 2026-10-31 A안): 원색·쌩 검정 대신 「연한 바탕 + 같은 계열 진한 글자」 한 규칙.
+// 흰 글자·검정 글자가 섞이지 않고, 글자 대비는 모두 4.5:1 이상(밝은 화면 6~8:1). 어두운 화면은 어둡게 낮춘 바탕 + 밝은 글자.
+// Google은 4색 조합을 흉내 내지 않고 파랑 하나만. 로고 모양·글꼴은 따라 하지 않는다. 권리 검토: docs/RIGHTS.md 4장.
+// 시안: design-preview/src/feedback_2026-10-31.html, 피그마 「홈·탐색 A안」.
+class RgBrandTone {
+  const RgBrandTone(this.bg, this.fg, this.darkBg, this.darkFg);
+  final Color bg, fg, darkBg, darkFg;
+  Color get background => isDark ? darkBg : bg;
+  Color get foreground => isDark ? darkFg : fg;
+}
+
 abstract class RgBrand {
-  static const anthropic = Color(0xFFB5522B); // Anthropic·Claude Code·Claude API(점토 주황, 흰 글자 5.0:1)
-  // OpenAI·xAI(흑백 브랜드): 어두운 화면에선 검정이 카드에 묻혀 한 단계 밝은 차콜
-  static Color get openai => isDark ? const Color(0xFF3A3A36) : const Color(0xFF0E0E0D);
-  static const google = Color(0xFF1A66D9); // Google DeepMind·Google Research(흰 글자 5.3:1)
-  static const huggingface = Color(0xFFFFD21E); // Hugging Face(노랑, 검정 글자 13.3:1)
-  static const nvidia = Color(0xFF76B900); // NVIDIA(초록, 흰 글자는 2.4:1이라 검정 글자 8.0:1)
-  static const meta = Color(0xFF0866FF); // Meta(파랑, 흰 글자 4.8:1)
-  static Color get xai => openai;
+  static const anthropic = RgBrandTone(Color(0xFFF6E3D6), Color(0xFF8A3D1E), Color(0xFF3D271D), Color(0xFFF2B79A)); // 살구
+  static const openai = RgBrandTone(Color(0xFFE6E6E2), Color(0xFF2E2E2B), Color(0xFF34342F), Color(0xFFDCDCD6)); // 회색(흑백 브랜드)
+  static const google = RgBrandTone(Color(0xFFDDE8FA), Color(0xFF1A4F9E), Color(0xFF1C2A42), Color(0xFFA9C7F5)); // 하늘
+  static const huggingface = RgBrandTone(Color(0xFFFFF0BA), Color(0xFF6B5400), Color(0xFF3A3215), Color(0xFFF3D774)); // 노랑
+  static const nvidia = RgBrandTone(Color(0xFFE5F1CF), Color(0xFF3E6400), Color(0xFF26331A), Color(0xFFBEDC8C)); // 연두
+  static const meta = RgBrandTone(Color(0xFFE3E6FA), Color(0xFF3A47A8), Color(0xFF23264A), Color(0xFFB4BCF5)); // 남색
+  static const xai = openai;
 }
 
 // 움직임(design-preview/DESIGN_SYSTEM.md 「움직임·진동」). 앱 전체가 같은 속도·곡선을 쓴다.

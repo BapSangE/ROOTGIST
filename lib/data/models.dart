@@ -195,6 +195,10 @@ String kstDateTime(DateTime utc) {
   return '${k.month}월 ${k.day}일 ${kstTime(utc)}';
 }
 
+// 요약 첫머리 「이 글은 」을 뗀다(디자인 피드백 2026-10-31: 목록의 모든 줄이 같은 말로 시작해 훑기 어려웠다).
+// 새 요약은 수집기 규칙에서 빼지만(worker/official_news.py) 이미 쌓인 요약도 같게 보이게.
+String? trimSummaryLead(String? s) => s?.replaceFirst(RegExp(r'^이 글은\s+'), '');
+
 // 연구소 공식 소식(PROPOSALS P8d). 제목·출처·날짜·링크만, 본문은 옮기지 않는다. 모양은 worker/official_news.py 출력.
 class OfficialNews {
   OfficialNews.fromJson(Map<String, dynamic> j)
@@ -202,7 +206,7 @@ class OfficialNews {
         source = j['source'],
         sourceLabel = j['source_label'],
         kind = j['kind'] ?? 'post',
-        summaryKo = j['summary_ko'],
+        summaryKo = trimSummaryLead(j['summary_ko']),
         keyPoints = [for (final k in j['key_points'] ?? const []) NewsPoint.fromJson(k)],
         category = j['category'],
         titleEn = j['title_en'],
@@ -238,14 +242,14 @@ class OfficialNews {
   bool get isHot => kind == 'hot'; // 「화제」 칸(Hacker News·GitHub)
   bool get isGithub => source == 'github';
 
-  // 「HN 1,314점」「408점 · 댓글 213」「★ 179」: 화제는 점수가 주인공이라 앞에, 공식 소식은 뒤에 짧게
+  // 「추천 408 · 댓글 213」「HN 추천 331」「★ 179」: 「점」만으로는 기준이 안 보여 Hacker News 추천(upvote) 수라고 밝힌다
   String? get reaction => points == null
       ? null
       : isGithub
           ? '★ ${countKo(points!)}'
           : isHot
-              ? '${countKo(points!)}점${comments == null ? '' : ' · 댓글 ${countKo(comments!)}'}'
-              : 'HN ${countKo(points!)}점';
+              ? '추천 ${countKo(points!)}${comments == null ? '' : ' · 댓글 ${countKo(comments!)}'}'
+              : 'HN 추천 ${countKo(points!)}';
 
   // 근거 문장으로 바로 여는 원문 주소(브라우저 텍스트 위치 링크 #:~:text=). 인용이 없으면 글 주소.
   String evidenceUrl(NewsPoint p) =>

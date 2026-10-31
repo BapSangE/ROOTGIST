@@ -1,5 +1,6 @@
 import '../../analytics/posthog_sink.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:go_router/go_router.dart';
 
 import '../../data/models.dart';
@@ -56,6 +57,7 @@ Future<(List<OfficialNews>, List<TrendingModel>)> _loadExtras() async {
 
 class _HomeScreenState extends State<HomeScreen> {
   late final _req = Reloadable(() => loadDigest(widget.date));
+  final _paperKey = GlobalKey(), _updatesKey = GlobalKey(); // 브리핑 배지가 스크롤해 갈 칸
   late final _extras = widget.date == null ? _loadExtras() : null;
 
   @override
@@ -87,6 +89,8 @@ class _HomeScreenState extends State<HomeScreen> {
           };
           final (digest, fallback) = snap.data ?? (null, null);
           return ListView(
+            // 브리핑 배지(「바뀐 도구」 등)가 화면 밖 먼 칸으로 스크롤할 수 있게 홈 전체를 미리 그려 둔다(글 몇 줄이라 가볍다)
+            scrollCacheExtent: const ScrollCacheExtent.pixels(4000),
             padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top, bottom: RgSpace.bottomScrollInset),
             children: [
               _topBar(context),
@@ -95,9 +99,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 if (widget.date == null) ...[
                   FutureBuilder(
                     future: _extras,
-                    builder: (context, s) => BriefingSection(news: s.data?.$1, paperCount: (fallback == null ? digest : null)?.papers.length ?? 0),
+                    builder: (context, s) => BriefingSection(
+                      news: s.data?.$1,
+                      paperCount: (fallback == null ? digest : null)?.papers.length ?? 0,
+                      paperKey: _paperKey,
+                      updatesKey: _updatesKey,
+                    ),
                   ),
-                  _paperHeader(digest, fallback),
+                  KeyedSubtree(key: _paperKey, child: _paperHeader(digest, fallback)),
                 ] else
                   _headline(digest, fallback),
                 DigestPapers(digest: digest, fallback: fallback, limit: widget.date == null ? 3 : null, pastDay: widget.date != null),
@@ -227,7 +236,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final top = models.take(2).toList();
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       if (updates.isNotEmpty) ...[
-        const SectionTitle('바뀐 도구'),
+        SectionTitle('바뀐 도구', key: _updatesKey),
         RgCard(child: Column(children: [for (final (i, n) in updates.indexed) UpdateRow(news: n, last: i == updates.length - 1)])),
         MoreLink(label: '업데이트 더 보기', onTap: () => openExplore(context, const ExploreJump(1, updates: true))),
       ],
@@ -460,7 +469,7 @@ class _FeaturedCard extends StatelessWidget {
   const _FeaturedCard({required this.paper, required this.label, this.compact = false});
   final PaperItem paper;
   final String label;
-  final bool compact; // 홈(브리핑 아래): 저자·불릿 대신 한 줄 요약(시안 B)
+  final bool compact; // 홈(브리핑 아래): 저자·불릿 대신 두 줄 요약
 
   @override
   Widget build(BuildContext context) {
@@ -473,7 +482,9 @@ class _FeaturedCard extends StatelessWidget {
       child: RgPressable(
         row: true,
         onTap: () => context.push('/paper/${paper.id}'),
+        // 간격(디자인 피드백 2026-10-31 6번): 안쪽 20, 칩→제목 10, 제목→요약 8. 요약은 두 줄까지
         child: RgFeaturedCard(
+          padding: const EdgeInsets.all(RgSpace.s20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -511,11 +522,11 @@ class _FeaturedCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: RgSpace.s8),
+              const SizedBox(height: RgSpace.s10),
               HeadingTextScale(child: KeepAllText(paper.title, style: RgText.titleFeatured)),
               const SizedBox(height: RgSpace.s8),
               if (compact && paper.keyPoints.isNotEmpty)
-                Text(paper.keyPoints.first, maxLines: 1, overflow: TextOverflow.ellipsis, style: sub)
+                KeepAllText(paper.keyPoints.first, maxLines: 2, overflow: TextOverflow.ellipsis, style: sub)
               else
                 KeepAllText('${paper.authors} · ${paper.date}', style: sub),
               if (bullets.isNotEmpty) ...[

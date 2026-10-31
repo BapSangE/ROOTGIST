@@ -57,16 +57,17 @@ double importance(OfficialNews n, DateTime now) {
   return kind + major + launch + related - age;
 }
 
-/// 「12분 전」 「3시간 전」 「어제 02:00」 「10월 27일」. 날짜 경계는 KST.
+/// 「12분 전」 「3시간 전」 「2일 전」 한 형식(디자인 피드백 2026-10-31 3번: 「어제 18:00」 「10월 29일」이 섞여 있었다).
+/// 24시간 안은 시간, 그 뒤는 KST 날짜 차이로 「N일 전」. 한 달이 넘으면 날짜.
 String relativeKo(DateTime utc, DateTime now) {
   final d = now.difference(utc);
   if (d.inMinutes < 1) return '방금';
   if (d.inMinutes < 60) return '${d.inMinutes}분 전';
+  if (d.inHours < 24) return '${d.inHours}시간 전';
   final k = utc.toUtc().add(const Duration(hours: 9)), today = now.toUtc().add(const Duration(hours: 9));
   final days = DateTime(today.year, today.month, today.day).difference(DateTime(k.year, k.month, k.day)).inDays;
-  if (days == 0) return '${d.inHours}시간 전';
-  if (days == 1) return '어제 ${kstTime(utc)}';
-  return '${k.month}월 ${k.day}일';
+  if (days > 30) return '${k.month}월 ${k.day}일';
+  return '${days < 1 ? 1 : days}일 전';
 }
 
 /// 「오늘 · 10월 30일」 「어제 · 10월 29일」 「10월 27일」(공식 소식 목록의 날짜 머리)

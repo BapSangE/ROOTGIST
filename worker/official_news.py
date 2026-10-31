@@ -553,7 +553,8 @@ POST_SYSTEM = (
     "You write a short Korean digest of an English blog post for Korean developers. Use only the numbered paragraphs given. "
     "Do not guess, add facts, or translate the whole post. Keep product, model, company and benchmark names in their original spelling. "
     "Return only a JSON object: {\"summary\": \"...\", \"points\": [{\"text\": \"...\", \"para\": N, \"quote\": \"...\"}]}. "
-    "summary: 1 or 2 Korean sentences on what the post is about. points: up to 3 key points, each one Korean sentence, "
+    "summary: 1 or 2 Korean sentences on what the post is about; start with the subject itself (the product, model or finding), "
+    "never with 「이 글은」 or 「이 포스트는」. points: up to 3 key points, each one Korean sentence, "
     "para: the number of the paragraph that supports it, quote: 3 to 10 consecutive words copied exactly from that paragraph. "
     "If the paragraphs are too short for key points, return an empty points list."
 ) + HAEYO

@@ -78,26 +78,60 @@ class SettingsScreen extends StatelessWidget {
         ]),
         group('사용 분석'),
         _SettingsCard(children: [
+          // 디자인 피드백 2026-10-31 7번: 스위치는 제목 줄 오른쪽에 작게, 설명은 한 줄. 나머지(보내는 것·안 보내는 것·만 14세 미만)는 시트로
           ValueListenableBuilder(
             valueListenable: analyticsCollectionEnabled,
-            builder: (_, enabled, _) => Material(
-              color: Colors.transparent,
-              child: SwitchListTile.adaptive(
-                key: const ValueKey('analytics-collection'),
-                contentPadding: const EdgeInsets.symmetric(vertical: RgSpace.s8),
-                title: Text('사용 분석 데이터 수집', style: RgText.bodySummary),
-                subtitle: Text(
-                  '선택 사항 · 기본 꺼짐\n화면 방문·기능 사용·활성 독서 시간과 임의의 앱 식별자를 PostHog에 보내 앱을 개선해요. 본문·번역문·이메일은 보내지 않아요. 언제든 끌 수 있어요.\n만 14세 미만이라면 켜지 말아 주세요.',
-                  style: RgText.caption.copyWith(color: RgColors.textSecondary),
+            builder: (_, enabled, _) => Padding(
+              padding: const EdgeInsets.only(top: RgSpace.s12, bottom: RgSpace.s4),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Expanded(child: Text('사용 분석', style: RgText.bodySummary)),
+                  // 누르는 영역(44)은 두고 보이는 크기만 줄인다
+                  SizedBox(
+                    height: 44,
+                    child: Transform.scale(
+                      scale: 0.8,
+                      alignment: Alignment.centerRight,
+                      child: Switch.adaptive(
+                        key: const ValueKey('analytics-collection'),
+                        activeThumbColor: RgColors.textPrimary,
+                        // 꺼짐: 칩 면 트랙 + 흐린 손잡이(기본값은 어두운 화면에서 흰 테두리가 튄다)
+                        inactiveTrackColor: RgColors.fillNeutral,
+                        inactiveThumbColor: RgColors.textTertiary,
+                        trackOutlineColor: WidgetStatePropertyAll(RgColors.borderDefault),
+                        value: enabled,
+                        onChanged: (value) {
+                          HapticFeedback.selectionClick();
+                          analyticsCollectionEnabled.value = value;
+                        },
+                      ),
+                    ),
+                  ),
+                ]),
+                KeepAllText('익명 사용 기록으로 앱을 개선해요 · 기본 꺼짐', style: RgText.caption.copyWith(color: RgColors.textSecondary)),
+                Semantics(
+                  button: true,
+                  child: RgPressable(
+                    onTap: () => _analyticsDetails(context),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 36),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        widthFactor: 1,
+                        child: Text(
+                          '보내는 정보 자세히',
+                          style: RgText.caption.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: RgColors.textBody,
+                            decoration: TextDecoration.underline,
+                            decorationColor: RgColors.textTertiary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-                activeThumbColor: RgColors.textPrimary,
-                // 꺼짐: 칩 면 트랙 + 흐린 손잡이(기본값은 어두운 화면에서 흰 테두리가 튄다)
-                inactiveTrackColor: RgColors.fillNeutral,
-                inactiveThumbColor: RgColors.textTertiary,
-                trackOutlineColor: WidgetStatePropertyAll(RgColors.borderDefault),
-                value: enabled,
-                onChanged: (value) => analyticsCollectionEnabled.value = value,
-              ),
+              ]),
             ),
           ),
           if (!analytics.configured)
@@ -212,6 +246,31 @@ Future<void> _contact(BuildContext context, {String? subject, String? body}) asy
       duration: const Duration(seconds: 4),
     ));
 }
+
+// 「보내는 정보 자세히」: 설정 줄에서 줄인 사용 분석 안내 전문
+Future<void> _analyticsDetails(BuildContext context) => showRgBottomSheet<void>(
+  context,
+  builder: (sheet) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    const SizedBox(height: RgSpace.s4),
+    Semantics(header: true, child: Text('사용 분석으로 보내는 정보', style: RgText.titleSection)),
+    const SizedBox(height: RgSpace.s10),
+    KeepAllText(
+      '선택 사항이고 기본은 꺼져 있어요. 켜면 화면 방문·기능 사용·활성 독서 시간과 임의의 앱 식별자를 PostHog에 보내 앱을 개선해요. 본문·번역문·이메일은 보내지 않아요. 언제든 끌 수 있어요.',
+      perSentence: true,
+      style: RgText.bodySummary.copyWith(color: RgColors.textBody),
+    ),
+    const SizedBox(height: RgSpace.s12),
+    KeepAllText('만 14세 미만이라면 켜지 말아 주세요.', style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
+    const SizedBox(height: RgSpace.s20),
+    TextButton(
+      onPressed: () {
+        Navigator.pop(sheet);
+        context.go('/settings/privacy');
+      },
+      child: Text('개인정보 처리방침 보기', style: RgText.bodySmall),
+    ),
+  ]),
+);
 
 // 처리방침 7장: 수집을 끄고 설치 식별자를 새로 바꾼 뒤, 이전 식별자를 적은 삭제 요청 메일을 준비한다.
 // 한 번도 수집을 켜지 않았으면 보낸 기록이 없다고 알리고 끝낸다. 되돌릴 수 없는 동작이라 시트에서 한 번 더 묻는다.
@@ -463,7 +522,7 @@ class DataSourceScreen extends StatelessWidget {
     '각 논문의 원문은 상세 화면의 Hugging Face·arXiv 링크에서 확인할 수 있어요. 논문 제목과 초록은 arXiv가 CC0으로 공개한 정보예요.',
     // 공식 소식·모델(docs/RIGHTS.md 3·4장): 출처와 「원문이 아니라 AI 정리」라는 점, 삭제 요청 창구를 밝힌다.
     '공식 소식은 OpenAI·Anthropic·Google DeepMind·Google Research·Hugging Face·Meta·NVIDIA의 공식 블로그(Hugging Face 블로그에 회사 계정이 쓴 글 포함)와 개발자 공지, Claude Code·SDK·API 릴리스 노트에서 모아요. 제목과 요약·핵심 내용은 AI가 원문을 보고 한국어로 정리한 것이고, 글 전체는 각 원문 링크에서 읽을 수 있어요.',
-    '「화제」는 Hacker News에서 개발자들이 많이 본 AI 글과 GitHub의 새 AI 저장소예요. 점수는 Hacker News 추천 수·GitHub 별 수이고, 요약은 원문 사이트가 허용할 때만 만들어요.',
+    '「개발자 화제」는 Hacker News에서 개발자들이 많이 본 AI 글과 GitHub의 새 AI 저장소예요. 숫자는 Hacker News 추천(upvote) 수·GitHub 별 수이고, 요약은 원문 사이트가 허용할 때만 만들어요.',
     '모델은 Hugging Face 트렌딩 순위와 각 모델 카드에 적힌 제작사 설명을 바탕으로 해요. 점수는 제작사가 직접 측정해 밝힌 값이에요.',
     // 출처 배지의 회사 대표 색(RgBrand)과 함께 둔다(docs/RIGHTS.md 4장)
     '표시된 회사·제품 이름은 각 소유자의 상표예요. ROOTGIST는 이 회사들과 제휴하거나 후원받지 않으며, 출처 배지의 색은 출처를 구분하려고 쓴 것이에요.',

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../tokens.dart';
-import '../typography.dart';
 
 // 새 글 점 6pt(포인트 색 하나, 개수는 세지 않는다). 화면 읽기에는 「새 글」.
 class RgNewDot extends StatelessWidget {
@@ -19,12 +18,13 @@ class RgNewDot extends StatelessWidget {
   );
 }
 
-// 「새 글」 두 글자(목록 행 머리 줄 끝). 출처 칩이 회사 대표 색이라 점 대신 글자로 뜻을 분명히 한다.
-// 작은 글자라 점보다 한 단계 진한 newText(대비 4.5:1 이상). 읽으면 작아지며 흐려져 사라지고(180ms) 자리를 메운다.
+// 목록 행 머리 줄 끝의 새 글 표시. 글자 「새 글」은 시각·관련 수와 같은 무게로 붙어 위계를 흐려(디자인 피드백 2026-10-31 4번)
+// 점 하나로 바꿨다. 칩이 연한 색이라 빨간 점이 묻히지 않는다. 화면 읽기에는 label을 읽는다.
+// 읽으면 작아지며 흐려져 사라지고(180ms) 자리를 메운다.
 class RgNewLabel extends StatelessWidget {
   const RgNewLabel({super.key, this.visible = true, this.label = '새 글'});
   final bool visible;
-  final String label; // 모델 목록은 「새로 진입」
+  final String label; // 화면 읽기 이름. 모델 목록은 「새로 진입」
 
   @override
   Widget build(BuildContext context) {
@@ -36,10 +36,10 @@ class RgNewLabel extends StatelessWidget {
         duration: d,
         transitionBuilder: (child, a) => FadeTransition(opacity: a, child: ScaleTransition(scale: Tween(begin: 0.6, end: 1.0).animate(a), child: child)),
         child: visible
-            ? Text(
-                label,
+            ? Semantics(
                 key: const ValueKey(true),
-                style: RgText.caption.copyWith(fontSize: 12, height: 1.2, fontWeight: FontWeight.w700, color: RgColors.newText),
+                label: label,
+                child: Container(width: 6, height: 6, decoration: BoxDecoration(color: RgColors.newDot, shape: BoxShape.circle)),
               )
             : const SizedBox(key: ValueKey(false)),
       ),
