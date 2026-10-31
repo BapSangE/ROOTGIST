@@ -42,6 +42,19 @@ abstract class RgText {
   static TextStyle get serifTerm => _s(26, 32, FontWeight.w600, 0, isSerif: true);
   static TextStyle get serifSubtitle => _s(16, 23, FontWeight.w400, 0, isSerif: true);
   static TextStyle get wordmark => _s(15, 18, FontWeight.w800, 3.3); // 자간 0.22em
+  // 홈(디자이너 시안 home_re 2026-10-31). 자간 −0.02em. 칸 제목 줄 높이는 시안(25)보다 넉넉히: 한글 두 줄·큰 글자에서 겹친다
+  static TextStyle get homeSection => _s(28, 34, FontWeight.w700, -0.56);
+  static TextStyle get homeSub => _s(16, 21, FontWeight.w400, 0); // 칸 부제
+  static TextStyle get homeMore => _s(14, 18, FontWeight.w500, 0); // 「더보기」
+  static TextStyle get homeTitle => _s(18, 23.4, FontWeight.w500, -0.36); // 카드 안 글 제목
+  static TextStyle get homeSummary => _s(14, 19, FontWeight.w400, -0.28);
+  static TextStyle get homeDate => _s(12, 15, FontWeight.w400, -0.24);
+  static TextStyle get homeLabel => _s(14, 17, FontWeight.w500, -0.28); // 「오늘의 주요 논문」 「10시간 전」
+  static TextStyle get homeChip => _s(12, 16, FontWeight.w500, 0); // 칩·알약
+  static TextStyle get homeMeta => _s(13, 19, FontWeight.w400, 0); // 사이트·저자
+  static TextStyle get homeFeatured => _s(24, 31, FontWeight.w700, -0.48);
+  static TextStyle get homeUpdate => _s(20, 26, FontWeight.w700, -0.4);
+  static TextStyle get homeRank => _s(40, 40, FontWeight.w700, -0.8);
 }
 
 // HANDOFF 9.3: Flutter에 keep-all이 없어 어절 안 글자 사이에 word joiner(U+2060)를 넣는다.

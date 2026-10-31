@@ -33,7 +33,7 @@ import 'package:rootgist/features/explore/explore_screen.dart';
 import 'package:rootgist/features/explore/official_news.dart';
 import 'package:rootgist/features/common/term_text.dart';
 import 'package:rootgist/features/home/home_screen.dart';
-import 'package:rootgist/features/home/briefing_section.dart';
+import 'package:rootgist/features/home/home_sections.dart';
 import 'package:rootgist/features/home/briefing.dart';
 import 'package:rootgist/features/paper/paper_screen.dart';
 import 'package:rootgist/features/reader/reader_screen.dart';
@@ -60,6 +60,9 @@ Future<void> pumpApp(WidgetTester tester) async {
   modelsSeen.value = {};
   newsSeenAt.value = null;
   clock = DateTime.now;
+  // 홈 키워드 칩이 바로 사전을 부른다: 지난 테스트의 끝나지 않은 요청을 물려받지 않게 새로, 실제 비동기에서 미리 받아 둔다
+  resetDictionary();
+  await tester.runAsync(dictionary);
   await tester.runAsync(() async {
     await tester.pumpWidget(const RootgistApp());
     await Future<void>.delayed(const Duration(milliseconds: 200));
@@ -189,7 +192,7 @@ void main() {
     addTearDown(tester.view.reset);
     await pumpApp(tester);
 
-    expect(find.textContaining('편 모두 보기'), findsOneWidget); // 홈은 3편만 미리 보여 준다
+    expect(find.text(keepAll('6편이 올라왔어요')), findsOneWidget); // 홈은 3편만 미리 보여 주고 나머지는 「더보기」로
 
     await tester.tap(find.bySemanticsLabel('북마크에 저장').first);
     await tester.pump();
@@ -500,27 +503,27 @@ void main() {
     await pumpApp(tester);
     await settle(tester);
     expect(find.text('오늘의 주요 논문'), findsOneWidget);
-    // 홈 맨 위는 「오늘의 브리핑」(시안 A): 표제 → 주요 소식 카드. fixture 소식은 오래돼 「새 소식이 없어요」 + 최근 소식
-    expect(find.text(keepAll('새 소식이 없어요')), findsOneWidget);
-    expect(find.text('최근 소식'), findsOneWidget);
-    expect(find.byType(BriefRow), findsNWidgets(5));
-    expect(find.textContaining('더 보기'), findsWidgets);
-    // 브리핑 아래(시안 B): 오늘의 논문 → 바뀐 도구 → 모델. 연구소 소식 칸은 브리핑이 맡는다
-    expect(find.text('오늘의 논문'), findsOneWidget);
-    expect(find.text('연구소 소식'), findsNothing);
-    expect(find.text('바뀐 도구'), findsOneWidget);
-    expect(find.text('요즘 많이 쓰는 모델'), findsOneWidget);
-    // 바뀐 도구도 통일 머리 줄: 출처 칩 + 버전·건수 · 날짜(공지는 「공지」)
-    expect(find.text(keepAll('v0.0.3 · 3건 · ${relativeKo(DateTime.utc(2026, 10, 18, 12), clock())}')), findsOneWidget);
-    expect(find.text(keepAll('공지 · ${relativeKo(DateTime.utc(2026, 10, 17, 9), clock())}')), findsOneWidget);
+    // 디자이너 시안 home_re(2026-10-31): 주요 소식 → (개발자 화제) → 오늘의 논문 → 바뀐 도구 → 모델 트렌드 순위.
+    // fixture 소식은 오래돼 「최근 소식」. 날짜 헤드라인·요약 배지는 없다
+    expect(find.text(keepAll('새 소식이 없어요')), findsNothing);
+    expect(find.text(keepAll('최근 소식')), findsOneWidget);
+    expect(find.byType(HomeStoryRow), findsNWidgets(3));
+    expect(find.text(keepAll('오늘의 논문')), findsOneWidget);
+    expect(find.text(keepAll('바뀐 도구')), findsOneWidget);
+    expect(find.text(keepAll('모델 트렌드 순위')), findsOneWidget);
+    expect(find.bySemanticsLabel('더보기'), findsNWidgets(4)); // 칸마다(소식·논문·바뀐 도구·모델)
+    // 바뀐 도구: 회사 색 카드에 시각 → 도구 이름 → 「업데이트 3건 (v0.0.1~v0.0.3)」
+    expect(find.byType(HomeUpdateCard), findsNWidgets(2));
+    expect(find.text(keepAll('Claude Code')), findsOneWidget);
+    // 모델: 3장, 큰 순위 숫자
+    expect(find.byType(HomeModelCard), findsNWidgets(3));
     expect(find.text('example-coder'), findsOneWidget);
-    // 홈 논문은 추천 1 + 행 2 = 3편
-    // 목록·카드에는 북마크만(공유는 상세 화면에서). 브리핑 행은 훑어보기용이라 북마크 없이 누르면 상세
+    // 북마크는 논문 3 + 바뀐 도구 2(공유는 상세 화면에서)
     expect(find.bySemanticsLabel('공유'), findsNothing);
-    expect(find.bySemanticsLabel('북마크에 저장'), findsNWidgets(3 + 2 + 2)); // 논문 3 + 바뀐 도구 2 + 모델 2
+    expect(find.bySemanticsLabel('북마크에 저장'), findsNWidgets(3 + 2));
 
     // 바뀐 도구를 저장하면 보관함에 「공식 소식」으로
-    await tester.tap(find.descendant(of: find.byType(UpdateRow).first, matching: find.bySemanticsLabel('북마크에 저장')));
+    await tester.tap(find.descendant(of: find.byType(HomeUpdateCard).first, matching: find.bySemanticsLabel('북마크에 저장')));
     await tester.pump();
     expect(bookmarks.value.values.last.kind, 'news');
 
@@ -532,9 +535,10 @@ void main() {
     expect(find.ancestor(of: find.text('제작사가 내세운 강점'), matching: find.byType(Material)), findsWidgets);
     router.pop();
     await settle(tester);
-    expect(find.text('요즘 많이 쓰는 모델'), findsOneWidget);
+    expect(find.text(keepAll('모델 트렌드 순위')), findsOneWidget);
 
-    await tester.tap(find.text('업데이트 더 보기'));
+    Finder more(String section) => find.descendant(of: find.widgetWithText(HomeSection, keepAll(section)), matching: find.bySemanticsLabel('더보기'));
+    await tester.tap(more('바뀐 도구'));
     await settle(tester);
     expect(find.text('릴리스 노트 전체 보기'), findsOneWidget); // 공식 소식 칸의 「업데이트」
     // 업데이트 카드는 어디를 눌러도 소식 상세로(실기기 QA: 본문을 눌러도 반응이 없어 새 글 점이 안 지워졌다)
@@ -547,7 +551,7 @@ void main() {
 
     router.go('/home');
     await settle(tester);
-    await tester.tap(find.text('모델 더 보기'));
+    await tester.tap(more('모델 트렌드 순위'));
     await settle(tester);
     expect(find.text(keepAll(byLine('요즘 Hugging Face에서 주목받는 모델이에요. 순서는 Hugging Face의 트렌딩 순위예요.'))), findsOneWidget);
 
@@ -561,8 +565,8 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await pumpApp(tester);
-    // fixture 날짜(10월 중순)에 맞춘 시계, 기준 시각은 10월 1일
-    clock = () => DateTime.utc(2026, 10, 20);
+    // fixture 날짜(마지막 소식 10월 18일)에 맞춘 시계(새 글은 하루 안), 기준 시각은 10월 1일
+    clock = () => DateTime.utc(2026, 10, 18, 20);
     newSince = DateTime.utc(2026, 10, 1);
     readItems.value = {...readItems.value}; // 다시 그리기
     await settle(tester);
@@ -584,30 +588,31 @@ void main() {
     router.go('/home');
     await settle(tester);
 
-    // 홈의 공식 발표 행: 7일 안의 안 연 글에 「새 글」 글자(출처 배지가 회사 색이라 점 대신), 상세를 열면 그 글만 사라진다
+    // 홈의 공식 발표 행: 하루 안의 안 연 글에 「새 글」 글자(출처 배지가 회사 색이라 점 대신), 상세를 열면 그 글만 사라진다
     // 읽으면 「새 글」은 작아지며 사라진다(위젯은 남고 visible만 꺼진다)
-    final dots = find.descendant(of: find.byType(BriefRow), matching: find.byWidgetPredicate((w) => w is RgNewLabel && w.visible));
+    final dots = find.descendant(of: find.byType(HomeStoryRow), matching: find.byWidgetPredicate((w) => w is RgNewLabel && w.visible));
     final before = dots.evaluate().length;
     expect(before, greaterThan(0));
-    await tester.tap(find.descendant(of: find.byType(BriefRow), matching: find.byWidgetPredicate((w) => w is RgNewLabel && w.visible)).first);
+    await tester.tap(find.descendant(of: find.byType(HomeStoryRow), matching: find.byWidgetPredicate((w) => w is RgNewLabel && w.visible)).first);
     await settle(tester);
     router.pop();
     await settle(tester);
     expect(dots.evaluate().length, before - 1);
 
-    // 7일이 지나면 안 열었어도 점이 없다
+    // 하루가 지나면 안 열었어도 점이 없다
     clock = () => DateTime.utc(2026, 12, 1);
     readItems.value = {...readItems.value};
     await tester.pump();
     expect(dots, findsNothing);
   });
 
-  test('새 글 규칙: 기준 시각 전·7일 지난 글·읽은 글은 새 글이 아니다', () {
+  test('새 글 규칙: 기준 시각 전·하루 지난 글·읽은 글은 새 글이 아니다', () {
     clock = () => DateTime.utc(2026, 10, 20);
     newSince = DateTime.utc(2026, 10, 10);
     readItems.value = {'a'};
-    expect(isNew('b', DateTime.utc(2026, 10, 18)), isTrue);
-    expect(isNew('a', DateTime.utc(2026, 10, 18)), isFalse); // 읽음
+    expect(isNew('b', DateTime.utc(2026, 10, 19, 1)), isTrue);
+    expect(isNew('a', DateTime.utc(2026, 10, 19, 1)), isFalse); // 읽음
+    expect(isNew('b', DateTime.utc(2026, 10, 18, 23)), isFalse); // 하루 지남
     expect(isNew('b', DateTime.utc(2026, 10, 9)), isFalse); // 기준 시각 전
     expect(isNew('b', DateTime.utc(2026, 10, 12)), isFalse); // 8일 지남
     expect(Notice('t', '2026.10.27', []).publishedAt, DateTime.utc(2026, 10, 26, 15)); // KST 0시
@@ -937,10 +942,10 @@ void main() {
     });
     await tester.pumpAndSettle();
 
-    expect(find.text('최근 논문'), findsOneWidget); // 홈 논문 칸 머리(브리핑 아래)
+    expect(find.text(keepAll('최근 논문')), findsOneWidget); // 홈 논문 칸 머리(브리핑 아래)
     expect(find.text(keepAll(byLine('주말에는 새 논문이 발표되지 않아요. 가장 최근인 10월 18일 일요일 논문을 보여 드려요.'))), findsOneWidget);
     expect(find.text('10월 18일 주요 논문'), findsOneWidget);
-    expect(find.textContaining('편 모두 보기'), findsOneWidget);
+    expect(find.descendant(of: find.widgetWithText(HomeSection, keepAll('최근 논문')), matching: find.bySemanticsLabel('더보기')), findsOneWidget);
 
     // 지연은 대체하지 않고 지금처럼 수집 안내만
     await tester.runAsync(() async {
@@ -949,7 +954,7 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 200));
     });
     await tester.pumpAndSettle();
-    expect(find.textContaining('편 모두 보기'), findsNothing);
+    expect(find.descendant(of: find.widgetWithText(HomeSection, keepAll('오늘 논문을 모으는 중이에요')), matching: find.bySemanticsLabel('더보기')), findsNothing);
     expect(find.textContaining(keepAll('모으는'), findRichText: true), findsWidgets);
   });
 
@@ -985,7 +990,7 @@ void main() {
     expect(find.textContaining(keepAll('05:09.')), findsOneWidget); // 마지막 정상 수집 10월 18일 05:09 (KST)
 
     await switchTo(FixtureMode.empty);
-    expect(find.text('최근 논문'), findsOneWidget);
+    expect(find.text(keepAll('최근 논문')), findsOneWidget);
     expect(find.text('10월 18일 주요 논문'), findsOneWidget); // P4: 가장 최근 다이제스트로 대신
 
     // 「다시 시도」는 다시 부른다(아직 error 모드라 또 실패). 정상으로 돌리면 복구된다.
@@ -997,7 +1002,7 @@ void main() {
     expect(find.text('불러오지 못했어요'), findsOneWidget);
     await switchTo(FixtureMode.normal);
     await tester.pumpAndSettle();
-    expect(find.textContaining('편 모두 보기'), findsOneWidget);
+    expect(find.text(keepAll('6편이 올라왔어요')), findsOneWidget);
   });
 
   testWidgets('M3: 오프라인에서 보관함 → S02는 제목 블록 + 오류 카드(7.7)', (tester) async {
@@ -1081,7 +1086,8 @@ void main() {
       n('tool', 'github', 'hot', 'tool: an agent tool', 30, points: 179),
     ], now);
     expect(b.stories.first.id, 'mistral'); // 공식 출처가 없는 발표도 화제 덕에 1위
-    expect(b.talk.map((x) => x.id), ['voice']); // GitHub 새 도구는 탐색 화제 칸에만
+    expect(b.talk.map((x) => x.id), ['voice']); // HN 글만
+    expect(b.repos.map((x) => x.id), ['tool']); // GitHub 새 저장소는 따로(별 순)
     expect(b.hotCount, 3);
     expect(b.total, 3); // 공식 1 + 24시간 안 화제 2
     expect(b.stories.first.reaction, '추천 1,314');
@@ -1089,39 +1095,12 @@ void main() {
       'url': 'u', 'published_at': '2026-10-29T00:00:00Z', 'points': 331}).reaction, 'HN 추천 331'); // 공식 소식에 붙은 반응
   });
 
-  testWidgets('홈 배지: 누르면 그 칸이 맨 위로 스크롤된다(새 논문·바뀐 도구·주요 소식)', (tester) async {
-    tester.view.physicalSize = const Size(390, 844);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
-    clock = () => DateTime.utc(2026, 10, 19);
-    await pumpApp(tester);
-    clock = () => DateTime.utc(2026, 10, 19); // pumpApp이 시계를 되돌린다
-    router.go('/explore');
-    await settle(tester);
-    router.go('/home'); // 바꾼 시계로 브리핑을 다시 그린다
-    await settle(tester);
-    final pill = find.textContaining('바뀐 도구 ', findRichText: true);
-    expect(pill, findsOneWidget);
-    final title = find.descendant(of: find.byType(SectionTitle, skipOffstage: false), matching: find.text('바뀐 도구', skipOffstage: false), skipOffstage: false); // 화면 밖이지만 미리 그려 둔 칸
-    expect(tester.getTopLeft(title).dy, greaterThan(844)); // 처음엔 화면 아래
-    await tester.tap(pill);
-    await tester.pumpAndSettle();
-    expect(tester.getTopLeft(title).dy, inInclusiveRange(0, 120));
-    // 맨 위로 올려 「새 논문」 배지
-    await tester.drag(find.byType(ListView).first, const Offset(0, 3000));
-    await tester.pumpAndSettle();
-    await tester.tap(find.textContaining('새 논문 ', findRichText: true));
-    await tester.pumpAndSettle();
-    expect(tester.getTopLeft(find.descendant(of: find.byType(SectionTitle), matching: find.text('오늘의 논문'))).dy, inInclusiveRange(0, 120));
-    clock = DateTime.now;
-  });
-
   testWidgets('소식 · 화제 칸: Hacker News 점수 순 → GitHub 새 도구, 상세는 원문·HN 토론 링크', (tester) async {
     tester.view.physicalSize = const Size(390, 2400);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await pumpApp(tester);
-    clock = () => DateTime.utc(2026, 10, 19);
+    clock = () => DateTime.utc(2026, 10, 18, 20);
     router.go('/explore');
     await settle(tester);
     await tester.tap(find.text('소식'));
@@ -1315,10 +1294,11 @@ void main() {
     await tester.drag(find.byType(Scrollable).first, const Offset(0, 20000)); // 앞에서 내려 둔 홈을 맨 위로
     await tester.pumpAndSettle();
     expect(MediaQuery.textScalerOf(tester.element(find.text('홈'))).scale(1), 1.35);
-    // 브리핑 표제(날짜 다음 글자)
-    expect(MediaQuery.textScalerOf(tester.element(find.descendant(of: find.byType(BriefingSection), matching: find.byType(Text)).at(1))).scale(1), 2);
-    await tester.scrollUntilVisible(find.textContaining('편 모두 보기'), 300, scrollable: find.byType(Scrollable).first);
-    expect(MediaQuery.textScalerOf(tester.element(find.textContaining('편 모두 보기'))).scale(1), 3.12);
+    // 홈 칸 제목(28)은 2배에서 멈추고, 부제는 그대로 커진다
+    final title = find.text(keepAll('오늘의 논문'));
+    await tester.scrollUntilVisible(title, 300, scrollable: find.byType(Scrollable).first);
+    expect(MediaQuery.textScalerOf(tester.element(title)).scale(1), 2);
+    expect(MediaQuery.textScalerOf(tester.element(find.text(keepAll('6편이 올라왔어요')))).scale(1), 3.12);
   });
 
   testWidgets('화면 바탕: 기본은 흰색, 읽기 설정에서 「종이」를 고르면 앱 전체가 바로 바뀌고 저장된다', (tester) async {
@@ -1519,15 +1499,16 @@ void main() {
     expect(text['Anthropic'], RgBrand.anthropic.foreground);
   });
 
-  testWidgets('대표 카드: 홈·탐색 모두 다른 카드와 같은 면(차콜 없음), 주제 칩은 중립 알약', (tester) async {
+  testWidgets('대표 카드: 홈은 시안의 회색 카드(흰 글자), 탐색은 다른 카드와 같은 면, 주제 칩은 중립 알약', (tester) async {
     tester.view.physicalSize = const Size(390, 2400);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await pumpApp(tester);
+    final home = tester.widget<Container>(find.descendant(of: find.byType(HomeFeaturedPaper), matching: find.byType(Container)).first);
+    expect((home.decoration as BoxDecoration).color, RgHome.paperCard);
     Color face() => (tester.widget<Container>(find.descendant(of: find.byType(RgFeaturedCard).first, matching: find.byType(Container)).first)
             .decoration as BoxDecoration)
         .color!;
-    expect(face(), RgColors.surfaceCard);
     router.go('/explore');
     await settle(tester);
     expect(face(), RgColors.surfaceCard);

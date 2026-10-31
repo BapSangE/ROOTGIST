@@ -98,6 +98,7 @@ class RgCircleButton extends StatelessWidget {
     this.iconColor,
     this.selected,
     this.visualSize,
+    this.circleColor,
   }) : assert((icon == null) != (text == null));
 
   final String semanticLabel;
@@ -109,6 +110,7 @@ class RgCircleButton extends StatelessWidget {
   final Color? iconColor;
   final bool? selected; // 토글(북마크)일 때 상태 낭독
   final double? visualSize; // 보이는 원 크기(목록 행은 36). 누르는 영역은 size(44) 그대로
+  final Color? circleColor; // 원 면을 바꿀 때(홈 카드 위 북마크). filled는 그대로
 
   @override
   Widget build(BuildContext context) {
@@ -135,7 +137,7 @@ class RgCircleButton extends StatelessWidget {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: switch (variant) {
+              color: variant != RgCircleVariant.filled && circleColor != null ? circleColor : switch (variant) {
                 RgCircleVariant.outline => RgColors.surfaceRaised,
                 RgCircleVariant.neutral => RgColors.fillNeutral,
                 RgCircleVariant.filled => RgColors.actionPrimary,
@@ -181,6 +183,8 @@ class RgBookmarkButton extends StatefulWidget {
     this.size = 44,
     this.visualSize,
     this.strongHaptic = false,
+    this.circleColor,
+    this.iconColor,
   });
   final bool saved;
   final VoidCallback? onTap;
@@ -188,6 +192,7 @@ class RgBookmarkButton extends StatefulWidget {
   final double size;
   final double? visualSize;
   final bool strongHaptic;
+  final Color? circleColor, iconColor; // 저장 전 원 면·아이콘 색(홈 카드). 저장하면 검정 원으로 바뀐다
 
   @override
   State<RgBookmarkButton> createState() => _RgBookmarkButtonState();
@@ -233,7 +238,8 @@ class _RgBookmarkButtonState extends State<RgBookmarkButton> with SingleTickerPr
         size: widget.size,
         visualSize: widget.visualSize,
         variant: plain ? variant : (saved ? RgCircleVariant.filled : variant),
-        iconColor: plain ? (saved ? RgColors.textPrimary : RgColors.textTertiary) : null,
+        iconColor: plain ? (saved ? RgColors.textPrimary : RgColors.textTertiary) : (saved ? null : widget.iconColor),
+        circleColor: widget.circleColor,
       ),
     );
   }

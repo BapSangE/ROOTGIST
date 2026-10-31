@@ -152,20 +152,40 @@ abstract class RgColors {
   static const onInkMuted = Color(0xFFA9A9A2); // 리더 검정 조절 알약의 고르지 않은 칸
 }
 
+// 홈 화면만의 면(디자이너 시안 home_re 2026-10-31): 회청 바탕 + 흰 카드(둥글기 28, 아주 옅은 그림자).
+// 다른 화면은 아직 기존 바탕(흰색·종이)이라 홈에서만 쓴다. 종이 바탕·어두운 화면은 그 바탕의 바탕·카드 색을 따른다.
+abstract class RgHome {
+  static bool get _custom => !isDark && backdrop.value == Backdrop.white;
+  static Color get bg => _custom ? const Color(0xFFEDEFF2) : _p.bgApp;
+  static Color get card => _custom ? const Color(0xFFFFFFFF) : _p.surfaceCard;
+  static List<BoxShadow> get cardShadow => isDark ? const [] : const [BoxShadow(color: Color(0x08000000), blurRadius: 15)];
+  static Color get chip => isDark ? const Color(0x1AFFFFFF) : const Color(0x14000000); // 키워드·주제 칩
+  static Color get statPill => isDark ? const Color(0xFF2C2C2A) : const Color(0xFFF4F4F4); // 추천·댓글·좋아요·다운로드 알약
+  static Color get statText => isDark ? const Color(0x99FFFFFF) : const Color(0x66000000);
+  static Color get divider => isDark ? const Color(0x1AFFFFFF) : const Color(0x1A000000); // 카드 안 행 사이
+  static Color get dividerOnBg => isDark ? const Color(0x24FFFFFF) : const Color(0x33000000); // 바탕 위 논문 행 사이
+  static Color get ring => isDark ? const Color(0xFF2E2E2B) : const Color(0xFFD0D4DA); // 바탕 위 북마크 원
+  static Color get paperCard => isDark ? const Color(0xFF3A3E45) : const Color(0xFF777D86); // 오늘의 주요 논문
+  static Color get paperRing => isDark ? const Color(0xFF2C2F35) : const Color(0xFF5F6369);
+}
+
 // 출처 칩 색(디자인 피드백 2026-10-31 A안): 원색·쌩 검정 대신 「연한 바탕 + 같은 계열 진한 글자」 한 규칙.
 // 흰 글자·검정 글자가 섞이지 않고, 글자 대비는 모두 4.5:1 이상(밝은 화면 6~8:1). 어두운 화면은 어둡게 낮춘 바탕 + 밝은 글자.
 // Google은 4색 조합을 흉내 내지 않고 파랑 하나만. 로고 모양·글꼴은 따라 하지 않는다. 권리 검토: docs/RIGHTS.md 4장.
 // 시안: design-preview/src/feedback_2026-10-31.html, 피그마 「홈·탐색 A안」.
 class RgBrandTone {
-  const RgBrandTone(this.bg, this.fg, this.darkBg, this.darkFg);
+  const RgBrandTone(this.bg, this.fg, this.darkBg, this.darkFg, {this.cardBg, this.ringBg});
   final Color bg, fg, darkBg, darkFg;
+  final Color? cardBg, ringBg; // 홈 「바뀐 도구」 카드 면·북마크 원(디자이너 시안 home_re 2026-10-31). 없으면 칩 면에서 만든다
   Color get background => isDark ? darkBg : bg;
   Color get foreground => isDark ? darkFg : fg;
+  Color get card => isDark ? darkBg : (cardBg ?? Color.lerp(bg, const Color(0xFF000000), 0.05)!);
+  Color get ring => isDark ? Color.lerp(darkBg, const Color(0xFFFFFFFF), 0.08)! : (ringBg ?? Color.lerp(card, const Color(0xFF000000), 0.08)!);
 }
 
 abstract class RgBrand {
-  static const anthropic = RgBrandTone(Color(0xFFF6E3D6), Color(0xFF8A3D1E), Color(0xFF3D271D), Color(0xFFF2B79A)); // 살구
-  static const openai = RgBrandTone(Color(0xFFE6E6E2), Color(0xFF2E2E2B), Color(0xFF34342F), Color(0xFFDCDCD6)); // 회색(흑백 브랜드)
+  static const anthropic = RgBrandTone(Color(0xFFF6E3D6), Color(0xFF8A3D1E), Color(0xFF3D271D), Color(0xFFF2B79A), cardBg: Color(0xFFEADED6), ringBg: Color(0xFFD9CAC0)); // 살구
+  static const openai = RgBrandTone(Color(0xFFE6E6E2), Color(0xFF2E2E2B), Color(0xFF34342F), Color(0xFFDCDCD6), cardBg: Color(0xFFDADADA), ringBg: Color(0xFFBFBFBF)); // 회색(흑백 브랜드)
   static const google = RgBrandTone(Color(0xFFDDE8FA), Color(0xFF1A4F9E), Color(0xFF1C2A42), Color(0xFFA9C7F5)); // 하늘
   static const huggingface = RgBrandTone(Color(0xFFFFF0BA), Color(0xFF6B5400), Color(0xFF3A3215), Color(0xFFF3D774)); // 노랑
   static const nvidia = RgBrandTone(Color(0xFFE5F1CF), Color(0xFF3E6400), Color(0xFF26331A), Color(0xFFBEDC8C)); // 연두

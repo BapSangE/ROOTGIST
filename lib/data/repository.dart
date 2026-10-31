@@ -33,12 +33,20 @@ abstract class Repository {
   Future<Digest?> today() => getDigest();
 }
 
-// 공용 용어 사전은 앱을 켜 있는 동안 한 번만 받는다. 실패하면 하이라이트 없이 그린다(다음 실행에 다시).
+// 공용 용어 사전은 앱을 켜 있는 동안 한 번만 받는다. 실패하면 하이라이트 없이 그리고, 다음에 부를 때 다시 받는다
+// (홈 키워드 칩이 앱을 켜자마자 부르는데, 그때 오프라인이면 하루 종일 하이라이트가 비지 않게).
 Future<List<GlossaryTerm>>? _dictionary;
-Future<List<GlossaryTerm>> dictionary() =>
-    _dictionary ??= repository.listTerms().catchError((Object _) => <GlossaryTerm>[]);
+Future<List<GlossaryTerm>> dictionary() => _dictionary ??= repository.listTerms().then((v) => dictionaryValue = v).catchError((Object _) {
+      _dictionary = null;
+      return <GlossaryTerm>[];
+    });
+// 받아 둔 사전(FutureBuilder initialData). 다시 만들어진 홈 카드가 첫 프레임부터 키워드 칩을 그려 높이가 튀지 않게
+List<GlossaryTerm>? dictionaryValue;
 @visibleForTesting
-void resetDictionary() => _dictionary = null;
+void resetDictionary() {
+  _dictionary = null;
+  dictionaryValue = null;
+}
 
 // 개발용 fixture(빌드에 Supabase 설정이 없을 때).
 class FixtureRepository extends Repository {

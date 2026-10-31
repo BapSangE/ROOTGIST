@@ -1,6 +1,5 @@
 import '../../analytics/posthog_sink.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:go_router/go_router.dart';
 
 import '../../data/models.dart';
@@ -13,9 +12,9 @@ import '../../design/widgets/rg_pressable.dart';
 import '../../design/widgets/rg_row_head.dart';
 import '../../design/widgets/rg_states.dart';
 import '../common/item_actions.dart';
-import '../explore/official_news.dart';
-import '../explore/trending_models.dart';
+import '../../data/unread.dart';
 import 'briefing_section.dart';
+import 'home_sections.dart';
 
 // S01 홈 (HANDOFF 7.1 → 2026-10-30 「오늘의 브리핑」 시안): 맨 위 브리핑(최근 24시간 소식·주요 소식 5개) → 오늘의 논문 3편
 // → 바뀐 도구 → 주목받는 모델. 아침에 홈만 보고 밤사이 소식을 한눈에 보게 소식이 주인공이고 논문은 아래로.
@@ -57,13 +56,15 @@ Future<(List<OfficialNews>, List<TrendingModel>)> _loadExtras() async {
 
 class _HomeScreenState extends State<HomeScreen> {
   late final _req = Reloadable(() => loadDigest(widget.date));
-  final _paperKey = GlobalKey(), _updatesKey = GlobalKey(); // 브리핑 배지가 스크롤해 갈 칸
-  late final _extras = widget.date == null ? _loadExtras() : null;
+  // 소식·모델은 받은 값을 들고 있는다. FutureBuilder로 두면 홈을 내렸다 올릴 때 다시 만들어진 칸이 첫 프레임에
+  // 빈 칸(받는 중)으로 그려져 높이가 줄었다 늘며 맨 위로 튀었다(실기기 2026-10-31)
+  (List<OfficialNews>, List<TrendingModel>)? _extras;
 
   @override
   void initState() {
     super.initState();
-    _extras; // 논문과 함께 바로 불러오기 시작한다
+    // 논문과 함께 바로 불러오기 시작한다
+    if (widget.date == null) _loadExtras().then((v) => mounted ? setState(() => _extras = v) : null);
   }
 
   @override
@@ -88,36 +89,27 @@ class _HomeScreenState extends State<HomeScreen> {
             _ => const [_HomeSkeleton()],
           };
           final (digest, fallback) = snap.data ?? (null, null);
-          return ListView(
-            // 브리핑 배지(「바뀐 도구」 등)가 화면 밖 먼 칸으로 스크롤할 수 있게 홈 전체를 미리 그려 둔다(글 몇 줄이라 가볍다)
-            scrollCacheExtent: const ScrollCacheExtent.pixels(4000),
+          final home = widget.date == null;
+          final list = ListView(
             padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top, bottom: RgSpace.bottomScrollInset),
             children: [
               _topBar(context),
               ...?children,
               if (children == null) ...[
-                if (widget.date == null) ...[
-                  FutureBuilder(
-                    future: _extras,
-                    builder: (context, s) => BriefingSection(
-                      news: s.data?.$1,
-                      paperCount: (fallback == null ? digest : null)?.papers.length ?? 0,
-                      paperKey: _paperKey,
-                      updatesKey: _updatesKey,
-                    ),
-                  ),
-                  KeyedSubtree(key: _paperKey, child: _paperHeader(digest, fallback)),
-                ] else
+                if (home) ...[
+                  // 디자이너 시안 home_re(2026-10-31): 주요 소식 → 개발자 화제 → 오늘의 논문 → 바뀐 도구 → 모델 트렌드 순위
+                  BriefingSection(news: _extras?.$1),
+                  _homePapers(digest, fallback),
+                  _extrasSection(context, _extras),
+                ] else ...[
                   _headline(digest, fallback),
-                DigestPapers(digest: digest, fallback: fallback, limit: widget.date == null ? 3 : null, pastDay: widget.date != null),
-                if (widget.date == null) ...[
-                  if ((fallback ?? digest)?.papers case final ps? when ps.isNotEmpty)
-                    MoreLink(label: '논문 ${ps.length}편 모두 보기', pill: true, onTap: () => openExplore(context, const ExploreJump(0))),
-                  FutureBuilder(future: _extras, builder: (context, s) => _extrasSection(context, s.data)),
+                  DigestPapers(digest: digest, fallback: fallback, pastDay: true),
                 ],
               ],
             ],
           );
+          // 홈만 회청 바탕(다른 화면은 아직 기존 바탕)
+          return home ? ColoredBox(color: RgHome.bg, child: list) : list;
         },
       ),
     );
@@ -142,8 +134,8 @@ class _HomeScreenState extends State<HomeScreen> {
     ),
   );
 
-  // 홈(브리핑 아래) 논문 칸 머리: 큰 헤드라인 대신 칸 제목. 비었거나 지연이면 안내 카드는 그대로.
-  Widget _paperHeader(Digest? digest, Digest? fallback) {
+  // 홈 「오늘의 논문」: 주요 논문 회색 카드 → 바탕 위 행 2개. 비었거나 지연이면 제목을 바꾸고 안내 카드를 먼저.
+  Widget _homePapers(Digest? digest, Digest? fallback) {
     final total = digest?.papers.length ?? 0;
     final status = digest?.status;
     final date = digest?.date ?? DateTime.now();
@@ -154,25 +146,35 @@ class _HomeScreenState extends State<HomeScreen> {
       _ when total == 0 => '아직 올라온 논문이 없어요',
       _ => '오늘의 논문',
     };
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      SectionTitle(title, count: fallback == null && total > 0 ? '$total편' : null),
-      if (fallback != null)
-        RgCard(
-          padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s16),
-          child: KeepAllText(
-            [if (weekend) '주말에는 새 논문이 발표되지 않아요.', '가장 최근인 ${koreanDate(fallback.date)} 논문을 보여 드려요.'].join(' '),
-            perSentence: true, style: RgText.bodySmall.copyWith(color: RgColors.textSecondary),
+    final day = fallback;
+    final view = HomeView((fallback ?? digest)?.papers ?? const [], null);
+    final rows = view.list.take(view.featured == null ? 3 : 2).toList();
+    final note = switch (status) {
+      _ when fallback != null => [if (weekend) '주말에는 새 논문이 발표되지 않아요.', '가장 최근인 ${koreanDate(fallback.date)} 논문을 보여 드려요.'].join(' '),
+      'delayed' => [if (digest?.lastSuccessAt case final t?) '마지막 정상 수집 ${kstDateTime(t)}.', '모이는 대로 이 화면에 올라와요.'].join(' '),
+      _ => null,
+    };
+    return HomeSection(
+      title: title,
+      subtitle: fallback == null && total > 0 ? '$total편이 올라왔어요' : null,
+      onMore: (fallback ?? digest)?.papers.isNotEmpty ?? false ? () => openExplore(context, const ExploreJump(0)) : null,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        if (note != null) ...[
+          HomeCard(
+            padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s18),
+            child: KeepAllText(note, perSentence: true, style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
           ),
-        ),
-      if (status == 'delayed')
-        RgCard(
-          padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s16),
-          child: KeepAllText(
-            [if (digest?.lastSuccessAt case final t?) '마지막 정상 수집 ${kstDateTime(t)}.', '모이는 대로 이 화면에 올라와요.'].join(' '),
-            perSentence: true, style: RgText.bodySmall.copyWith(color: RgColors.textSecondary),
-          ),
-        ),
-    ]);
+          const SizedBox(height: RgSpace.s24),
+        ],
+        if (view.featured case final p?) ...[
+          HomeFeaturedPaper(paper: p, label: day == null ? '오늘의 주요 논문' : '${day.date.month}월 ${day.date.day}일 주요 논문'),
+          const SizedBox(height: RgSpace.s24),
+        ],
+        Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: RgSpace.s20, children: [
+          for (final (i, p) in rows.indexed) HomePaperRow(paper: p, last: i == rows.length - 1),
+        ]),
+      ]),
+    );
   }
 
   // 지난 날짜 화면(S04에서 연 그날): 날짜와 큰 표제.
@@ -228,23 +230,31 @@ class _HomeScreenState extends State<HomeScreen> {
     ]);
   }
 
-  // 브리핑 아래 칸들(시안 B): 연구소 소식은 브리핑이 맡고, 바뀐 도구 = 버전 태그 한 줄 2개, 모델 = 큰 순위 숫자 2개.
+  // 논문 아래 칸들: 바뀐 도구(회사 색 카드 2장), 모델 트렌드 순위(카드 3장)
   Widget _extrasSection(BuildContext context, (List<OfficialNews>, List<TrendingModel>)? data) {
     if (data == null) return const SizedBox.shrink();
     final (news, models) = data;
+    final now = clock();
     final updates = news.where((n) => n.isUpdate).take(2).toList();
-    final top = models.take(2).toList();
+    final top = models.take(3).toList();
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      if (updates.isNotEmpty) ...[
-        SectionTitle('바뀐 도구', key: _updatesKey),
-        RgCard(child: Column(children: [for (final (i, n) in updates.indexed) UpdateRow(news: n, last: i == updates.length - 1)])),
-        MoreLink(label: '업데이트 더 보기', onTap: () => openExplore(context, const ExploreJump(1, updates: true))),
-      ],
-      if (top.isNotEmpty) ...[
-        const SectionTitle('요즘 많이 쓰는 모델', trailing: 'Hugging Face 트렌딩'),
-        RgCard(child: Column(children: [for (final (i, m) in top.indexed) ModelRow(model: m, last: i == top.length - 1)])),
-        MoreLink(label: '모델 더 보기', onTap: () => openExplore(context, const ExploreJump(2))),
-      ],
+      if (updates.isNotEmpty)
+        HomeSection(
+          title: '바뀐 도구',
+          onMore: () => openExplore(context, const ExploreJump(1, updates: true)),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: RgSpace.s10, children: [
+            for (final n in updates) HomeUpdateCard(news: n, now: now),
+          ]),
+        ),
+      if (top.isNotEmpty)
+        HomeSection(
+          title: '모델 트렌드 순위',
+          subtitle: 'Hugging Face 트렌딩',
+          onMore: () => openExplore(context, const ExploreJump(2)),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: RgSpace.s16, children: [
+            for (final m in top) HomeModelCard(model: m),
+          ]),
+        ),
     ]);
   }
 }

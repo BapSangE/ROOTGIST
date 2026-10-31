@@ -1,6 +1,6 @@
 import '../../data/models.dart';
 
-// 홈 「오늘의 브리핑」(design-preview/src/briefing_preview.html): 최근 24시간 소식을 모아 주요 소식 5개를 고른다.
+// 홈 「오늘의 브리핑」(design-preview/src/briefing_preview.html): 최근 24시간 소식을 모아 주요 소식을 고른다(홈은 3개).
 // 화면과 떼어 테스트한다. 사건 묶기·중요도 점수를 배치(LLM)로 옮기기 전까지는 아래 간단한 규칙으로 고른다.
 class Briefing {
   Briefing(List<OfficialNews> all, DateTime now, {int top = 5}) {
@@ -23,8 +23,11 @@ class Briefing {
     // 나머지 = 세어진 새 소식 중 주요 소식에 안 든 것(최신순, 받은 순서 그대로). 최근 소식 모드면 남은 최근 소식
     rest = [for (final n in stale ? pool : counted) if (!stories.contains(n)) n];
     updates = counted.where((n) => n.isUpdate).length;
-    // 개발자 화제: 주요 소식에 오르지 않은 Hacker News 글, 점수 순(GitHub 새 도구는 탐색의 화제 칸에)
+    // 개발자 화제: 주요 소식에 오르지 않은 Hacker News 글, 점수 순
     talk = [for (final n in hot) if (!n.isGithub && !stories.contains(n)) n]..sort((a, b) => (b.points ?? 0).compareTo(a.points ?? 0));
+    // 홈 개발자 화제의 GitHub 칸(2026-10-31): 이번 주(8일, 서버 list_official_news와 같은 창) 새 저장소, 별 순
+    repos = [for (final n in all) if (n.isHot && n.isGithub && within(n, const Duration(days: 8))) n]
+      ..sort((a, b) => (b.points ?? 0).compareTo(a.points ?? 0));
     hotCount = hot.length;
   }
 
@@ -33,6 +36,7 @@ class Briefing {
   late final List<OfficialNews> stories; // 오늘의 주요 소식(중요한 순)
   late final List<OfficialNews> rest; // 나머지 새 소식(최신순)
   late final List<OfficialNews> talk; // 개발자 화제(점수 순)
+  late final List<OfficialNews> repos; // 이번 주 GitHub 새 저장소(별 순)
   late final int total;
   late final int updates; // 그중 바뀐 도구(공지·릴리스)
   late final int hotCount; // 화제 칸의 글 수(최근 이틀)

@@ -17,15 +17,20 @@ class ItemActions extends StatelessWidget {
     this.kind = 'paper',
     this.variant = RgCircleVariant.neutral,
     this.share = false,
+    this.visualSize,
+    this.circleColor,
+    this.iconColor,
   });
   final String id, title, url, source, kind;
   final RgCircleVariant variant;
   final bool share;
+  final double? visualSize; // 홈 카드: 원 크기·면·아이콘 색을 시안대로
+  final Color? circleColor, iconColor;
 
   @override
   Widget build(BuildContext context) {
     final compact = variant == RgCircleVariant.neutral; // 목록·카드
-    final visual = compact ? 36.0 : null;
+    final visual = visualSize ?? (compact ? 36.0 : null);
     return Row(mainAxisSize: MainAxisSize.min, spacing: compact ? 0 : 8, children: [
       if (share)
         RgCircleButton(
@@ -41,6 +46,8 @@ class ItemActions extends StatelessWidget {
           saved: saved.containsKey(id),
           variant: variant,
           visualSize: visual,
+          circleColor: circleColor,
+          iconColor: iconColor,
           onTap: () => toggleBookmark(id, title, source: source, kind: kind),
         ),
       ),

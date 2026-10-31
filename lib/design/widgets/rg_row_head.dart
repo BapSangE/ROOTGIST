@@ -31,7 +31,12 @@ class RgChip extends StatelessWidget {
 // 수집기에 출처를 더하면 여기에도 더한다(worker/official_news.py RSS_SOURCES·RELEASE_SOURCES).
 // 로고·글꼴은 따라 하지 않고 이름 글자만(docs/RIGHTS.md 4장 「출처 배지 색」).
 (Color, Color)? brandOf(String? source) {
-  final tone = switch (source) {
+  final tone = brandToneOf(source);
+  return tone == null ? null : (tone.background, tone.foreground);
+}
+
+RgBrandTone? brandToneOf(String? source) {
+  return switch (source) {
     'anthropic' || 'claude_code' || 'claude_api' || 'anthropic_sdk' ||
     'Anthropic' || 'Claude Code' || 'Claude API' || 'Anthropic Python SDK' => RgBrand.anthropic,
     'openai' || 'openai_community' || 'openai_sdk' || 'OpenAI' || 'OpenAI 커뮤니티' || 'OpenAI Python SDK' => RgBrand.openai,
@@ -43,7 +48,6 @@ class RgChip extends StatelessWidget {
     'xai' || 'xai_sdk' || 'xAI' || 'xAI Python SDK' => RgBrand.xai,
     _ => null,
   };
-  return tone == null ? null : (tone.background, tone.foreground);
 }
 
 // 목록 행의 머리 줄: [칩] 보조 글자 [새 글 점]. 앱의 모든 목록 행이 이 모양을 쓴다(논문·공식 소식·모델·보관함).
