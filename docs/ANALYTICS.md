@@ -68,6 +68,8 @@ flutter run \
 
 기존 `.env.app.json`의 Supabase 설정을 계속 전달한다. 이 파일을 분석 설정으로 덮어쓰지 않는다. 토큰·Host는 저장소에 작성하지 않았다. 환경값은 development(기본), testflight, production만 허용한다. release 여부로 TestFlight를 추정하지 않는다. 배포 채널을 빌드 명령에서 명시한다. 개발·베타의 프로젝트를 분리하면 데이터 격리가 더 쉽다.
 
+자동 빌드 대비(2026-10-31): GitHub Secrets에 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `POSTHOG_PROJECT_TOKEN`, `POSTHOG_HOST`가 등록돼 있다. 앱 빌드 워크플로는 아직 없다. 만들 때 위 값을 `--dart-define`으로 넘기고, iOS는 배포 인증서(.p12)·프로비저닝 프로파일·App Store Connect API 키를, Android는 업로드 키스토어를 Secrets에 추가해야 한다.
+
 아래는 **향후 새 빌드의 명령 예시**이며 이번 작업에서는 실행하거나 업로드하지 않았다. `NEXT_BUILD_NUMBER`는 App Store Connect에서 기존 모든 빌드보다 큰 번호로 직접 정한다.
 
 ```sh
