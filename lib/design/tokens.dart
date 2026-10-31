@@ -34,15 +34,15 @@ class RgPalette {
   );
   // 어두운 화면(설정 › 화면 모드). 바탕 선택(흰색·종이)과 상관없이 이 한 벌.
   static const dark = RgPalette(
-    bgApp: Color(0xFF111110),
-    bgReading: Color(0xFF141413),
-    surfaceCard: Color(0xFF1C1C1A),
-    fill: Color(0xFF2A2A27), // 카드 위 칩·태그
-    line: Color(0xFF33332F),
-    divider: Color(0xFF2B2B28),
-    grabber: Color(0xFF4A4A46),
+    bgApp: Color(0xFF0C0C0B), // 카드와 차이를 벌리려 거의 검정(사용자 피드백)
+    bgReading: Color(0xFF0F0F0E),
+    surfaceCard: Color(0xFF222220),
+    fill: Color(0xFF30302D), // 카드 위 칩·태그
+    line: Color(0xFF3A3A36),
+    divider: Color(0xFF31312E),
+    grabber: Color(0xFF55554F),
     newDot: Color(0xFFFF5449),
-    newText: Color(0xFFFF6A5F), // 카드 위 5.4:1
+    newText: Color(0xFFFF6A5F), // 카드 위 5.7:1
   );
   static const paper = RgPalette(
     bgApp: Color(0xFFF4F4F1),
@@ -103,10 +103,10 @@ class RgInk {
   );
   // 어두운 화면: 면은 바탕 → 카드 → 떠 있는 면 순으로 밝아지고, 주 버튼은 밝은 면 + 검정 글자로 뒤집힌다.
   static const dark = RgInk(
-    surfaceRaised: Color(0xFF1C1C1A), // 탭바·시트·하단 버튼 줄: 카드와 같은 밝기(밝으면 화면 아래가 떠 보인다)
+    surfaceRaised: Color(0xFF222220), // 탭바·시트·하단 버튼 줄: 카드와 같은 밝기(밝으면 화면 아래가 떠 보인다)
     textPrimary: Color(0xFFEDEDE9),
     textBody: Color(0xFFCFCFC9),
-    textSecondary: Color(0xFF9E9E97), // 카드 대비 6.1:1
+    textSecondary: Color(0xFFA3A39C), // 카드 대비 6.3:1
     textTertiary: Color(0xFF75756F),
     highlight: Color(0xFF4A3F12), // 어두운 노랑 면 + 밝은 글자(10:1)
     highlightActive: Color(0xFF66561A),
@@ -114,7 +114,7 @@ class RgInk {
     onAction: Color(0xFF111110),
     overlayDim: Color(0x99000000),
     pressOverlay: Color(0x14FFFFFF),
-    thumb: Color(0xFF45453F), // 세그먼트 선택 알약·슬라이더 손잡이: 칩 면보다 한 단계 밝게
+    thumb: Color(0xFF4E4E49), // 세그먼트 선택 알약·슬라이더 손잡이: 칩 면보다 한 단계 밝게
   );
 }
 
