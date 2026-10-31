@@ -208,7 +208,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Color(0x00FAFAF7), RgColors.bgReading],
+                  colors: [RgColors.bgReading.withAlpha(0), RgColors.bgReading],
                   stops: [0, 0.55],
                 ),
               ),

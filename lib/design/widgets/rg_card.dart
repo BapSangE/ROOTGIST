@@ -109,7 +109,7 @@ class RgTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fg = onInk || inverted ? RgColors.onAction : RgColors.textBody;
+    final fg = onInk ? RgColors.onInk : (inverted ? RgColors.onAction : RgColors.textBody);
     return Container(
       constraints: BoxConstraints(minHeight: height), // 고정 높이면 큰 글자에서 잘린다
       padding: const EdgeInsets.symmetric(horizontal: RgSpace.s10, vertical: RgSpace.s4),

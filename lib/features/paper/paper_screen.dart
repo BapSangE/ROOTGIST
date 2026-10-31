@@ -183,7 +183,7 @@ class _PaperScreenState extends State<PaperScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 spacing: RgSpace.s6,
                 children: [
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.only(top: 1.5),
                     child: RgIcon('info', size: 14, color: RgColors.textSecondary),
                   ),
@@ -360,7 +360,7 @@ class _InfoRow extends StatelessWidget {
             Padding(
               // bodySmall 첫 줄(행간 21) 가운데
               padding: EdgeInsets.only(top: (MediaQuery.textScalerOf(context).scale(21) - 14) / 2),
-              child: const RgIcon('arrow-up-right', size: 14, color: RgColors.textTertiary),
+              child: RgIcon('arrow-up-right', size: 14, color: RgColors.textTertiary),
             ),
         ],
       ),

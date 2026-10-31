@@ -33,11 +33,13 @@ class RgSegmented<T> extends StatelessWidget {
     final n = options.length;
     final index = options.indexWhere((o) => o.$1 == value);
     final scaler = rgPillTextScaler(context);
+    // 검정 알약(ink): 밝은 화면은 검정 트랙 + 흰 선택 칸, 어두운 화면은 어두운 트랙 + 밝은 선택 칸 + 검정 글자
+    final darkInk = ink && isDark;
     return Container(
       height: rgPillHeight(context, height),
       padding: const EdgeInsets.all(RgSpace.s4),
       decoration: BoxDecoration(
-        color: ink ? RgColors.actionPrimary : RgColors.fillNeutral,
+        color: ink ? (darkInk ? RgColors.thumb : RgColors.actionPrimary) : RgColors.fillNeutral,
         borderRadius: BorderRadius.circular(RgRadius.pill),
       ),
       child: LayoutBuilder(builder: (context, c) {
@@ -52,7 +54,7 @@ class RgSegmented<T> extends StatelessWidget {
               child: Container(
                 width: segW,
                 decoration: BoxDecoration(
-                  color: RgColors.surfaceRaised,
+                  color: darkInk ? RgColors.actionPrimary : RgColors.thumb,
                   borderRadius: BorderRadius.circular(RgRadius.pill),
                   boxShadow: ink ? null : RgShadow.segment,
                 ),
@@ -84,7 +86,7 @@ class RgSegmented<T> extends StatelessWidget {
                                   height: 1.2,
                                   fontWeight: v == value ? FontWeight.w700 : FontWeight.w500,
                                   color: v == value
-                                      ? RgColors.textPrimary
+                                      ? (darkInk ? RgColors.onAction : RgColors.textPrimary)
                                       : (ink ? RgColors.onInkMuted : RgColors.textSecondary),
                                 ),
                               ),

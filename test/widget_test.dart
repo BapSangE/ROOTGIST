@@ -1304,6 +1304,39 @@ void main() {
     expect(scaffoldBg(), const Color(0xFFFFFFFF));
   });
 
+  testWidgets('화면 모드: 「어둡게」면 바탕과 무관하게 어두운 색, 「기기 설정」은 기기 다크 모드를 따른다', (tester) async {
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    addTearDown(() {
+      appearance.value = Appearance.system;
+      platformDark.value = false;
+    });
+    await pumpApp(tester);
+    Color scaffoldBg() => Theme.of(tester.element(find.text('홈'))).scaffoldBackgroundColor;
+
+    router.go('/settings/reading');
+    await settle(tester);
+    await tester.tap(find.text('어둡게'));
+    await tester.pumpAndSettle();
+    expect(scaffoldBg(), RgPalette.dark.bgApp);
+    expect(RgText.titleList.color, RgInk.dark.textPrimary); // 글자 스타일도 다시 읽힌다
+    expect((await SharedPreferences.getInstance()).getString('settings.appearance'), 'dark');
+    // 어두운 화면에서도 화면마다 깨지지 않는다
+    for (final path in ['/home', '/explore', '/library', '/settings']) {
+      router.go(path);
+      await settle(tester);
+      expect(tester.takeException(), isNull, reason: path);
+    }
+
+    appearance.value = Appearance.system;
+    await tester.pumpAndSettle();
+    expect(scaffoldBg(), RgPalette.white.bgApp);
+    platformDark.value = true; // 기기를 다크로
+    await tester.pumpAndSettle();
+    expect(scaffoldBg(), RgPalette.dark.bgApp);
+  });
+
   testWidgets('옆으로 밀기: 홈 → 탐색 칸들 → 공식 소식 발표·업데이트 → 모델 트렌딩·새로 나옴 → 보관함 → 설정, 반대로 밀면 거꾸로', (tester) async {
     tester.view.physicalSize = const Size(390, 2400);
     tester.view.devicePixelRatio = 1;

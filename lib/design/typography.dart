@@ -19,29 +19,29 @@ abstract class RgText {
   );
 
   // Ink & Paper 글자 체계(design-preview/DESIGN_SYSTEM.md 3장). 보조 글자는 피드백대로 14 아래로 내리지 않는다.
-  static final display = _s(34, 40, FontWeight.w800, -1.0); // 탭 화면 표제(탐색·보관함·설정)
-  static final displayHome = display; // 홈 헤드라인
-  static final titleDetail = _s(26, 34, FontWeight.w700, -0.6);
-  static final titleReader = _s(21, 29, FontWeight.w700, -0.4);
-  static final titleFeatured = _s(21, 29, FontWeight.w700, -0.4);
-  static final titleSection = _s(18, 25, FontWeight.w700, -0.3);
-  static final titleCard = _s(18, 25, FontWeight.w700, -0.3);
-  static final titleList = _s(16.5, 24, FontWeight.w600, -0.3);
-  static final bodyReaderKo = _s(17.5, 30, FontWeight.w400, -0.2);
-  static final bodyDefinition = _s(16, 26, FontWeight.w400, 0);
-  static final bodySummary = _s(16, 26, FontWeight.w400, 0);
-  static final bodySmall = _s(14.5, 22, FontWeight.w400, 0);
-  static final meta = _s(14, 20, FontWeight.w400, 0);
-  static final caption = _s(13, 18, FontWeight.w400, 0);
-  static final eyebrow = _s(13, 17, FontWeight.w600, 0); // 행 위 주제·종류(한국어는 자간 없음)
-  static final caps = _s(11.5, 14, FontWeight.w600, 1.6); // 영문 대문자 머리말(OPENAI · ANTHROPIC · GOOGLE)
-  static final rank = _s(30, 32, FontWeight.w800, -1.0); // 모델 순위 숫자
-  static final tabLabel = _s(13, 16, FontWeight.w500, 0); // 피드백: 11/14는 너무 작았다
-  static final serifTogether = _s(15, 24, FontWeight.w400, 0, isSerif: true); // 번역이 주, 원문은 대조용
-  static final serifOnly = _s(18, 30, FontWeight.w400, 0, isSerif: true);
-  static final serifTerm = _s(26, 32, FontWeight.w600, 0, isSerif: true);
-  static final serifSubtitle = _s(16, 23, FontWeight.w400, 0, isSerif: true);
-  static final wordmark = _s(15, 18, FontWeight.w800, 3.3); // 자간 0.22em
+  static TextStyle get display => _s(34, 40, FontWeight.w800, -1.0); // 탭 화면 표제(탐색·보관함·설정)
+  static TextStyle get displayHome => display; // 홈 헤드라인
+  static TextStyle get titleDetail => _s(26, 34, FontWeight.w700, -0.6);
+  static TextStyle get titleReader => _s(21, 29, FontWeight.w700, -0.4);
+  static TextStyle get titleFeatured => _s(21, 29, FontWeight.w700, -0.4);
+  static TextStyle get titleSection => _s(18, 25, FontWeight.w700, -0.3);
+  static TextStyle get titleCard => _s(18, 25, FontWeight.w700, -0.3);
+  static TextStyle get titleList => _s(16.5, 24, FontWeight.w600, -0.3);
+  static TextStyle get bodyReaderKo => _s(17.5, 30, FontWeight.w400, -0.2);
+  static TextStyle get bodyDefinition => _s(16, 26, FontWeight.w400, 0);
+  static TextStyle get bodySummary => _s(16, 26, FontWeight.w400, 0);
+  static TextStyle get bodySmall => _s(14.5, 22, FontWeight.w400, 0);
+  static TextStyle get meta => _s(14, 20, FontWeight.w400, 0);
+  static TextStyle get caption => _s(13, 18, FontWeight.w400, 0);
+  static TextStyle get eyebrow => _s(13, 17, FontWeight.w600, 0); // 행 위 주제·종류(한국어는 자간 없음)
+  static TextStyle get caps => _s(11.5, 14, FontWeight.w600, 1.6); // 영문 대문자 머리말(OPENAI · ANTHROPIC · GOOGLE)
+  static TextStyle get rank => _s(30, 32, FontWeight.w800, -1.0); // 모델 순위 숫자
+  static TextStyle get tabLabel => _s(13, 16, FontWeight.w500, 0); // 피드백: 11/14는 너무 작았다
+  static TextStyle get serifTogether => _s(15, 24, FontWeight.w400, 0, isSerif: true); // 번역이 주, 원문은 대조용
+  static TextStyle get serifOnly => _s(18, 30, FontWeight.w400, 0, isSerif: true);
+  static TextStyle get serifTerm => _s(26, 32, FontWeight.w600, 0, isSerif: true);
+  static TextStyle get serifSubtitle => _s(16, 23, FontWeight.w400, 0, isSerif: true);
+  static TextStyle get wordmark => _s(15, 18, FontWeight.w800, 3.3); // 자간 0.22em
 }
 
 // HANDOFF 9.3: Flutter에 keep-all이 없어 어절 안 글자 사이에 word joiner(U+2060)를 넣는다.

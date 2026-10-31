@@ -207,7 +207,7 @@ class TopModelCard extends StatelessWidget {
         decoration: BoxDecoration(border: first ? null : const Border(left: BorderSide(color: RgColors.lineOnInk))),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s2, children: [
           Text(label, style: sub.copyWith(fontSize: 12.5)),
-          KeepAllText(value, style: RgText.titleList.copyWith(color: RgColors.onAction)),
+          KeepAllText(value, style: RgText.titleList.copyWith(color: RgColors.onInk)),
         ]),
       ),
     );
@@ -232,7 +232,7 @@ class TopModelCard extends StatelessWidget {
               ),
             ]),
             const SizedBox(height: RgSpace.s8),
-            Text(m.name, style: RgText.titleFeatured.copyWith(color: RgColors.onAction)),
+            Text(m.name, style: RgText.titleFeatured.copyWith(color: RgColors.onInk)),
             const SizedBox(height: RgSpace.s4),
             KeepAllText(modelSpec(m), style: sub),
             if (m.variants.isNotEmpty) ...[const SizedBox(height: RgSpace.s4), VariantsLine(model: m, onInk: true)],

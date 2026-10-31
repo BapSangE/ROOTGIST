@@ -85,7 +85,7 @@ class _RgUnderlineTabsState extends State<RgUnderlineTabs> {
               width: width,
               bottom: 0,
               height: 2,
-              child: const ColoredBox(color: RgColors.textPrimary),
+              child: ColoredBox(color: RgColors.textPrimary),
             ),
         ]),
       ),

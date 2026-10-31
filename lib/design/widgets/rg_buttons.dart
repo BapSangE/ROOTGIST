@@ -113,7 +113,11 @@ class RgCircleButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fg = iconColor ??
-        (variant == RgCircleVariant.filled || variant == RgCircleVariant.glass ? RgColors.onAction : RgColors.textPrimary);
+        switch (variant) {
+          RgCircleVariant.filled => RgColors.onAction,
+          RgCircleVariant.glass => RgColors.onInk,
+          _ => RgColors.textPrimary,
+        };
     return Semantics(
       container: true, // 행 탭 영역 안에 있어도 별도 노드로(행 이동과 북마크를 따로 조작)
       button: true,

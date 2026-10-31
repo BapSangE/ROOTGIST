@@ -64,7 +64,7 @@ Future<void> showEvidenceSheet(
                 padding: const EdgeInsets.symmetric(horizontal: RgSpace.s18, vertical: RgSpace.s10),
                 decoration: BoxDecoration(color: RgColors.fillNeutral, borderRadius: BorderRadius.circular(RgRadius.pill)),
                 child: Row(mainAxisSize: MainAxisSize.min, spacing: RgSpace.s6, children: [
-                  const RgIcon('book', size: 16, color: RgColors.textPrimary),
+                  RgIcon('book', size: 16, color: RgColors.textPrimary),
                   Flexible(child: Text('초록 전체에서 보기', style: RgText.bodySmall.copyWith(height: 1.2, fontWeight: FontWeight.w600))),
                 ]),
               ),

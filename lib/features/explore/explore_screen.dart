@@ -203,7 +203,7 @@ class _MonthHeader extends StatelessWidget {
         if (onTap != null)
           Transform.rotate(
             angle: open ? -1.5708 : 1.5708, // 펼침 ▲ / 접힘 ▼
-            child: const RgIcon('chevron-right', size: 16, color: RgColors.textSecondary),
+            child: RgIcon('chevron-right', size: 16, color: RgColors.textSecondary),
           ),
       ]),
     );
@@ -238,7 +238,7 @@ class _DayRow extends StatelessWidget {
         showDivider: !last,
         onTap: published ? () => context.go('/explore/${day.dateKey}') : null,
         trailing: switch (day.status) {
-          'published' => const Padding(
+          'published' => Padding(
             padding: EdgeInsets.only(left: RgSpace.s4), // 시안 간격 12 = 행 기본 8 + 4
             child: RgIcon('chevron-right', size: 20, color: RgColors.textTertiary),
           ),

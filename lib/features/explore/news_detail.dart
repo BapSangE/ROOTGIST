@@ -292,7 +292,7 @@ class _ModelDetailScreenState extends State<ModelDetailScreen> {
                   width: 4,
                   height: 4,
                   margin: EdgeInsets.only(top: (MediaQuery.textScalerOf(context).scale(23) - 4) / 2),
-                  decoration: const BoxDecoration(color: RgColors.textBody, shape: BoxShape.circle),
+                  decoration: BoxDecoration(color: RgColors.textBody, shape: BoxShape.circle),
                 ),
                 Expanded(child: TermText(s, highlights: marks[i], style: body)),
               ]),
@@ -458,7 +458,7 @@ class _Note extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
     child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s6, children: [
-      const Padding(padding: EdgeInsets.only(top: 2), child: RgIcon('info', size: 14, color: RgColors.textSecondary)),
+      Padding(padding: EdgeInsets.only(top: 2), child: RgIcon('info', size: 14, color: RgColors.textSecondary)),
       Expanded(child: KeepAllText(text, perSentence: true, style: RgText.caption.copyWith(color: RgColors.textSecondary))),
     ]),
   );
@@ -497,7 +497,7 @@ class _LinkCard extends StatelessWidget {
           child: Row(spacing: RgSpace.s16, children: [
             Text(label, style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
             Expanded(child: Text(value, textAlign: TextAlign.end, style: RgText.bodySmall)),
-            const RgIcon('arrow-up-right', size: 14, color: RgColors.textTertiary),
+            RgIcon('arrow-up-right', size: 14, color: RgColors.textTertiary),
           ]),
         ),
       ),

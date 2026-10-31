@@ -177,7 +177,7 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
       Padding(
         padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s12, RgSpace.gutterText, 0),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s6, children: [
-          const Padding(padding: EdgeInsets.only(top: 2), child: RgIcon('info', size: 14, color: RgColors.textSecondary)),
+          Padding(padding: EdgeInsets.only(top: 2), child: RgIcon('info', size: 14, color: RgColors.textSecondary)),
           Expanded(
             child: KeepAllText(
               _updates
@@ -220,7 +220,7 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
       Padding(
         padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s12, RgSpace.gutterText, 0),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s6, children: [
-          const Padding(padding: EdgeInsets.only(top: 2), child: RgIcon('info', size: 14, color: RgColors.textSecondary)),
+          Padding(padding: EdgeInsets.only(top: 2), child: RgIcon('info', size: 14, color: RgColors.textSecondary)),
           Expanded(
             child: KeepAllText(
               '개발자들이 많이 본 글과 새 도구예요. 공식 발표가 아니라 각 사이트의 글이고, 점수는 Hacker News 추천 수·GitHub 별 수예요. 요약은 원문 사이트가 허용할 때만 AI가 만들어요.',
@@ -279,7 +279,7 @@ class RelatedRow extends StatelessWidget {
     return RgListRow(
       showDivider: !last,
       onTap: () => context.push('/news/${Uri.encodeComponent(n.id)}'),
-      trailing: const Padding(
+      trailing: Padding(
         padding: EdgeInsets.only(top: 2, right: RgSpace.s12),
         child: RgIcon('chevron-right', size: 18, color: RgColors.textTertiary),
       ),
@@ -474,7 +474,7 @@ class _NewsCard extends StatelessWidget {
                 constraints: const BoxConstraints(minHeight: 36),
                 child: Row(mainAxisSize: MainAxisSize.min, spacing: RgSpace.s2, children: [
                   Text('릴리스 노트 전체 보기', style: linkStyle),
-                  const RgIcon('arrow-up-right', size: 14, color: RgColors.textSecondary),
+                  RgIcon('arrow-up-right', size: 14, color: RgColors.textSecondary),
                 ]),
               ),
             ),
@@ -507,7 +507,7 @@ class _NewsCard extends StatelessWidget {
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s8, children: [
             Padding(
               padding: EdgeInsets.only(top: (body.fontSize! * body.height! - 4) / 2),
-              child: Container(width: 4, height: 4, decoration: const BoxDecoration(color: RgColors.textTertiary, shape: BoxShape.circle)),
+              child: Container(width: 4, height: 4, decoration: BoxDecoration(color: RgColors.textTertiary, shape: BoxShape.circle)),
             ),
             Expanded(child: KeepAllText(p.text, maxLines: 2, overflow: TextOverflow.ellipsis, style: body)),
           ]),
@@ -580,7 +580,7 @@ class EvidencePill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: RgSpace.s10, vertical: RgSpace.s6),
       decoration: BoxDecoration(color: RgColors.fillNeutral, borderRadius: BorderRadius.circular(RgRadius.pill)),
       child: Row(mainAxisSize: MainAxisSize.min, spacing: RgSpace.s4, children: [
-        const RgIcon('quote', size: 14, color: RgColors.textBody),
+        RgIcon('quote', size: 14, color: RgColors.textBody),
         Flexible(child: Text(label, style: RgText.caption.copyWith(height: 1.25, fontWeight: FontWeight.w500, color: RgColors.textBody))),
       ]),
     ),

@@ -303,12 +303,12 @@ class MoreLink extends StatelessWidget {
                   decoration: BoxDecoration(color: RgColors.fillNeutral, borderRadius: BorderRadius.circular(RgRadius.pill)),
                   child: Row(mainAxisSize: MainAxisSize.min, spacing: RgSpace.s4, children: [
                     Flexible(child: Text(label, style: RgText.meta.copyWith(height: 1.2, fontWeight: FontWeight.w600))),
-                    const RgIcon('chevron-right', size: 16, color: RgColors.textPrimary),
+                    RgIcon('chevron-right', size: 16, color: RgColors.textPrimary),
                   ]),
                 )
               : Row(mainAxisSize: MainAxisSize.min, spacing: RgSpace.s2, children: [
                   Flexible(child: Text(label, style: RgText.meta.copyWith(color: RgColors.textSecondary, fontWeight: FontWeight.w500))),
-                  const RgIcon('chevron-right', size: 16, color: RgColors.textSecondary),
+                  RgIcon('chevron-right', size: 16, color: RgColors.textSecondary),
                 ]),
         ),
       ),
@@ -511,7 +511,7 @@ class _FeaturedCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: RgSpace.s8),
-              HeadingTextScale(child: KeepAllText(paper.title, style: RgText.titleFeatured.copyWith(color: RgColors.onAction))),
+              HeadingTextScale(child: KeepAllText(paper.title, style: RgText.titleFeatured.copyWith(color: RgColors.onInk))),
               const SizedBox(height: RgSpace.s8),
               if (compact && paper.keyPoints.isNotEmpty)
                 Text(paper.keyPoints.first, maxLines: 1, overflow: TextOverflow.ellipsis, style: RgText.meta.copyWith(color: RgColors.onInkSecondary))
@@ -541,7 +541,7 @@ class _FeaturedCard extends StatelessWidget {
                               b,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              style: RgText.bodySmall.copyWith(color: RgColors.borderDefault),
+                              style: RgText.bodySmall.copyWith(color: RgColors.onInkBody),
                             ),
                           ),
                         ],

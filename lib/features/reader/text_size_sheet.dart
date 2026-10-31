@@ -158,7 +158,7 @@ class _StepSlider extends StatelessWidget {
                   child: Container(
                     width: 24,
                     height: 24,
-                    decoration: const BoxDecoration(color: RgColors.surfaceRaised, shape: BoxShape.circle, boxShadow: RgShadow.thumb),
+                    decoration: BoxDecoration(color: RgColors.thumb, shape: BoxShape.circle, boxShadow: RgShadow.thumb),
                   ),
                 ),
               ]),

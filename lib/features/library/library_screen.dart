@@ -116,7 +116,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
                 child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s6, children: [
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.only(top: 1.5),
                     child: RgIcon('info', size: 14, color: RgColors.textSecondary),
                   ),

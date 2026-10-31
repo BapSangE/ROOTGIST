@@ -19,7 +19,7 @@ class RgChip extends StatelessWidget {
       final b => b,
     };
     final (bg, fg) = brand ??
-        (onInk ? (RgColors.chipOnInk, RgColors.textPrimary) : (RgColors.fillNeutral, RgColors.textBody));
+        (onInk ? (RgColors.chipOnInk, RgColors.ink) : (RgColors.fillNeutral, RgColors.textBody));
     return Container(
       constraints: const BoxConstraints(minHeight: 24), // 고정 높이면 큰 글자에서 잘린다
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
@@ -34,14 +34,14 @@ class RgChip extends StatelessWidget {
 // 로고·글꼴은 따라 하지 않고 이름 글자만(docs/RIGHTS.md 4장 「출처 배지 색」).
 (Color, Color)? brandOf(String? source) => switch (source) {
   'anthropic' || 'claude_code' || 'claude_api' || 'anthropic_sdk' ||
-  'Anthropic' || 'Claude Code' || 'Claude API' || 'Anthropic Python SDK' => (RgBrand.anthropic, RgColors.onAction),
-  'openai' || 'openai_community' || 'openai_sdk' || 'OpenAI' || 'OpenAI 커뮤니티' || 'OpenAI Python SDK' => (RgBrand.openai, RgColors.onAction),
+  'Anthropic' || 'Claude Code' || 'Claude API' || 'Anthropic Python SDK' => (RgBrand.anthropic, RgColors.onInk),
+  'openai' || 'openai_community' || 'openai_sdk' || 'OpenAI' || 'OpenAI 커뮤니티' || 'OpenAI Python SDK' => (RgBrand.openai, RgColors.onInk),
   // 모델 칩은 발표한 회사 이름(makerName). 대표 색이 있는 회사만 그 색, 나머지는 중립
-  'deepmind' || 'google_research' || 'google' || 'Google DeepMind' || 'Google Research' || 'Google' => (RgBrand.google, RgColors.onAction),
-  'huggingface' || 'Hugging Face' => (RgBrand.huggingface, RgColors.textPrimary),
-  'nvidia' || 'nvidia_dev' || 'NVIDIA' || 'NVIDIA 개발자' => (RgBrand.nvidia, RgColors.textPrimary),
-  'meta' || 'Meta' => (RgBrand.meta, RgColors.onAction),
-  'xai' || 'xai_sdk' || 'xAI' || 'xAI Python SDK' => (RgBrand.xai, RgColors.onAction),
+  'deepmind' || 'google_research' || 'google' || 'Google DeepMind' || 'Google Research' || 'Google' => (RgBrand.google, RgColors.onInk),
+  'huggingface' || 'Hugging Face' => (RgBrand.huggingface, RgColors.ink),
+  'nvidia' || 'nvidia_dev' || 'NVIDIA' || 'NVIDIA 개발자' => (RgBrand.nvidia, RgColors.ink),
+  'meta' || 'Meta' => (RgBrand.meta, RgColors.onInk),
+  'xai' || 'xai_sdk' || 'xAI' || 'xAI Python SDK' => (RgBrand.xai, RgColors.onInk),
   _ => null,
 };
 

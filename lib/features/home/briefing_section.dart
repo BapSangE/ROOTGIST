@@ -109,7 +109,7 @@ class _BriefingSectionState extends State<BriefingSection> {
                         turns: _open ? -0.25 : 0.25,
                         duration: RgMotion.of(context, RgMotion.base),
                         curve: RgMotion.curve,
-                        child: const RgIcon('chevron-right', size: 16, color: RgColors.textBody),
+                        child: RgIcon('chevron-right', size: 16, color: RgColors.textBody),
                       ),
                     ]),
                   ),
@@ -147,7 +147,7 @@ class _BriefingSectionState extends State<BriefingSection> {
                   decoration: BoxDecoration(border: Border(top: BorderSide(color: RgColors.dividerCard))),
                   child: Row(mainAxisSize: MainAxisSize.min, spacing: RgSpace.s4, children: [
                     Flexible(child: Text('화제 ${b.hotCount}건 모두 보기', textAlign: TextAlign.center, style: RgText.meta.copyWith(fontWeight: FontWeight.w600, color: RgColors.textBody))),
-                    const RgIcon('chevron-right', size: 16, color: RgColors.textBody),
+                    RgIcon('chevron-right', size: 16, color: RgColors.textBody),
                   ]),
                 ),
               ),

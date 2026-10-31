@@ -91,6 +91,10 @@ class SettingsScreen extends StatelessWidget {
                   style: RgText.caption.copyWith(color: RgColors.textSecondary),
                 ),
                 activeThumbColor: RgColors.textPrimary,
+                // 꺼짐: 칩 면 트랙 + 흐린 손잡이(기본값은 어두운 화면에서 흰 테두리가 튄다)
+                inactiveTrackColor: RgColors.fillNeutral,
+                inactiveThumbColor: RgColors.textTertiary,
+                trackOutlineColor: WidgetStatePropertyAll(RgColors.borderDefault),
                 value: enabled,
                 onChanged: (value) => analyticsCollectionEnabled.value = value,
               ),
@@ -180,7 +184,7 @@ class _Row extends StatelessWidget {
           Expanded(
             child: KeepAllText(value!, style: RgText.bodySmall.copyWith(color: RgColors.textSecondary), textAlign: TextAlign.end),
           ),
-        if (chevron) const RgIcon('chevron-right', size: 18, color: RgColors.textTertiary),
+        if (chevron) RgIcon('chevron-right', size: 18, color: RgColors.textTertiary),
       ]),
     );
     return Semantics(button: onTap != null, child: RgPressable(onTap: onTap, child: row));
@@ -309,10 +313,40 @@ class ReadingSettingsScreen extends StatelessWidget {
         const SizedBox(height: RgSpace.s12),
         card('글자 크기', 'AI 요약·핵심 내용과 초록 리더 본문에 적용돼요', const TextSizePicker()),
         const SizedBox(height: RgSpace.s12),
+        // 화면 모드: 기본은 기기 설정을 따른다. 어둡게면 바탕(흰색·종이) 대신 어두운 한 벌을 쓴다.
+        card(
+          '화면 모드',
+          '어두운 화면에서는 아래 화면 바탕 대신 어두운 색을 써요',
+          ValueListenableBuilder(
+            valueListenable: appearance,
+            builder: (_, a, _) => Column(children: [
+              for (final (i, (v, label, desc)) in const [
+                (Appearance.system, '기기 설정', '기기의 다크 모드를 따라가요'),
+                (Appearance.light, '밝게', '늘 밝은 화면'),
+                (Appearance.dark, '어둡게', '늘 어두운 화면'),
+              ].indexed)
+                _RadioRow(
+                  label: label,
+                  desc: desc,
+                  selected: v == a,
+                  divider: i > 0,
+                  trailing: _BackdropSwatch(
+                    palette: switch (v) {
+                      Appearance.dark => RgPalette.dark,
+                      Appearance.light => backdrop.value == Backdrop.paper ? RgPalette.paper : RgPalette.white,
+                      Appearance.system => platformDark.value ? RgPalette.dark : (backdrop.value == Backdrop.paper ? RgPalette.paper : RgPalette.white),
+                    },
+                  ),
+                  onTap: () => appearance.value = v,
+                ),
+            ]),
+          ),
+        ),
+        const SizedBox(height: RgSpace.s12),
         // 화면 바탕: 기본은 흰색, 첫 리디자인 시안(따뜻한 종이)은 고를 수 있게 남겼다. 고르면 앱 전체가 바로 바뀐다.
         card(
           '화면 바탕',
-          '앱 전체의 바탕과 카드 색이에요',
+          '밝은 화면의 바탕과 카드 색이에요',
           ValueListenableBuilder(
             valueListenable: backdrop,
             builder: (_, b, _) => Column(children: [

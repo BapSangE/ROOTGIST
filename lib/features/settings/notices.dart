@@ -101,7 +101,7 @@ class _NoticesScreenState extends State<NoticesScreen> {
                           showDivider: i < notices.length - 1,
                           crossAxisAlignment: CrossAxisAlignment.center,
                           onTap: () => _open(context, n),
-                          trailing: const Padding(
+                          trailing: Padding(
                             padding: EdgeInsets.only(right: RgSpace.s12),
                             child: RgIcon('chevron-right', size: 18, color: RgColors.textTertiary),
                           ),

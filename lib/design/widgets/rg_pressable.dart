@@ -39,7 +39,7 @@ class _RgPressableState extends State<RgPressable> {
               curve: _pressed ? Curves.easeOut : Curves.easeOutBack,
               child: AnimatedContainer(
                 duration: _pressed ? RgMotion.press : RgMotion.release,
-                foregroundDecoration: BoxDecoration(color: _pressed ? const Color(0x0A000000) : const Color(0x00000000)),
+                foregroundDecoration: BoxDecoration(color: _pressed ? RgColors.pressOverlay : const Color(0x00000000)),
                 child: widget.child,
               ),
             )
