@@ -1318,7 +1318,11 @@ void main() {
     router.go('/settings/reading');
     await settle(tester);
     await tester.tap(find.text('어둡게'));
+    await tester.pump();
+    // 한 프레임에 확 바뀌지 않게: 직전 화면이 위에 덮였다가 흐려지며 사라진다(RgMotion.base)
+    expect(find.byType(RawImage), findsOneWidget);
     await tester.pumpAndSettle();
+    expect(find.byType(RawImage), findsNothing);
     expect(scaffoldBg(), RgPalette.dark.bgApp);
     expect(RgText.titleList.color, RgInk.dark.textPrimary); // 글자 스타일도 다시 읽힌다
     expect((await SharedPreferences.getInstance()).getString('settings.appearance'), 'dark');
@@ -1335,6 +1339,14 @@ void main() {
     platformDark.value = true; // 기기를 다크로
     await tester.pumpAndSettle();
     expect(scaffoldBg(), RgPalette.dark.bgApp);
+
+    // 「동작 줄이기」면 전환 없이 바로
+    tester.platformDispatcher.accessibilityFeaturesTestValue = const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    platformDark.value = false;
+    await tester.pump();
+    expect(find.byType(RawImage), findsNothing);
+    expect(scaffoldBg(), RgPalette.white.bgApp);
   });
 
   testWidgets('옆으로 밀기: 홈 → 탐색 칸들 → 공식 소식 발표·업데이트 → 모델 트렌딩·새로 나옴 → 보관함 → 설정, 반대로 밀면 거꾸로', (tester) async {

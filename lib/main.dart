@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'analytics/posthog_sink.dart';
 import 'data/repository.dart';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 import 'app_shell.dart';
@@ -35,7 +37,21 @@ class RootgistApp extends StatefulWidget {
 
 // 화면 바탕·화면 모드(설정 › 읽기 설정)나 기기 다크 모드가 바뀌면 앱 전체를 다시 그린다. 색 토큰이 getter라 모든 요소의 build를
 // 다시 부르면(핫 리로드의 reassemble과 같은 일, 입력 잠금 없이) 열린 화면·스크롤 위치는 그대로 새 색이 된다.
-class _RootgistAppState extends State<RootgistApp> with WidgetsBindingObserver {
+class _RootgistAppState extends State<RootgistApp> with WidgetsBindingObserver, SingleTickerProviderStateMixin {
+  // 화면 모드·바탕이 바뀔 때 직전 화면을 찍어 새 색 위에 덮고 흐리게 지운다(한 프레임에 확 바뀌지 않게)
+  final _appKey = GlobalKey();
+  ui.Image? _before;
+  late final _fade = AnimationController(vsync: this, duration: RgMotion.base)
+    ..addStatusListener((s) {
+      if (s == AnimationStatus.completed) setState(_dropBefore);
+    });
+  var _look = (isDark, backdrop.value);
+
+  void _dropBefore() {
+    _before?.dispose();
+    _before = null;
+  }
+
   Timer? _analyticsTimer;
   bool _navigationScheduled = false;
 
@@ -67,6 +83,20 @@ class _RootgistAppState extends State<RootgistApp> with WidgetsBindingObserver {
       analytics.setActive(state == AppLifecycleState.resumed);
 
   void _repaint() {
+    // 기기 다크 모드가 바뀌어도 화면 모드가 「밝게」·「어둡게」면 색은 그대로다
+    final look = (isDark, backdrop.value);
+    if (look == _look) return;
+    _look = look;
+    final boundary = _appKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+    if (boundary != null && !WidgetsBinding.instance.platformDispatcher.accessibilityFeatures.disableAnimations) {
+      try {
+        _dropBefore();
+        _before = boundary.toImageSync(pixelRatio: View.of(context).devicePixelRatio);
+        _fade.forward(from: 0);
+      } catch (_) {
+        _dropBefore(); // 아직 그려지지 않았으면 전환 없이 바로
+      }
+    }
     void dirty(Element e) {
       e.markNeedsBuild();
       e.visitChildren(dirty);
@@ -111,6 +141,8 @@ class _RootgistAppState extends State<RootgistApp> with WidgetsBindingObserver {
     backdrop.removeListener(_repaint);
     appearance.removeListener(_repaint);
     platformDark.removeListener(_repaint);
+    _fade.dispose();
+    _dropBefore();
     super.dispose();
   }
 
@@ -120,7 +152,18 @@ class _RootgistAppState extends State<RootgistApp> with WidgetsBindingObserver {
       title: 'ROOTGIST',
       debugShowCheckedModeBanner: false,
       theme: rgTheme,
+      themeAnimationStyle: AnimationStyle.noAnimation, // 색 전환은 아래 크로스페이드가 맡는다(동작 줄이기면 바로)
       routerConfig: router,
+      builder: (context, child) => Stack(fit: StackFit.expand, children: [
+        RepaintBoundary(key: _appKey, child: child),
+        if (_before case final image?)
+          IgnorePointer(
+            child: FadeTransition(
+              opacity: ReverseAnimation(CurvedAnimation(parent: _fade, curve: RgMotion.curve)),
+              child: RawImage(image: image, fit: BoxFit.fill),
+            ),
+          ),
+      ]),
     );
   }
 }
