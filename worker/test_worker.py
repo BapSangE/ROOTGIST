@@ -225,6 +225,8 @@ class NewsTermsTest(unittest.TestCase):
                              "sense_id": None, "source": "news", "surface_form": "MoE"},
                             {"normalized_form": "old term", "review_status": "pending", "canonical_ko_draft": None, "draft_model": None,
                              "sense_id": None, "source": "paper", "surface_form": "old term"}]
+                if table == "term_candidates" and "full_form_en_draft=is.null" in q:  # 소식 약어 후보는 논문 id가 없다(2026-10-31 배치 실패)
+                    return [{"normalized_form": "moe", "surface_form": "MoE", "definition_ko": "d", "first_paper_id": None}]
                 return []
 
             def upsert(self, *a): pass

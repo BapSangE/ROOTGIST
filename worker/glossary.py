@@ -232,8 +232,9 @@ def draft_full_forms(db: Db, api_key: str | None) -> int:
             if acronym.is_acronym(c["surface_form"])]
     ask = []
     for c in todo:
-        abstract = db.select("papers", f"paper_id=eq.{c['first_paper_id']}&select=abstract_en")[0]["abstract_en"]
-        if full := acronym.from_abstract(c["surface_form"], abstract):
+        # 소식 글에서 온 후보(source='news')는 first_paper_id가 없다 → 초록 없이 LLM으로
+        rows = db.select("papers", f"paper_id=eq.{c['first_paper_id']}&select=abstract_en") if c.get("first_paper_id") else []
+        if rows and (full := acronym.from_abstract(c["surface_form"], rows[0]["abstract_en"])):
             db.update("term_candidates", {"full_form_en_draft": full}, normalized_form=c["normalized_form"])
         else:
             ask.append(c)
