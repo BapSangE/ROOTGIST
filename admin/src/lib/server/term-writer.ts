@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import type {
+  Alias,
   ReviewMarks,
   Snapshot,
   TermCommandResult,
@@ -107,6 +108,12 @@ function fixtureWriter(): TermWriter {
         if (t.entity_type === "sense") {
           const sense = s.senses.find((x) => x.sense_id === t.entity_key)!;
           Object.assign(sense, Object.fromEntries(Object.entries(patch).filter(([k]) => k !== "aliases")));
+          // DB apply_patch와 같이: 보낸 별칭 목록이 이 의미의 별칭 전체가 된다
+          if (Array.isArray(patch.aliases))
+            s.aliases = [
+              ...s.aliases.filter((a) => a.sense_id !== sense.sense_id),
+              ...(patch.aliases as Omit<Alias, "sense_id">[]).map((a) => ({ ...a, sense_id: sense.sense_id })),
+            ];
           const next = status(sense.review_status);
           if (command.action === "approve" && (!sense.canonical_ko || !sense.definition_ko))
             fail(422, "VALIDATION_FAILED", "한국어 표기와 일반 정의를 먼저 채워 주세요.");

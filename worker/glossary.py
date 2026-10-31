@@ -338,7 +338,16 @@ def align_spans(db: Db, api_key: str | None) -> int:
     """논문 용어마다 번역문 속 실제 표기(ko_span)를 채운다(G2 하이라이트 위치). 사전에 없는 용어도 채운다.
     사전 대응어가 번역문에 그대로 있으면 그것, 영문 표기가 번역문에 남아 있으면(SFT·VLM) 그것,
     없으면 LLM이 번역문에서 고른 부분 문자열(번역문에 실제로 있는 글자만). 못 찾으면 빈 문자열."""
+    # 한국어 별칭: 직접 추가했거나 승인된 한글 표기(구글 번역 참고본처럼 검토 전인 것은 빼고)
+    ko_aliases = defaultdict(list)
+    for a in db.select_all("term_aliases", "select=sense_id,surface_form,relation_type,review_status&order=alias_id"):
+        if _HANGUL.search(a["surface_form"]) and (a["relation_type"] == "ko_alias" or a["review_status"] == "approved"):
+            ko_aliases[a["sense_id"]].append(_strip_paren(a["surface_form"]))
     rows = db.select_all("paper_glossary", "ko_span=is.null&select=paper_id,idx,term,sentence_ids,sense_id&order=paper_id,idx")
+    # 예전에 못 찾은(빈 값) 용어도 그 의미에 한국어 별칭이 생겼으면 별칭으로만 다시 찾는다(LLM은 부르지 않는다)
+    retry = [dict(r, retry=True) for r in db.select_all("paper_glossary", "ko_span=eq.&select=paper_id,idx,term,sentence_ids,sense_id&order=paper_id,idx")
+             if r["sense_id"] in ko_aliases]
+    rows += retry
     if not rows:
         return 0
     flag = _show_ai(db)
@@ -356,9 +365,11 @@ def align_spans(db: Db, api_key: str | None) -> int:
         ask = []
         for r in prs:
             ko, texts = senses.get(r["sense_id"]), [tr[s] for s in r["sentence_ids"] if s in tr and tr[s]]
-            found = next((c for c in (ko, r["term"]) if c and any(c in t for t in texts)), None)
+            found = next((c for c in (ko, *ko_aliases.get(r["sense_id"], ()), r["term"]) if c and any(c in t for t in texts)), None)
             if found:
                 db.update("paper_glossary", {"ko_span": found}, paper_id=pid, idx=r["idx"])
+            elif r.get("retry"):
+                continue  # 별칭으로도 못 찾으면 빈 값 그대로
             elif not texts:  # 번역이 없는 논문: 찾을 곳이 없다
                 db.update("paper_glossary", {"ko_span": ""}, paper_id=pid, idx=r["idx"])
             else:

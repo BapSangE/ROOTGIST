@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import type {
+  Alias,
   Envelope,
   PageResult,
   TermDetail,
@@ -93,7 +94,7 @@ export function TermsWorkbench() {
   const writable = !!detail.data?.capabilities.term_writes?.enabled;
   const meaningKey = JSON.stringify([row0?.type, row0?.id]);
   const [meaning, setMeaning] = useState<
-    Record<string, { canonical_ko?: string; definition_ko?: string; note?: string }>
+    Record<string, { canonical_ko?: string; definition_ko?: string; note?: string; aliases?: Alias[] }>
   >({});
   const senseValue = detail.data?.value.sense ?? null;
   const candidateValue = detail.data?.value.candidate ?? null;
@@ -106,14 +107,21 @@ export function TermsWorkbench() {
       ? (candidateValue?.definition_ko ?? "")
       : (senseValue?.definition_ko ?? "");
   const baseNote = row0?.type === "sense" ? (senseValue?.review_note_ko ?? "") : "";
+  const baseAliases = detail.data?.value.aliases ?? [];
   const edits = meaning[meaningKey] ?? {};
   const ko = edits.canonical_ko ?? baseKo,
     def = edits.definition_ko ?? baseDef,
-    note = edits.note ?? baseNote;
+    note = edits.note ?? baseNote,
+    aliases = edits.aliases ?? baseAliases;
+  // 별칭은 사전 의미에만(후보는 승인돼 사전에 들어간 뒤)
+  const aliasesDirty = row0?.type === "sense" && JSON.stringify(aliases) !== JSON.stringify(baseAliases);
   const meaningDirty =
-    row0?.type !== "occurrence" && (ko !== baseKo || def !== baseDef || note !== baseNote);
+    row0?.type !== "occurrence" && (ko !== baseKo || def !== baseDef || note !== baseNote || aliasesDirty);
   function editMeaning(field: "canonical_ko" | "definition_ko" | "note", value: string) {
     setMeaning((prev) => ({ ...prev, [meaningKey]: { ...prev[meaningKey], [field]: value } }));
+  }
+  function editAliases(next: Alias[]) {
+    setMeaning((prev) => ({ ...prev, [meaningKey]: { ...prev[meaningKey], aliases: next } }));
   }
   const unsaved = dirty || meaningDirty;
   function navigate(v: Changes) {
@@ -201,6 +209,8 @@ export function TermsWorkbench() {
       editable={!!writable && detail.data.value.row.type !== "occurrence"}
       values={{ ko, def, note }}
       onEdit={editMeaning}
+      aliases={aliases}
+      onAliases={editAliases}
       onOpenSense={(type, id) => navigate({ type, id, paper: null, sentence: null, filter: "all" })}
     />
   ) : (
@@ -253,6 +263,16 @@ export function TermsWorkbench() {
       if (ko !== baseKo) patch.canonical_ko = ko.trim() || null;
       if (def !== baseDef) patch.definition_ko = def.trim() || null;
       if (note !== baseNote) patch.review_note_ko = note.trim() || null;
+      // 별칭은 목록 전체를 보낸다(DB가 빠진 것은 지우고 나머지는 넣거나 고친다)
+      if (aliasesDirty)
+        patch.aliases = aliases.map((a) => ({
+          alias_id: a.alias_id,
+          surface_form: a.surface_form,
+          normalized_form: a.normalized_form,
+          relation_type: a.relation_type,
+          review_status: a.review_status,
+          auto_match_allowed: a.auto_match_allowed,
+        }));
     }
     return patch;
   }
@@ -1064,6 +1084,8 @@ function Inspector({
   editable,
   values,
   onEdit,
+  aliases,
+  onAliases,
   onOpenSense,
 }: {
   detail: TermDetail;
@@ -1072,9 +1094,11 @@ function Inspector({
   editable: boolean;
   values: { ko: string; def: string; note: string };
   onEdit: (field: "canonical_ko" | "definition_ko" | "note", value: string) => void;
+  aliases: Alias[];
+  onAliases: (next: Alias[]) => void;
   onOpenSense: (type: "sense" | "candidate", id: string) => void;
 }) {
-  const { row, sense, candidate, aliases } = detail.value;
+  const { row, sense, candidate } = detail.value;
   const occurrence = row.type === "occurrence";
   return (
     <>
@@ -1136,32 +1160,13 @@ function Inspector({
             </span>
           )}
         </label>
-        <section className="aliases">
-          <div className="field-heading">
-            <h3>영문 별칭</h3>
-            <button
-              disabled
-              className="text-button"
-              title="저장 연결 전에는 편집할 수 없어요"
-            >
-              추가
-            </button>
-          </div>
-          <div className="alias-list">
-            {aliases.length ? (
-              aliases.map((a) => (
-                <span className="alias-chip" key={a.alias_id}>
-                  {a.surface_form}
-                  <small>
-                    {a.review_status === "approved" ? "승인" : "대기"}
-                  </small>
-                </span>
-              ))
-            ) : (
-              <span className="micro subtle">등록된 별칭 없음</span>
-            )}
-          </div>
-        </section>
+        <AliasEditor
+          aliases={aliases}
+          senseId={sense?.sense_id ?? null}
+          editable={editable && row.type === "sense"}
+          canonical={row.term}
+          onChange={onAliases}
+        />
         {candidate?.source === "news" ? (
           <section className="context-meaning">
             <h3>처음 나온 소식 문장</h3>
@@ -1199,5 +1204,123 @@ function Inspector({
         </label>
       </div>
     </>
+  );
+}
+
+const hangul = /[가-힣]/;
+const aliasLabels: Record<string, string> = {
+  canonical_name: "원래 이름",
+  source_translation: "구글 번역 참고",
+  ai_korean_name: "AI 한국어 이름",
+  heading_abbreviation_or_expansion: "약어·풀이",
+  ko_alias: "직접 추가",
+  admin_alias: "직접 추가",
+};
+
+// 별칭: 같은 의미의 다른 표기. 한국어 별칭은 논문 번역·공식 소식·모델 카드에서 그 표기도 용어로 찾게 한다.
+// 영문 원래 이름(canonical_name)은 지우지 못한다. 추가·삭제는 검수 저장(변경 저장·승인)에 같이 들어간다.
+function AliasEditor({
+  aliases,
+  senseId,
+  editable,
+  canonical,
+  onChange,
+}: {
+  aliases: Alias[];
+  senseId: string | null;
+  editable: boolean;
+  canonical: string;
+  onChange: (next: Alias[]) => void;
+}) {
+  const [draft, setDraft] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const groups = [
+    ["한국어 별칭", aliases.filter((a) => hangul.test(a.surface_form))],
+    ["영문 별칭", aliases.filter((a) => !hangul.test(a.surface_form))],
+  ] as const;
+  function add() {
+    const value = draft.trim().replace(/\s+/g, " ");
+    if (!value || !senseId) return;
+    if (value.length < 2 || value.length > 60) return setError("2~60자로 적어 주세요.");
+    const key = value.toLowerCase();
+    if (key === canonical.toLowerCase() || aliases.some((a) => a.surface_form.toLowerCase() === key))
+      return setError("이미 있는 표기예요.");
+    const ko = hangul.test(value);
+    onChange([
+      ...aliases,
+      {
+        alias_id: `ALIAS-ADMIN-${crypto.randomUUID().replaceAll("-", "").slice(0, 20)}`,
+        sense_id: senseId,
+        surface_form: value,
+        normalized_form: ko ? null : normalizeTerm(value),
+        relation_type: ko ? "ko_alias" : "admin_alias",
+        review_status: "approved",
+        auto_match_allowed: true,
+      },
+    ]);
+    setDraft("");
+    setError(null);
+  }
+  return (
+    <section className="aliases">
+      <div className="field-heading">
+        <h3>별칭</h3>
+      </div>
+      {groups.map(([title, list]) => (
+        <div className="alias-group" key={title}>
+          <span className="alias-group-title">{title}</span>
+          <div className="alias-list">
+            {list.length ? (
+              list.map((a) => (
+                <span className="alias-chip" key={a.alias_id} title={aliasLabels[a.relation_type] ?? a.relation_type}>
+                  {a.surface_form}
+                  <small>{a.review_status === "approved" ? "승인" : "대기"}</small>
+                  {editable && a.relation_type !== "canonical_name" && (
+                    <button
+                      aria-label={`${a.surface_form} 별칭 빼기`}
+                      onClick={() => onChange(aliases.filter((x) => x.alias_id !== a.alias_id))}
+                    >
+                      ×
+                    </button>
+                  )}
+                </span>
+              ))
+            ) : (
+              <span className="micro subtle">없음</span>
+            )}
+          </div>
+        </div>
+      ))}
+      {editable && (
+        <div className="alias-add">
+          <input
+            value={draft}
+            maxLength={60}
+            placeholder="예: 동결된 디코더, frozen decoders"
+            aria-label="별칭 추가"
+            aria-invalid={!!error}
+            onChange={(e) => {
+              setDraft(e.target.value);
+              setError(null);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                add();
+              }
+            }}
+          />
+          <button className="button secondary" onClick={add} disabled={!draft.trim()}>
+            추가
+          </button>
+        </div>
+      )}
+      <span className="field-help" role={error ? "alert" : undefined}>
+        {error ??
+          (editable
+            ? "한글로 적으면 한국어 별칭이에요. 논문 번역·공식 소식·모델 카드에서 이 표기도 용어로 찾아요. 저장하거나 승인할 때 같이 반영돼요."
+            : "승인돼 사전에 들어간 의미에서 별칭을 더할 수 있어요.")}
+      </span>
+    </section>
   );
 }

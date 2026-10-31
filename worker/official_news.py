@@ -436,6 +436,37 @@ def link_related(items: list[dict], limit: int = 3):
         i["related"] = [j["id"] for j in items if j is not i and mine & found[j["id"]]][:limit]
 
 
+# 같은 회사의 공식 출처끼리 같은 발표를 따로 실으면(회사 블로그 + 그 회사의 HF 블로그 글 + 커뮤니티 공지) 하나만 남긴다.
+# 남기는 순서: 회사 자체 블로그(개발자 블로그 포함) > HF 블로그의 회사 계정 > 커뮤니티 공지. 같으면 먼저 올라온 글.
+COMPANY = {"openai_community": "openai", "deepmind": "google", "google_research": "google", "nvidia_dev": "nvidia"}
+SAME_DAYS, SAME_TITLE = 3, 0.6  # 3일 안, 영문 제목 글자쌍 겹침 60% 이상이면 같은 발표
+
+
+def _rank(item: dict) -> int:
+    return 2 if item["source"].endswith("_community") else 1 if item.get("category") == "Hugging Face Blog" else 0
+
+
+def _same_story(a: dict, b: dict) -> bool:
+    if COMPANY.get(a["source"], a["source"]) != COMPANY.get(b["source"], b["source"]):
+        return False
+    if abs(a["published_at"] - b["published_at"]) > timedelta(days=SAME_DAYS):
+        return False
+    x, y = _bigrams(a["title_en"]), _bigrams(b["title_en"])
+    similar = len(x & y) / len(x | y) >= SAME_TITLE if x and y else False
+    title_names = lambda i: names({"title_en": i["title_en"]})  # 제목 속 모델·제품 이름(gemini-4-carbon)만
+    return similar or bool(title_names(a) & title_names(b))
+
+
+def merge_official(items: list[dict]) -> tuple[list[dict], list[dict]]:
+    """(남길 글, 뺀 글). 공식 발표·공지(kind post·notice)만 본다. 화제·릴리스는 그대로."""
+    order = sorted((i for i in items if i["kind"] in ("post", "notice")), key=lambda i: (_rank(i), i["published_at"]))
+    kept, dropped = [], []
+    for i in order:
+        (dropped if any(_same_story(i, k) for k in kept) else kept).append(i)
+    gone = {id(i) for i in dropped}
+    return [i for i in items if id(i) not in gone], dropped
+
+
 def save_db(db, items: list[dict], models: list[dict], now: datetime):
     """소식은 쌓고(주소마다 한 줄, 다시 모으면 덮어쓴다), 모델 순위는 이번 실행 것으로 바꾼다."""
     stamp = now.isoformat()
@@ -783,6 +814,8 @@ def main(argv=None):
         report.append(f"HF 트렌딩 모델: 실패 {e!r}")
 
     items = [i for i in items if i["url"] not in blocked]
+    items, merged = merge_official(items)
+    report.append(f"같은 발표 합치기: {len(merged)}개를 공식 원문 쪽으로" + (f" ({', '.join(m['source_label'] for m in merged)})" if merged else ""))
     releases = [r for r in releases if r["url"] not in blocked]
     hot = [h for h in attach_hn(items + releases, hot) if h["url"] not in blocked]
     report.append(f"화제: 공식 소식에 붙인 HN 반응 {sum(1 for i in items + releases if i.get('points'))}개, 따로 보일 화제 {len(hot)}개")
@@ -883,6 +916,8 @@ def main(argv=None):
         json.dumps({"OFFICIAL_NEWS_PREVIEW": json.dumps(doc, ensure_ascii=False)}, ensure_ascii=False), encoding="utf-8")
     if db:
         save_db(db, items, models, now)
+        for m in merged:  # 지난 실행에서 따로 저장된 중복 글도 지운다
+            db.delete("official_news", id=hashlib.sha1(m["url"].encode()).hexdigest()[:12])
         report.append(f"DB 저장: 소식 {len(items)}개, 모델 {len(models)}개")
         # 소식·모델 글의 용어 후보(관리자 웹에서 승인하면 다음 배치에 앱 사전에 들어간다). 실패해도 소식 저장에는 영향이 없다
         if key:

@@ -1508,11 +1508,64 @@
     gap: 8px;
   }
 }
+.term-admin .alias-group + .alias-group {
+  margin-top: 8px;
+}
+.term-admin .alias-group-title {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.term-admin .alias-chip {
+  animation: alias-in 150ms ease-out;
+}
+@keyframes alias-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+.term-admin .alias-chip button {
+  transition: background-color 150ms ease-out, color 150ms ease-out;
+}
+.term-admin .alias-chip button:hover {
+  background: var(--fill);
+  color: var(--ink);
+}
+.term-admin .alias-add {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.term-admin .alias-add input {
+  flex: 1;
+  min-width: 0;
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0 10px;
+  font-size: 12px;
+  background: var(--surface);
+}
+.term-admin .alias-add input:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -1px;
+}
+.term-admin .alias-add input[aria-invalid="true"] {
+  border-color: var(--warn);
+}
+.term-admin .alias-add .button {
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 12px;
+}
 @media (prefers-reduced-motion: reduce) {
   .term-admin *,
   .term-admin *::before,
   .term-admin *::after {
     transition: none !important;
+    animation: none !important;
     scroll-behavior: auto !important;
   }
 }

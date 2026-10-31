@@ -68,7 +68,7 @@ class GlossaryTerm {
         termKo = j['term_ko'],
         termKoSpan = j['term_ko_span'],
         fullForm = (j['full_form_en'] as String?)?.isEmpty ?? true ? null : j['full_form_en'],
-        aliases = const [],
+        aliases = [for (final a in j['aliases'] ?? const []) a as String], // 사전 별칭(get_paper, 2026-10-31~)
         papers = null;
 
   // 공용 용어 사전(list_terms): 공식 소식·모델 상세에서 쓴다. 뜻은 논문 하나가 아니라 사전의 뜻.
@@ -84,7 +84,7 @@ class GlossaryTerm {
         papers = j['papers'];
 
   final String term;
-  final List<String> aliases; // 사전 용어의 다른 영문 표기(복수형·약어)
+  final List<String> aliases; // 사전 별칭: 다른 영문 표기(복수형·약어)와 관리자가 넣은 한국어 표기(동결된 디코더)
   final int? papers; // 사전 용어: 이 용어가 쓰인 논문 수. 논문 용어는 null
   final String? termKo; // 사전에 연결된 한국어 대응어(G1·G2). 없거나 앱에 보일 수 없는 의미면 null
   final String? termKoSpan; // 이 논문 번역문에서 실제로 쓴 표기(동결된 디코더 ↔ 대응어 고정 디코더). 하이라이트는 이것 우선

@@ -306,6 +306,17 @@ void main() {
                     'term_ko': '고정 디코더', 'term_ko_span': '동결된 디코더'}],
     });
     expect(firstHighlights(p2, korean: true)['A01']!.single.$3, '동결된 디코더');
+
+    // 관리자가 넣은 한국어 별칭: 번역문 표기를 아직 못 정했어도 별칭으로 찾는다(논문 상세 요약·핵심 내용도 같은 규칙)
+    final p4 = PaperDetail.fromJson({
+      'paper_id': 'z', 'title_en': 'T', 'authors': ['A'], 'published_at': '2026-10-18', 'hf_url': '', 'arxiv_url': '',
+      'ai_status': 'ready',
+      'sentences': [{'sentence_id': 'A01', 'kind': 'text', 'text': 'We use a frozen encoder.', 'translation_ko': '동결 인코더를 쓴다.'}],
+      'glossary': [{'term': 'frozen encoder', 'definition_ko': '정의.', 'sentence_ids': ['A01'], 'highlight': true,
+                    'term_ko': '고정 인코더', 'aliases': ['frozen encoders', '동결 인코더']}],
+    });
+    expect(firstHighlights(p4, korean: true)['A01']!.single.$3, '동결 인코더');
+    expect(findHighlights('요약: 동결 인코더로 학습해요.', p4.glossary).single.$3, '동결 인코더');
   });
 
   testWidgets('iOS: 왼쪽 가장자리에서 밀면 S03 → S02 → 홈으로 뒤로 간다', (tester) async {

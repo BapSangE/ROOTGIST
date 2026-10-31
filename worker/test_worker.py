@@ -137,6 +137,12 @@ class AlignSpansTest(unittest.TestCase):
 
         class FakeDb:
             def select_all(self, table, q):
+                if table == "term_aliases":  # 직접 넣은 한국어 별칭만 쓴다(검토 전 구글 번역 참고 별칭은 뺀다)
+                    return [{"sense_id": "S2", "surface_form": "동결 인코더", "relation_type": "ko_alias", "review_status": "approved"},
+                            {"sense_id": "S2", "surface_form": "고정된 인코더", "relation_type": "source_translation", "review_status": "pending"}]
+                if "ko_span=eq." in q:  # 예전에 못 찾은 용어: 별칭이 생긴 의미만 다시
+                    return [{"paper_id": "p", "idx": 3, "term": "frozen encoder", "sentence_ids": ["A01"], "sense_id": "S2"},
+                            {"paper_id": "p", "idx": 4, "term": "lost term", "sentence_ids": ["A01"], "sense_id": None}]
                 return [{"paper_id": "p", "idx": 0, "term": "SFT", "sentence_ids": ["A01"], "sense_id": None},
                         {"paper_id": "p", "idx": 1, "term": "verified trajectories", "sentence_ids": ["A01"], "sense_id": None},
                         {"paper_id": "p", "idx": 2, "term": "frozen decoder", "sentence_ids": ["A01"], "sense_id": "S1"}]
@@ -146,7 +152,7 @@ class AlignSpansTest(unittest.TestCase):
                     return [{"sense_id": "S1", "canonical_ko": "고정 디코더", "definition_kind": "paper_glossary",
                              "review_status": "approved", "ai_review_status": "first_pass_complete"}]
                 if table == "paper_translations":
-                    return [{"sentence_id": "A01", "translation_ko": "검증된 궤적과 고정 디코더로 SFT를 한다."}]
+                    return [{"sentence_id": "A01", "translation_ko": "검증된 궤적과 고정 디코더, 동결 인코더로 SFT를 한다."}]
                 return []
 
             def update(self, table, data, **key):
@@ -156,7 +162,7 @@ class AlignSpansTest(unittest.TestCase):
         with mock.patch.object(llm, "stream_chat", return_value={"content": json.dumps(reply, ensure_ascii=False), "finish_reason": "stop"}):
             glossary.align_spans(FakeDb(), "k")
         # 영문이 번역문에 그대로 있으면 LLM 없이, 사전 대응어도 그대로, 나머지만 LLM(번역문에 있는 글자만)
-        self.assertEqual(updates, {0: "SFT", 1: "검증된 궤적", 2: "고정 디코더"})
+        self.assertEqual(updates, {0: "SFT", 1: "검증된 궤적", 2: "고정 디코더", 3: "동결 인코더"})
 
 
 class NewsTermsTest(unittest.TestCase):
@@ -411,6 +417,22 @@ HF_FEED = b"""<?xml version="1.0"?><rss><channel>
 
 
 class OfficialNewsTest(unittest.TestCase):
+    def test_merge_same_story_keeps_official_source(self):
+        d = lambda day: official_news.datetime(2026, 10, day, tzinfo=official_news.timezone.utc)
+        item = lambda src, title, day, cat=None, kind="post": {"source": src, "source_label": src, "kind": kind,
+                                                                "category": cat, "title_en": title, "published_at": d(day), "url": src + title}
+        hf = item("nvidia", "Nemotron-4-Ultra: open reasoning model for agents", 20, "Hugging Face Blog")
+        blog = item("nvidia_dev", "Introducing Nemotron-4-Ultra, an open reasoning model", 21)
+        other = item("nvidia", "Faster Kubernetes runtimes for Dynamo", 21)
+        notice = item("openai_community", "GPT-6.1 Terra is now available in the API", 22, kind="notice")
+        news = item("openai", "Introducing GPT-6.1 Terra", 21)
+        late = item("openai", "Introducing GPT-6.1 Terra", 28)  # 3일이 넘으면 다른 소식
+        hot = item("hn", "Introducing GPT-6.1 Terra", 21, kind="hot")
+        kept, dropped = official_news.merge_official([hf, blog, other, notice, news, late, hot])
+        # HF 블로그·커뮤니티 공지보다 회사 블로그 쪽을 남기고, 화제(HN)는 여기서 건드리지 않는다
+        self.assertEqual(dropped, [hf, notice])
+        self.assertEqual(kept, [blog, other, news, late, hot])
+
     NOW = official_news.datetime(2026, 10, 26, tzinfo=official_news.timezone.utc)
 
     def test_openai_keeps_dev_categories_within_window(self):
