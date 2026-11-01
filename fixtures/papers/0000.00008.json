@@ -13,7 +13,7 @@
   "published_at": "2026-10-17",
   "hf_url": "https://huggingface.co/papers/0000.00008",
   "arxiv_url": "https://arxiv.org/abs/0000.00008",
-  "topic_primary": "multimodal",
+  "topic_primary": "vision",
   "topic_secondary": null,
   "ai_status": "ready",
   "summary_ko": "텍스트로 이미지를 편집할 때 선택한 영역이 움직이지 않도록 배치 제약을 더한 연구예요.",

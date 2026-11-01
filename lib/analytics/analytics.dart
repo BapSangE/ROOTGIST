@@ -155,7 +155,8 @@ class AppAnalytics {
 
   void category(String? code) {
     if (code != null &&
-        !const {'llm', 'agent', 'multimodal', 'optimization'}.contains(code)) {
+        !const {'llm', 'agent', 'multimodal', 'vision', 'audio', 'robotics', 'optimization', 'eval', 'other'}
+            .contains(code)) {
       return;
     }
     _send('category_selected', {

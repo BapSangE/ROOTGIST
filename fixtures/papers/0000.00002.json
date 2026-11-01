@@ -12,7 +12,7 @@
   "published_at": "2026-10-18",
   "hf_url": "https://huggingface.co/papers/0000.00002",
   "arxiv_url": "https://arxiv.org/abs/0000.00002",
-  "topic_primary": "multimodal",
+  "topic_primary": "vision",
   "topic_secondary": null,
   "ai_status": "ready",
   "summary_ko": "소수 예시 기반 영상 분할 모델이 학습 때와 다른 장면에서도 잘 작동하는지 살펴본 연구예요. 장면 유형을 분리한 평가 구성을 만들었고, 장면 유형이 달라지면 시험한 모든 모델의 정확도가 떨어졌다고 해요.",

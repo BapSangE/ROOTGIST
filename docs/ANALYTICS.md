@@ -98,7 +98,7 @@ flutter build ipa --release --build-number="$NEXT_BUILD_NUMBER" \
 | `term_opened` | 실제 용어 바텀 시트 열기 | `highlighted`, `has_translation` |
 | `bookmark_added` | 로컬 북마크 저장/되돌리기 | `content_kind`, `content_id`, 되돌리기일 때 `restored=true` |
 | `bookmark_removed` | 단일 북마크 해제 | `content_kind`, `content_id` |
-| `category_selected` | 홈/지난 논문 주제 칩 선택 | `scope=paper_topic`, `category=all/llm/agent/multimodal/optimization` |
+| `category_selected` | 홈/지난 논문 주제 칩 선택 | `scope=paper_topic`, `category=all/llm/agent/multimodal/vision/audio/robotics/optimization/eval/other` |
 | `category_selected` | 탐색의 실제 표시 분류 변경/진입 | `scope=explore`, `category=papers/news/updates/models` |
 | `reader_active_time` | 리더 화면 이탈, 활성 해제, 30초 체크포인트 | `content_id`, `active_ms`, `reason=navigation/background/checkpoint` |
 

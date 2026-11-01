@@ -79,12 +79,20 @@ class ValidateTest(unittest.TestCase):
             "evidence": output(key_points=[{"claim_ko": "x", "evidence_sentence_ids": ["A04"]}]),  # link 문장
             "term": output(glossary=[{**output()["glossary"][0], "term": "Toy routing"}]),  # 대소문자 다름
             "foreign": output(title_ko="가상 題目"),
-            "schema": output(topic_tags=["vision"]),
+            "schema": output(topic_tags=["biology"]),
             "mode": output(glossary_mode="fixed_terms"),
         }
         for kind, out in cases.items():
             with self.subTest(kind):
                 self.assertTrue(any(e.startswith(kind) for e in validate.check(out, s)), validate.check(out, s))
+
+    def test_topic_codes_match(self):
+        enum = set(validate.SCHEMA["properties"]["topic_tags"]["items"]["enum"])
+        self.assertEqual(enum, validate.ALLOWED_TOPICS)
+        self.assertEqual(set(llm.allowed_topics()), enum)  # 기본 프롬프트는 모든 코드를 쓴다
+        self.assertEqual(llm.allowed_topics("v0.6.1"), ["llm", "agent", "multimodal", "optimization", "other"])
+        user = llm.build_messages("T", "S", sentences())[1]["content"]
+        self.assertIn('allowed_topics: ["llm","agent","robotics","vision","audio","multimodal","optimization","eval","other"]', user)
 
     def test_postprocess_and_highlight(self):
         out = validate.postprocess(output(summary_ko="30\\% 개선, 4 times 4, 3\\times 빠름, GPU~A"))

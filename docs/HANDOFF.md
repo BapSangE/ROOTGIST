@@ -143,7 +143,7 @@ HF Daily Papers에서 **매일 상위 10편**을 골라, 초록만 근거로 한
 | `key_points[]` | 0~3개 `{claim_ko, evidence_sentence_ids[1..4]}` | S01 추천 카드 불릿(최대 2), S02 「핵심 내용」, C01 |
 | `sentence_translations[]` | `{sentence_id, translation_ko}`, `kind=text` 문장 전부 1:1 | S03 문장 쌍, C01 번역 줄 |
 | `glossary[]` | 0~8개 `{term, definition_ko, context_ko, sentence_ids, term_id, term_difficulty, explanation_level}` | S03 하이라이트, C02 |
-| `topic_tags[]` | 1~2개, 첫 항목이 대표. `llm`·`agent`·`multimodal`·`optimization`·`other` | 배지, 필터 칩, S04 「대표 분야」 |
+| `topic_tags[]` | 1~2개, 첫 항목이 대표. `llm`·`agent`·`robotics`·`vision`·`audio`·`multimodal`·`optimization`·`eval`·`other`(p2 v0.6.2부터, 이전은 앞의 5개 중) | 배지, 필터 칩, S04 「대표 분야」 |
 | `limitations[]` | 문자열 배열 | MVP 화면 미사용(저장만) |
 
 운영 모드 [제안]: **`auto_select` 1회 호출만**(용어 DB가 아직 없으므로 `fixed_terms` 불가. 비용 월 약 $1.2).
@@ -727,7 +727,7 @@ assets/
 | G3 | C02 「이 논문에서의 뜻」 내용 | 스키마에 `definition_ko`(일반 정의)와 `context_ko`(이 초록 용례) 둘. 시안 문장은 사전식 명사형(=정의 쪽) | `definition_ko`를 본문으로. `context_ko`는 MVP 미표시 |
 | G4 | 요약 표시 상한 | 실측 396~669자, ops config는 앱이 상한을 정하라고 함 | S02는 전문 표시(상세 화면이므로). 실기기 확인 후 필요하면 상한 |
 | G5 | 원문 LaTeX 표시 | 명세 「원문은 저장된 문자열 그대로」 vs A6 「원문 표시에도 같은 변환」 | 저장은 그대로, **표시만 A6 변환** |
-| G6 | 분야 칩 이름 | 시안 칩(언어 모델·컴퓨터 비전·강화학습)은 예시. 실제 코드는 5개 | `llm`=언어 모델, `agent`=에이전트, `multimodal`=멀티모달, `optimization`=모델 최적화, `other`=기타(칩 없음, 「전체」에서만). 그날 있는 대표 분야만 칩으로, 순서 고정 |
+| G6 | 분야 칩 이름 | 시안 칩(언어 모델·컴퓨터 비전·강화학습)은 예시. 실제 코드는 9개(p2 v0.6.2, 2026-11-01. 그전 5개는 `multimodal`이 이미지 생성·3D·로봇까지 받아 칩이 대부분 멀티모달이었다) | `llm`=언어 모델, `agent`=에이전트(디지털 환경), `multimodal`=멀티모달(여러 모달리티를 함께), `vision`=컴퓨터 비전(이미지·영상·3D), `audio`=음성·오디오, `robotics`=로봇(체화·VLA), `optimization`=모델 최적화(효율), `eval`=벤치마크·평가, `other`=기타. 그날 있는 대표 분야만 칩으로, 이 순서 고정 |
 | G7 | 데이터 출처 화면 | 시안 없음 | 텍스트 화면: HF Daily Papers 수집, upvote 기준 상위 10편(ROOTGIST 독자 평가가 아님), 원문 링크 HF·arXiv |
 | G8 | 게시 조직 표시 | A5는 「게시 조직」 표기 결정, UI v2.1 원문 정보 카드는 출처·발행일 2행 | `org_name` 있을 때만 원문 정보 카드에 「게시 조직」 행 추가. 저자 옆에는 쓰지 않음 |
 | G9 | 오늘의 주요 연구 선정 | 규칙 미확정(MVP v1.2 3.2는 제안 상태) | 선별 1위 중 `ai_status=ready`이고 근거 있는 핵심 내용 1개 이상인 첫 논문 |

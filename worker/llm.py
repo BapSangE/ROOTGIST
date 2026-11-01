@@ -15,8 +15,9 @@ ROOT = Path(__file__).resolve().parent.parent
 # 버전 → 문서. v0.6은 내부 테스트용 기본값(2026-10-23, 3편 확인 2회). 운영 제공처 전환 때 v0.5.2와 다시 비교한다.
 PROMPTS = {"v0.5.2": ROOT / "docs" / "contract" / "p2_prompt_v0.5.2.md",
            "v0.6": ROOT / "docs" / "contract" / "p2_prompt_v0.6.md",
-           "v0.6.1": ROOT / "docs" / "contract" / "p2_prompt_v0.6.1.md"}
-DEFAULT_PROMPT = "v0.6.1"
+           "v0.6.1": ROOT / "docs" / "contract" / "p2_prompt_v0.6.1.md",
+           "v0.6.2": ROOT / "docs" / "contract" / "p2_prompt_v0.6.2.md"}
+DEFAULT_PROMPT = "v0.6.2"  # 2026-11-01: 분야 코드 5개 → 9개(「논문 알약이 다 멀티모달」)
 SCHEMA_VERSION = "p2-output-v0.2"
 NVIDIA_ENDPOINT = "https://integrate.api.nvidia.com/v1/chat/completions"
 DEEPSEEK_ENDPOINT = "https://api.deepseek.com/chat/completions"
@@ -68,6 +69,12 @@ def load_prompt(version: str = DEFAULT_PROMPT) -> tuple[str, str]:
     return system, mode_b
 
 
+def allowed_topics(version: str = DEFAULT_PROMPT) -> list[str]:
+    """프롬프트 문서 USER TEMPLATE의 allowed_topics 줄. 버전마다 분야 코드가 다르다(v0.6.2부터 9개)."""
+    doc = PROMPTS[version].read_text(encoding="utf-8")
+    return json.loads(re.search(r"^allowed_topics: (\[.*\])$", doc, re.M).group(1))
+
+
 def sha256(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
@@ -87,7 +94,7 @@ def build_messages(title_en: str, abstract: str, sentences: list[dict],
         f"original_title: {title_en}",
         f"abstract_sha256: {sha256(abstract)}",
         f"source_sentences: {json.dumps(src, ensure_ascii=False)}",
-        'allowed_topics: ["llm","agent","multimodal","optimization","other"]',
+        f"allowed_topics: {json.dumps(allowed_topics(version), separators=(',', ':'))}",
         'explanation_level: "standard"',
         # v0.6부터: 승인된 사전 표기(없으면 빈 목록). v0.5.2 템플릿에는 없는 줄이다.
         *([f"preferred_terms: {json.dumps(preferred_terms or [], ensure_ascii=False)}"] if version != "v0.5.2" else []),

@@ -176,7 +176,7 @@ void main() {
     expect(all.featured!.id, '0000.00001'); // 1위가 pending → 2위(G9)
     expect(all.list.length, 5); // 추천 논문은 목록에서 빠짐
     expect(all.list.first.title, 'Benchmarking Long-Context Retrieval'); // pending은 영문 제목(G14)
-    expect(all.chips, ['llm', 'agent', 'multimodal', 'optimization']);
+    expect(all.chips, ['llm', 'agent', 'vision', 'optimization']); // 영상 분할은 multimodal이 아니라 vision(p2 v0.6.2)
 
     final opt = HomeView(papers, 'optimization');
     expect(opt.total, 6); // 헤드라인 편수는 전체 기준

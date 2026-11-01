@@ -10,7 +10,8 @@ from jsonschema import Draft202012Validator
 
 SCHEMA = json.loads((Path(__file__).resolve().parent.parent / "docs" / "contract" / "p2_output_schema_v0.2.json").read_text(encoding="utf-8"))
 _validator = Draft202012Validator(SCHEMA)
-ALLOWED_TOPICS = {"llm", "agent", "multimodal", "optimization", "other"}
+# 스키마 enum = 모든 프롬프트 버전의 분야 코드 합(v0.6.2에서 vision·audio·robotics·eval 추가, 2026-11-01).
+ALLOWED_TOPICS = {"llm", "agent", "robotics", "vision", "audio", "multimodal", "optimization", "eval", "other"}
 # 한자(CJK 통합·확장 A·호환), 히라가나, 가타카나
 FOREIGN = re.compile(r"[぀-ヿ㐀-䶿一-鿿豈-﫿]")
 KO_FIELDS = ("title_ko", "summary_ko")

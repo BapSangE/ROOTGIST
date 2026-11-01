@@ -1,11 +1,18 @@
 // HANDOFF 4.3 ② 하루 다이제스트, ③ 논문 상세.
 
-// G6: 분야 코드 → 칩 이름. other는 칩 없음(「전체」에서만).
+// G6: 분야 코드 → 칩 이름. 순서가 칩 순서다.
+// p2 프롬프트 v0.6.2(2026-11-01)에서 5개 → 9개. 이전 multimodal은 이미지 생성·3D·로봇까지 받아 칩이 다 「멀티모달」이었다.
+// other도 칩 없이 두면 분류가 빠진 것처럼 보여 「기타」로 둔다.
 const topicLabels = {
   'llm': '언어 모델',
   'agent': '에이전트',
   'multimodal': '멀티모달',
+  'vision': '컴퓨터 비전',
+  'audio': '음성·오디오',
+  'robotics': '로봇',
   'optimization': '모델 최적화',
+  'eval': '벤치마크·평가',
+  'other': '기타',
 };
 
 class PaperItem {
