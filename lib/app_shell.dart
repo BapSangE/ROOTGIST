@@ -33,7 +33,7 @@ Page<void> _page(GoRouterState state, Widget child) => MaterialPage<void>(
   child: _PageBackground(child: Material(type: MaterialType.transparency, child: child)),
 );
 
-// 페이지 바탕. 페이지 위젯은 라우터가 한 번 만들어 들고 있어, 색을 build에서 읽어야 화면 바탕을 바꿀 때 따라온다.
+// 페이지 바탕. 페이지 위젯은 라우터가 한 번 만들어 들고 있어, 색을 build에서 읽어야 화면 모드를 바꿀 때 따라온다.
 class _PageBackground extends StatelessWidget {
   const _PageBackground({required this.child});
   final Widget child;

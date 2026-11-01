@@ -33,7 +33,7 @@ Future<void> initStorage() async {
   newsSeenAt.value = DateTime.tryParse(prefs.getString('unread.newsSeenAt') ?? '');
   modelsSeen.value = {...?(jsonDecode(prefs.getString('unread.modelsSeen') ?? 'null') as Map?)?.cast<String, String>()};
   readerDefaultMode.value = ReaderMode.values.asNameMap()[prefs.getString('settings.readerMode')] ?? ReaderMode.together;
-  backdrop.value = Backdrop.values.asNameMap()[prefs.getString('settings.backdrop')] ?? Backdrop.white;
+  prefs.remove('settings.backdrop'); // 「종이」 바탕을 뺐다(2026-11-01). 남은 값은 지운다
   appearance.value = Appearance.values.asNameMap()[prefs.getString('settings.appearance')] ?? Appearance.system;
   final scale = prefs.getDouble('settings.readerScale');
   if (readerScales.any((s) => s.$1 == scale)) readerScale.value = scale!;
@@ -45,6 +45,5 @@ Future<void> initStorage() async {
   modelsSeen.addListener(() => prefs.setString('unread.modelsSeen', jsonEncode(modelsSeen.value)));
   readerDefaultMode.addListener(() => prefs.setString('settings.readerMode', readerDefaultMode.value.name));
   readerScale.addListener(() => prefs.setDouble('settings.readerScale', readerScale.value));
-  backdrop.addListener(() => prefs.setString('settings.backdrop', backdrop.value.name));
   appearance.addListener(() => prefs.setString('settings.appearance', appearance.value.name));
 }

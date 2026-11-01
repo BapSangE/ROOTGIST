@@ -3,9 +3,8 @@ import 'package:flutter/material.dart';
 // 리디자인 「Ink & Paper」(design-preview/DESIGN_SYSTEM.md). 화면 코드에 HEX·숫자를 직접 쓰지 않는다.
 // 검정 잉크와 바탕만으로 위계를 만든다: 색은 새 글 점(빨강)과 리더 용어 하이라이트(노랑)뿐이다.
 
-// 화면 바탕 두 가지(설정 › 읽기 설정 › 화면 바탕). 배치는 같고 바탕·카드·선·새 글 점만 다르다.
-// 흰색(기본): 흰 바탕 + 연한 회색 카드 + 선명한 빨간 점. 종이: 따뜻한 바탕 + 흰 카드 + 로고 주황 점(Ink & Paper 첫 시안).
-enum Backdrop { white, paper }
+// 밝은 화면: 회청 바탕 + 흰 카드 + 선명한 빨간 점(홈 시안 home_re의 면을 앱 전체로, 2026-10-31).
+// 「종이」 바탕 고르기는 2026-11-01 뺐다(사용자 요청). 어두운 화면은 아래 dark 한 벌.
 
 class RgPalette {
   const RgPalette({
@@ -22,17 +21,17 @@ class RgPalette {
   final Color bgApp, bgReading, surfaceCard, fill, line, divider, grabber, newDot, newText;
 
   static const white = RgPalette(
-    bgApp: Color(0xFFFFFFFF),
-    bgReading: Color(0xFFFFFFFF),
-    surfaceCard: Color(0xFFF4F4F2), // 연한 회색 카드(보조 글자 대비 4.9:1)
-    fill: Color(0xFFE7E7E3), // 회색 카드 위에서도 칩·태그가 보이게 한 단계 진하게
-    line: Color(0xFFE6E6E3),
-    divider: Color(0xFFE3E3E0),
-    grabber: Color(0xFFD9D9D6),
+    bgApp: Color(0xFFEDEFF2), // 홈과 같은 회청 바탕(보조 글자 대비 4.6:1)
+    bgReading: Color(0xFFFFFFFF), // 리더는 흰 종이 그대로
+    surfaceCard: Color(0xFFFFFFFF), // 흰 카드 + 아주 옅은 그림자(RgShadow.card)
+    fill: Color(0xFFE3E6EA), // 흰 카드 위 칩·태그, 바탕 위 세그먼트 바닥 둘 다 보이는 차가운 회색
+    line: Color(0xFFDDE0E5),
+    divider: Color(0xFFE8EAED), // 카드 안 행 사이(홈 카드 구분선과 같은 밝기)
+    grabber: Color(0xFFD0D4DA),
     newDot: Color(0xFFF0362B), // 선명한 빨강
     newText: Color(0xFFD42A20), // 「새 글」 글자: 점보다 한 단계 진하게(회색 카드 위 4.6:1)
   );
-  // 어두운 화면(설정 › 화면 모드). 바탕 선택(흰색·종이)과 상관없이 이 한 벌.
+  // 어두운 화면(설정 › 화면 모드).
   static const dark = RgPalette(
     bgApp: Color(0xFF0C0C0B), // 카드와 차이를 벌리려 거의 검정(사용자 피드백)
     bgReading: Color(0xFF0F0F0E),
@@ -44,31 +43,18 @@ class RgPalette {
     newDot: Color(0xFFFF5449),
     newText: Color(0xFFFF6A5F), // 카드 위 5.7:1
   );
-  static const paper = RgPalette(
-    bgApp: Color(0xFFF4F4F1),
-    bgReading: Color(0xFFFAFAF7),
-    surfaceCard: Color(0xFFFFFFFF),
-    fill: Color(0xFFEBEBE6),
-    line: Color(0xFFE4E4DF),
-    divider: Color(0xFFE4E4DF),
-    grabber: Color(0xFFD9D9D3),
-    newDot: Color(0xFFE0533A), // 로고 주황
-    newText: Color(0xFFC2462E), // 「새 글」 글자(종이 바탕 위 4.5:1)
-  );
 }
 
-// 지금 고른 바탕·화면 모드. 바꾸면 main.dart가 앱 전체를 다시 그린다. 저장은 storage.dart.
-final backdrop = ValueNotifier(Backdrop.white);
-
+// 지금 고른 화면 모드. 바꾸면 main.dart가 앱 전체를 다시 그린다. 저장은 storage.dart.
 enum Appearance { system, light, dark }
 
 final appearance = ValueNotifier(Appearance.system);
 final platformDark = ValueNotifier(false); // 기기 설정의 다크 모드(main.dart가 맞춘다)
 bool get isDark => appearance.value == Appearance.dark || (appearance.value == Appearance.system && platformDark.value);
-RgPalette get _p => isDark ? RgPalette.dark : (backdrop.value == Backdrop.paper ? RgPalette.paper : RgPalette.white);
+RgPalette get _p => isDark ? RgPalette.dark : RgPalette.white;
 RgInk get _i => isDark ? RgInk.dark : RgInk.light;
 
-// 바탕(흰색·종이)과 상관없이 밝은/어두운 화면에서만 갈리는 색
+// 밝은/어두운 화면에서만 갈리는 색(바탕·카드처럼 팔레트에 든 것 말고)
 class RgInk {
   const RgInk({
     required this.surfaceRaised,
@@ -119,7 +105,7 @@ class RgInk {
 }
 
 abstract class RgColors {
-  // 바탕·화면 모드에 따라 바뀌는 색(getter라 const 안에 쓸 수 없다)
+  // 화면 모드에 따라 바뀌는 색(getter라 const 안에 쓸 수 없다)
   static Color get bgApp => _p.bgApp;
   static Color get bgReading => _p.bgReading;
   static Color get surfaceCard => _p.surfaceCard; // 카드
@@ -153,9 +139,9 @@ abstract class RgColors {
 }
 
 // 홈 화면만의 면(디자이너 시안 home_re 2026-10-31): 회청 바탕 + 흰 카드(둥글기 28, 아주 옅은 그림자).
-// 다른 화면은 아직 기존 바탕(흰색·종이)이라 홈에서만 쓴다. 종이 바탕·어두운 화면은 그 바탕의 바탕·카드 색을 따른다.
+// 다른 화면도 흰색 바탕 팔레트를 이 면에 맞췄다(2026-10-31). 홈 칩·알약·논문 카드처럼 홈에만 있는 색은 여기 둔다.
 abstract class RgHome {
-  static bool get _custom => !isDark && backdrop.value == Backdrop.white;
+  static bool get _custom => !isDark;
   static Color get bg => _custom ? const Color(0xFFEDEFF2) : _p.bgApp;
   static Color get card => _custom ? const Color(0xFFFFFFFF) : _p.surfaceCard;
   static List<BoxShadow> get cardShadow => isDark ? const [] : const [BoxShadow(color: Color(0x08000000), blurRadius: 15)];
@@ -208,7 +194,8 @@ abstract class RgMotion {
 abstract class RgSpace {
   static const s2 = 2.0, s4 = 4.0, s6 = 6.0, s8 = 8.0, s10 = 10.0, s12 = 12.0, s14 = 14.0,
       s16 = 16.0, s18 = 18.0, s20 = 20.0, s22 = 22.0, s24 = 24.0, s28 = 28.0, s32 = 32.0, s36 = 36.0, s40 = 40.0;
-  static const gutterCard = 16.0, gutterText = 20.0, gutterReader = 24.0;
+  // 카드·글 좌우 여백은 홈 시안과 같은 24(2026-10-31, 이전 16·20). 홈은 homeGutter를 따로 쓴다
+  static const gutterCard = 24.0, gutterText = 24.0, gutterReader = 24.0;
   // 탭바가 바닥에 붙어(Scaffold.bottomNavigationBar) 본문이 그 위에서 끝난다. 스크롤 끝 여백만.
   static const topBar = 52.0, bottomScrollInset = 40.0, minTouch = 44.0;
   static const floatingBottom = 30.0; // 리더 떠 있는 조절 알약의 하단 띄움
@@ -216,11 +203,13 @@ abstract class RgSpace {
 }
 
 abstract class RgRadius {
-  static const card = 22.0, cardDark = 26.0, sheet = 30.0, box = 16.0, badge = 10.0, term = 4.0, pill = 999.0;
+  static const card = 28.0, cardDark = 28.0, // 홈 카드와 같은 둥글기(이전 22·26)
+      sheet = 30.0, box = 16.0, badge = 10.0, term = 4.0, pill = 999.0;
 }
 
-// 그림자는 쓰지 않는다. 예외는 세그먼트의 선택 알약 하나(1px, 6%).
+// 그림자: 카드의 아주 옅은 번짐(홈 시안, 어두운 화면엔 없음)과 세그먼트의 선택 알약(1px, 6%).
 abstract class RgShadow {
+  static List<BoxShadow> get card => RgHome.cardShadow;
   static const segment = [BoxShadow(color: Color(0x0F000000), offset: Offset(0, 1), blurRadius: 2)];
   static const thumb = [BoxShadow(color: Color(0x40000000), offset: Offset(0, 1), blurRadius: 4)]; // 글자 크기 슬라이더
 }

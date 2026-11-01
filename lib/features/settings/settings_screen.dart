@@ -372,10 +372,10 @@ class ReadingSettingsScreen extends StatelessWidget {
         const SizedBox(height: RgSpace.s12),
         card('글자 크기', 'AI 요약·핵심 내용과 초록 리더 본문에 적용돼요', const TextSizePicker()),
         const SizedBox(height: RgSpace.s12),
-        // 화면 모드: 기본은 기기 설정을 따른다. 어둡게면 바탕(흰색·종이) 대신 어두운 한 벌을 쓴다.
+        // 화면 모드: 기본은 기기 설정을 따른다
         card(
           '화면 모드',
-          '어두운 화면에서는 아래 화면 바탕 대신 어두운 색을 써요',
+          '기기의 다크 모드를 따르거나 밝게·어둡게로 고정해요',
           ValueListenableBuilder(
             valueListenable: appearance,
             builder: (_, a, _) => Column(children: [
@@ -392,34 +392,11 @@ class ReadingSettingsScreen extends StatelessWidget {
                   trailing: _BackdropSwatch(
                     palette: switch (v) {
                       Appearance.dark => RgPalette.dark,
-                      Appearance.light => backdrop.value == Backdrop.paper ? RgPalette.paper : RgPalette.white,
-                      Appearance.system => platformDark.value ? RgPalette.dark : (backdrop.value == Backdrop.paper ? RgPalette.paper : RgPalette.white),
+                      Appearance.light => RgPalette.white,
+                      Appearance.system => platformDark.value ? RgPalette.dark : RgPalette.white,
                     },
                   ),
                   onTap: () => appearance.value = v,
-                ),
-            ]),
-          ),
-        ),
-        const SizedBox(height: RgSpace.s12),
-        // 화면 바탕: 기본은 흰색, 첫 리디자인 시안(따뜻한 종이)은 고를 수 있게 남겼다. 고르면 앱 전체가 바로 바뀐다.
-        card(
-          '화면 바탕',
-          '밝은 화면의 바탕과 카드 색이에요',
-          ValueListenableBuilder(
-            valueListenable: backdrop,
-            builder: (_, b, _) => Column(children: [
-              for (final (i, (v, label, desc, palette)) in const [
-                (Backdrop.white, '흰색', '흰 바탕에 연한 회색 카드', RgPalette.white),
-                (Backdrop.paper, '종이', '따뜻한 종이색 바탕에 흰 카드', RgPalette.paper),
-              ].indexed)
-                _RadioRow(
-                  label: label,
-                  desc: desc,
-                  selected: v == b,
-                  divider: i > 0,
-                  trailing: _BackdropSwatch(palette: palette),
-                  onTap: () => backdrop.value = v,
                 ),
             ]),
           ),
@@ -442,7 +419,7 @@ class _RadioRow extends StatelessWidget {
   final String label, desc;
   final bool selected, divider;
   final VoidCallback onTap;
-  final Widget? trailing; // 오른쪽 견본(화면 바탕)
+  final Widget? trailing; // 오른쪽 견본(화면 모드)
 
   @override
   Widget build(BuildContext context) => Semantics(
@@ -482,7 +459,7 @@ class _RadioRow extends StatelessWidget {
   );
 }
 
-// 화면 바탕 견본: 바탕 위에 카드 하나와 새 글 점(고르기 전에 차이가 보이게). 지금 바탕과 상관없이 그 팔레트 색.
+// 화면 모드 견본: 바탕 위에 카드 하나와 새 글 점(고르기 전에 차이가 보이게). 지금 모드와 상관없이 그 팔레트 색.
 class _BackdropSwatch extends StatelessWidget {
   const _BackdropSwatch({required this.palette});
   final RgPalette palette;

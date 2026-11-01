@@ -262,7 +262,7 @@ class _ModelDetailScreenState extends State<ModelDetailScreen> {
               child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 _Stat('하는 일', m.taskKo, first: true),
                 _Stat('크기', m.paramsKo ?? '정보 없음', muted: m.paramsKo == null),
-                _Stat('라이선스', m.licenseKo ?? '정보 없음', muted: m.licenseKo == null),
+                _Stat('라이선스', m.licenseKo ?? '정보 없음', muted: m.licenseKo == null, flex: 4), // 「Apache-2.0」이 한 줄에 들게 조금 넓게
               ]),
             ),
           ),
@@ -433,12 +433,14 @@ class _Fact extends StatelessWidget {
 
 // 한눈에 한 칸: 작은 이름 + 굵은 값. 첫 칸이 아니면 왼쪽에 세로 가는 선.
 class _Stat extends StatelessWidget {
-  const _Stat(this.label, this.value, {this.first = false, this.muted = false});
+  const _Stat(this.label, this.value, {this.first = false, this.muted = false, this.flex = 3});
   final String label, value;
   final bool first, muted;
+  final int flex;
 
   @override
   Widget build(BuildContext context) => Expanded(
+    flex: flex,
     child: Container(
       padding: EdgeInsets.only(left: first ? 0 : RgSpace.s12, right: RgSpace.s4),
       decoration: BoxDecoration(border: first ? null : Border(left: BorderSide(color: RgColors.dividerCard))),

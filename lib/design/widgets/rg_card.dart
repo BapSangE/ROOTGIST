@@ -4,7 +4,7 @@ import '../tokens.dart';
 import '../typography.dart';
 import 'rg_pressable.dart';
 
-// RgCard: 폭 = 화면 − 32. 바깥 좌우 16 여백까지 포함한다.
+// RgCard: 폭 = 화면 − 48. 바깥 좌우 24 여백까지 포함한다. 흰 면 + 둥글기 28 + 옅은 그림자(홈 카드와 같은 모양).
 class RgCard extends StatelessWidget {
   const RgCard({super.key, required this.child, this.padding = EdgeInsets.zero});
   final Widget child;
@@ -18,6 +18,7 @@ class RgCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: RgColors.surfaceCard,
           borderRadius: BorderRadius.circular(RgRadius.card),
+          boxShadow: RgShadow.card,
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(RgRadius.card),
@@ -93,7 +94,7 @@ class RgFeaturedCard extends StatelessWidget {
     padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
     child: Container(
       padding: padding,
-      decoration: BoxDecoration(color: RgColors.surfaceCard, borderRadius: BorderRadius.circular(RgRadius.cardDark)),
+      decoration: BoxDecoration(color: RgColors.surfaceCard, borderRadius: BorderRadius.circular(RgRadius.cardDark), boxShadow: RgShadow.card),
       child: child,
     ),
   );

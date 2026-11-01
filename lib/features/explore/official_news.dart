@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -15,9 +14,10 @@ import '../../design/widgets/rg_underline_tabs.dart';
 import '../../design/widgets/rg_states.dart';
 import '../../data/unread.dart';
 import '../home/briefing.dart';
-import '../../design/widgets/rg_new_dot.dart';
 import '../../design/widgets/rg_row_head.dart';
 import '../common/item_actions.dart';
+import '../home/home_sections.dart';
+import 'date_groups.dart';
 
 // S04 「공식 소식」 칸(PROPOSALS P8d·P9 A안). 발표(연구소 블로그) | 업데이트(커뮤니티 공지·릴리스).
 // 글마다 AI 요약과 핵심 내용만 한국어로 보이고, 핵심 내용은 원문의 근거 문단으로, 상세는 원문 링크로 보낸다.
@@ -33,7 +33,7 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
   late var _tab = newsTab.value = exploreJump.value?.newsTab ?? 0; // 0 발표, 1 업데이트, 2 화제
   bool get _updates => _tab == 1;
   String? _source; // null = 전체
-  var _hnOpen = false; // 개발자 화제: Hacker News 6위부터 펼침
+  String? _hot; // 개발자 화제 칩: null 전체, 'hn', 'github'
 
   // 홈 「업데이트 더 보기」로 들어오면 업데이트를, 「공식 발표 더 보기」면 발표를 고른다
   void _jump() {
@@ -42,26 +42,13 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
       setState(() {
         _tab = newsTab.value = j.newsTab;
         _source = null;
+        _hot = null;
       });
     }
   }
 
   // 「여기까지 봤어요」: 이 화면을 열기 전 값(이번에 연 뒤에는 맨 위 글 시각으로 바꾼다)
   final DateTime? _seenBefore = newsSeenAt.value;
-
-  // 날짜 머리별로 나눈다(받은 순서 = 최신순 유지)
-  List<(String, List<OfficialNews>)> _byDay(List<OfficialNews> list, DateTime now) {
-    final out = <(String, List<OfficialNews>)>[];
-    for (final n in list) {
-      final day = dayHeaderKo(n.publishedAt, now);
-      if (out.isNotEmpty && out.last.$1 == day) {
-        out.last.$2.add(n);
-      } else {
-        out.add((day, [n]));
-      }
-    }
-    return out;
-  }
 
   // 지난번에 본 글 중 가장 새것(선은 그 글 바로 위에)
   OfficialNews? _firstSeen(List<OfficialNews> list) =>
@@ -102,6 +89,7 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
               onTap: (i) => setState(() {
                 _tab = newsTab.value = i;
                 _source = null;
+                _hot = null;
               }),
             ),
             ...switch (snap) {
@@ -151,31 +139,38 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
           ],
         ),
       ),
-      // 발표는 논문 목록처럼 짧은 행, 누르면 상세(실기기 QA: 한 화면이 너무 길었다). 업데이트는 4~5개라 카드 그대로.
-      // 발표·업데이트나 출처 칩을 바꾸면 목록이 떠오르며 바뀐다(RgFilterSwitch)
+      // 홈 카드 모양(2026-11-01): 발표는 한 묶음(하루·주·달)에 흰 카드 하나(홈 「오늘의 주요 소식」 행), 업데이트는 글마다 회사 색 카드(홈 「바뀐 도구」).
+      // 최근 7일은 하루씩, 그 앞은 주·달·해로 묶는다(DateGroups). 발표·업데이트나 출처 칩을 바꾸면 목록이 떠오르며 바뀐다(RgFilterSwitch)
       RgFilterSwitch(
         switchKey: (_tab, _source),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          if (_updates)
-            for (final n in shown) ...[const SizedBox(height: RgSpace.s12), _NewsCard(news: n)]
-          else
-            // 날짜 머리(오늘·어제·날짜)마다 카드 하나. 지난번에 본 맨 위 글 앞에 「여기까지 봤어요」 선
-            for (final (day, rows) in _byDay(shown, now)) ...[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s20, RgSpace.gutterText, RgSpace.s8),
-                child: Semantics(header: true, child: Text(day, style: RgText.meta.copyWith(fontWeight: FontWeight.w700, color: RgColors.textSecondary))),
-              ),
-              RgCard(
-                child: Column(children: [
-                  for (final (i, n) in rows.indexed) ...[
-                    if (_seenBefore case final seen? when n.publishedAt.compareTo(seen) <= 0 && shown.first.publishedAt.isAfter(seen) && _firstSeen(shown) == n)
-                      const _ReadLine(),
-                    NewsRow(news: n, last: i == rows.length - 1, summary: true),
-                  ],
-                ]),
-              ),
-            ],
-        ]),
+        child: DateGroups<OfficialNews>(
+          key: ValueKey((_tab, _source)),
+          items: shown,
+          at: (n) => n.publishedAt,
+          now: now,
+          builder: (context, rows) => Padding(
+            padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
+            child: _updates
+                ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: RgSpace.s10, children: [
+                    for (final n in rows) HomeUpdateCard(news: n, now: now),
+                  ])
+                : HomeCard(
+                    padding: const EdgeInsets.fromLTRB(20, 28, 20, 28),
+                    child: FutureBuilder(
+                      future: dictionary(),
+                      initialData: dictionaryValue,
+                      builder: (context, snap) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 32, children: [
+                        for (final (i, n) in rows.indexed) ...[
+                          // 지난번에 본 맨 위 글 앞에 「여기까지 봤어요」 선
+                          if (_seenBefore case final seen? when n.publishedAt.compareTo(seen) <= 0 && shown.first.publishedAt.isAfter(seen) && _firstSeen(shown) == n)
+                            const _ReadLine(),
+                          HomeStoryRow(news: n, now: now, last: i == rows.length - 1, keywords: newsKeywords(n, snap.data ?? const []), explore: true),
+                        ],
+                      ]),
+                    ),
+                  ),
+          ),
+        ),
       ),
       Padding(
         padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s12, RgSpace.gutterText, 0),
@@ -194,83 +189,52 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
     ];
   }
 
-  // 화제 칸(시안 B): Hacker News(최근 24시간, 점수 순) → GitHub 이번 주 새 AI 도구(별 순). 칩 거르기 없음
+  // 개발자 화제 칸: 「전체 | Hacker News | GitHub」 칩(발표·업데이트의 출처 칩과 같은 자리), 홈 개발자 화제 카드를 날짜로 묶어.
+  // 점수 단위가 달라(HN 추천 · GitHub 별) 한 줄로 섞어 세우지 않는다: 각자 점수 순, 「전체」는 둘을 한 개씩 번갈아 놓는다.
   List<Widget> _hotList(BuildContext context, List<OfficialNews> all) {
     final now = clock();
-    final hn = [for (final n in all) if (n.isHot && !n.isGithub && now.difference(n.publishedAt).inHours < 48) n]
-      ..sort((a, b) => (b.points ?? 0).compareTo(a.points ?? 0));
-    final gh = [for (final n in all) if (n.isGithub) n]..sort((a, b) => (b.points ?? 0).compareTo(a.points ?? 0));
-    // Hacker News는 하루 20건 안팎이라 다 펼치면 GitHub가 한참 아래로 밀린다(실데이터 2026-10-31: HN 20 · GitHub 1).
-    // 상위 5건만 보이고 나머지는 카드 아래 「더 보기」로 그 자리에서 펼친다(220ms, 동작 줄이기면 바로).
-    final d = RgMotion.of(context, RgMotion.base);
-    Widget group(String title, List<OfficialNews> rows, {bool fold = false}) {
-      final more = fold ? hotFoldCount(rows.length) : 0;
-      final shown = more > 0 ? rows.take(hotFoldTop) : rows;
-      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s20, RgSpace.gutterText, RgSpace.s8),
-          child: Semantics(header: true, child: Text(title, style: RgText.meta.copyWith(fontWeight: FontWeight.w700, color: RgColors.textSecondary))),
+    int byPoints(OfficialNews a, OfficialNews b) => (b.points ?? 0).compareTo(a.points ?? 0);
+    final hn = [for (final n in all) if (n.isHot && !n.isGithub) n]..sort(byPoints);
+    final gh = [for (final n in all) if (n.isGithub) n]..sort(byPoints);
+    final shown = switch (_hot) {
+      'hn' => hn,
+      'github' => gh,
+      _ => [for (var i = 0; i < hn.length || i < gh.length; i++) ...[if (i < hn.length) hn[i], if (i < gh.length) gh[i]]],
+    };
+    return [
+      const SizedBox(height: RgSpace.s14),
+      SizedBox(
+        height: RgFilterChip.touchHeight(context),
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
+          children: [
+            for (final (id, label) in [(null, '전체'), if (hn.isNotEmpty) ('hn', 'Hacker News'), if (gh.isNotEmpty) ('github', 'GitHub')]) ...[
+              RgFilterChip(label: label, selected: _hot == id, onTap: () => setState(() => _hot = id)),
+              const SizedBox(width: RgSpace.s8),
+            ],
+          ],
         ),
-        RgCard(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            for (final (i, n) in shown.indexed) HotRow(news: n, now: now, divider: i > 0, actions: true),
-            if (more > 0) ...[
-              AnimatedSize(
-                duration: d,
-                curve: RgMotion.curve,
-                alignment: Alignment.topCenter,
-                child: _hnOpen
-                    ? Column(children: [for (final n in rows.skip(hotFoldTop)) HotRow(news: n, now: now, actions: true)])
-                    : const SizedBox(width: double.infinity),
-              ),
-              Semantics(
-                button: true,
-                expanded: _hnOpen,
-                child: RgPressable(
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    setState(() => _hnOpen = !_hnOpen);
-                  },
-                  child: Container(
-                    constraints: const BoxConstraints(minHeight: RgSpace.minTouch + 4),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(border: Border(top: BorderSide(color: RgColors.dividerCard))),
-                    child: Row(mainAxisSize: MainAxisSize.min, spacing: RgSpace.s4, children: [
-                      Flexible(
-                        child: Text(
-                          _hnOpen ? '접기' : 'Hacker News $more건 더 보기',
-                          textAlign: TextAlign.center,
-                          style: RgText.meta.copyWith(fontWeight: FontWeight.w600, color: RgColors.textBody),
-                        ),
-                      ),
-                      // 아래(펼치기) ↔ 위(접기)
-                      AnimatedRotation(
-                        turns: _hnOpen ? -0.25 : 0.25,
-                        duration: d,
-                        curve: RgMotion.curve,
-                        child: RgIcon('chevron-right', size: 16, color: RgColors.textBody),
-                      ),
-                    ]),
-                  ),
+      ),
+      RgFilterSwitch(
+        switchKey: (_tab, _hot),
+        child: shown.isEmpty
+            ? Padding(
+                padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s24, RgSpace.gutterText, 0),
+                child: KeepAllText('아직 모은 개발자 화제가 없어요', style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
+              )
+            : DateGroups<OfficialNews>(
+                key: ValueKey(_hot),
+                items: shown,
+                at: (n) => n.publishedAt,
+                now: now,
+                builder: (context, rows) => Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: RgSpace.s16, children: [
+                    for (final n in rows) HomeTalkCard(news: n, now: now, explore: true),
+                  ]),
                 ),
               ),
-            ],
-          ]),
-        ),
-      ]);
-    }
-    return [
-      RgFilterSwitch(
-        switchKey: _tab,
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          if (hn.isEmpty && gh.isEmpty)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s24, RgSpace.gutterText, 0),
-              child: KeepAllText('아직 모은 개발자 화제가 없어요', style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
-            ),
-          if (hn.isNotEmpty) group('Hacker News · 최근 이틀', hn, fold: true),
-          if (gh.isNotEmpty) group('GitHub · 이번 주 새 AI 도구', gh),
-        ]),
       ),
       Padding(
         padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s12, RgSpace.gutterText, 0),
@@ -278,124 +242,13 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
           Padding(padding: EdgeInsets.only(top: 2), child: RgIcon('info', size: 14, color: RgColors.textSecondary)),
           Expanded(
             child: KeepAllText(
-              '개발자들이 많이 본 글과 새 도구예요. 공식 발표가 아니라 각 사이트의 글이고, 숫자는 Hacker News 추천(upvote) 수·GitHub 별 수예요. 요약은 원문 사이트가 허용할 때만 AI가 만들어요.',
+              '개발자들이 많이 본 글과 새 도구예요. 공식 발표가 아니라 각 사이트의 글이고, 숫자는 Hacker News 추천(upvote)·댓글 수와 GitHub 별 수예요. 요약은 원문 사이트가 허용할 때만 AI가 만들어요.',
               perSentence: true, style: RgText.caption.copyWith(color: RgColors.textSecondary),
             ),
           ),
         ]),
       ),
     ];
-  }
-}
-
-// 발표 한 줄(탐색 목록, 홈 하이라이트): 머리 줄(출처 칩 · 분류 · 날짜 · 새 글) + 제목, 누르면 상세. 오른쪽에 북마크.
-class NewsRow extends StatelessWidget {
-  const NewsRow({super.key, required this.news, required this.last, this.summary = false});
-  final OfficialNews news;
-  final bool last;
-  final bool summary; // 탐색 발표 목록: 제목 아래 두 줄 요약
-
-  @override
-  Widget build(BuildContext context) {
-    final n = news;
-    return RgListRow(
-      showDivider: !last,
-      onTap: () => context.push('/news/${Uri.encodeComponent(n.id)}'),
-      trailing: newsActions(n),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        NewsHead(news: n),
-        const SizedBox(height: RgSpace.s6),
-        KeepAllText(n.titleKo ?? n.titleEn, style: RgText.titleList),
-        // 두 줄 요약(시안 C): 목록만 훑어도 무슨 소식인지. 요약·핵심 내용·근거 전체는 상세에서
-        if ((summary ? (n.summaryKo ?? n.keyPoints.firstOrNull?.text) : null) case final s?) ...[
-          const SizedBox(height: RgSpace.s4),
-          KeepAllText(s, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.bodySmall.copyWith(color: RgColors.textBody)),
-        ],
-        if (n.thin && !n.isHot) ...[
-          const SizedBox(height: RgSpace.s8),
-          const RgTag(label: '원문 소개문만'),
-        ],
-      ]),
-    );
-  }
-}
-
-// 개발자 화제의 Hacker News 접기: 상위 hotFoldTop건만 보이고 나머지 건수를 「더 보기」로. 1건만 남으면 접지 않는다(그냥 보인다)
-const hotFoldTop = 5;
-int hotFoldCount(int length) => length > hotFoldTop + 1 ? length - hotFoldTop : 0;
-
-// 화제 한 줄(디자인 피드백 2026-10-31 5번): 「얼마나 뜨거운가」가 먼저 보이게 점수를 왼쪽 칸에 크게(주황),
-// 오른쪽은 제목 → (두 줄 요약) → 사이트 · 댓글 N · 시각. 회사 칩은 화제 글에 맞지 않아 쓰지 않는다.
-class HotRow extends StatelessWidget {
-  const HotRow({super.key, required this.news, required this.now, this.divider = true, this.summary = true, this.actions = false});
-  final OfficialNews news;
-  final DateTime now;
-  final bool divider;
-  final bool summary; // 탐색 화제 칸: 두 줄 요약. 홈은 제목만
-  final bool actions; // 탐색: 오른쪽 북마크
-
-  @override
-  Widget build(BuildContext context) {
-    final n = news;
-    final s = summary ? n.summaryKo : null;
-    final meta = [n.sourceLabel, if (n.comments != null) '댓글 ${countKo(n.comments!)}', relativeKo(n.publishedAt, now)].join(' · ');
-    return Semantics(
-      button: true,
-      child: RgPressable(
-        row: true,
-        onTap: () => context.push('/news/${Uri.encodeComponent(n.id)}'),
-        child: Container(
-          padding: EdgeInsets.fromLTRB(RgSpace.s16, RgSpace.s14, actions ? RgSpace.s8 : RgSpace.s18, RgSpace.s14),
-          decoration: BoxDecoration(border: divider ? Border(top: BorderSide(color: RgColors.dividerCard)) : null),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s10, children: [
-            // 숫자 아래 단위가 기준을 밝힌다: Hacker News 추천(upvote) 수 · GitHub 별 수
-            Semantics(
-              label: n.points == null ? null : '${n.isGithub ? '별' : '추천'} ${countKo(n.points!)}',
-              excludeSemantics: true,
-              child: SizedBox(
-              width: 46,
-              child: Column(children: [
-                Text(
-                  n.points == null ? '–' : countKo(n.points!),
-                  maxLines: 1,
-                  style: RgText.titleList.copyWith(fontSize: 17, height: 22 / 17, fontWeight: FontWeight.w700, color: RgColors.hotScore),
-                ),
-                Text(n.isGithub ? '별' : '추천', style: RgText.caption.copyWith(fontSize: 11.5, color: RgColors.textTertiary)),
-              ]),
-            ),
-            ),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s6, children: [
-                  Expanded(
-                    child: KeepAllText(
-                      n.titleKo ?? n.titleEn,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: RgText.titleList.copyWith(fontSize: 15.5, height: 22 / 15.5, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  ValueListenableBuilder(
-                    valueListenable: readItems,
-                    builder: (context, _, _) => Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: RgNewLabel(visible: isNew(newsKey(n), n.publishedAt)),
-                    ),
-                  ),
-                ]),
-                if (s != null) ...[
-                  const SizedBox(height: RgSpace.s4),
-                  KeepAllText(s, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.bodySmall.copyWith(color: RgColors.textBody)),
-                ],
-                const SizedBox(height: RgSpace.s4),
-                Text(meta, maxLines: 1, overflow: TextOverflow.ellipsis, style: RgText.caption.copyWith(fontSize: 12.5, color: RgColors.textSecondary)),
-              ]),
-            ),
-            if (actions) newsActions(n),
-          ]),
-        ),
-      ),
-    );
   }
 }
 
@@ -466,70 +319,6 @@ class NewsHead extends StatelessWidget {
   );
 }
 
-// 홈 「연구소 소식」 맨 위 대표 글(피드백 3차 C안): 출처 줄 → 제목(카드 제목 크기) → 요약 두 줄까지. 오른쪽 위 북마크.
-class FeaturedNews extends StatelessWidget {
-  const FeaturedNews({super.key, required this.news, required this.divider});
-  final OfficialNews news;
-  final bool divider;
-
-  @override
-  Widget build(BuildContext context) {
-    final n = news;
-    return DecoratedBox(
-      decoration: BoxDecoration(border: divider ? Border(bottom: BorderSide(color: RgColors.dividerCard)) : null),
-      child: Semantics(
-        button: true,
-        child: RgPressable(
-          row: true,
-          onTap: () => context.push('/news/${Uri.encodeComponent(n.id)}'),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(RgSpace.s20, RgSpace.s18, RgSpace.s8, RgSpace.s18),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s8, children: [
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  NewsHead(news: n),
-                  const SizedBox(height: RgSpace.s8),
-                  KeepAllText(n.titleKo ?? n.titleEn, style: RgText.titleCard),
-                  if (n.summaryKo case final s?) ...[
-                    const SizedBox(height: RgSpace.s6),
-                    KeepAllText(s, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
-                  ],
-                ]),
-              ),
-              newsActions(n),
-            ]),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// 홈 「이번 주 바뀐 도구」 한 줄: 머리 줄(출처 칩 · 버전·건수 · 날짜 · 새 글) + 제목. 누르면 상세. 오른쪽에 북마크.
-// 공지는 버전 대신 「공지」. 다른 목록 행과 같은 모양(통일 행 구조).
-class UpdateRow extends StatelessWidget {
-  const UpdateRow({super.key, required this.news, required this.last});
-  final OfficialNews news;
-  final bool last;
-
-  @override
-  Widget build(BuildContext context) {
-    final n = news;
-    return RgListRow(
-      showDivider: !last,
-      onTap: () => context.push('/news/${Uri.encodeComponent(n.id)}'),
-      trailing: newsActions(n),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        NewsHead(news: n, release: true),
-        const SizedBox(height: RgSpace.s6),
-        KeepAllText(n.titleKo ?? n.titleEn, style: RgText.titleList),
-      ]),
-    );
-  }
-}
-
-// 「v2.1.310 · 7건」. 원제(수집기가 만든 「Claude Code v2.1.304~v2.1.310 (7 releases)」)에서 마지막 버전과 건수를 꺼낸다.
-// 버전이 없으면 건수만(「19건」), 공지는 「공지」.
 String releaseTag(OfficialNews n) {
   if (n.kind != 'release') return '공지';
   final ver = RegExp(r'v[\d.]+(?:~(v[\d.]+))?').firstMatch(n.titleEn);
@@ -541,7 +330,7 @@ String releaseTag(OfficialNews n) {
 String newsKey(OfficialNews n) => 'news:${n.id}';
 bool hasNewNews(Iterable<OfficialNews> news) => news.any((n) => isNew(newsKey(n), n.publishedAt));
 
-ItemActions newsActions(OfficialNews n, {RgCircleVariant variant = RgCircleVariant.neutral, bool share = false}) => ItemActions(
+ItemActions newsActions(OfficialNews n, {RgCircleVariant variant = RgCircleVariant.neutral, bool share = false, double? visualSize}) => ItemActions(
   id: n.id,
   title: n.titleKo ?? n.titleEn,
   url: n.url,
@@ -549,109 +338,8 @@ ItemActions newsActions(OfficialNews n, {RgCircleVariant variant = RgCircleVaria
   kind: 'news',
   variant: variant,
   share: share,
+  visualSize: visualSize,
 );
-
-class _NewsCard extends StatelessWidget {
-  const _NewsCard({required this.news});
-  final OfficialNews news;
-
-  @override
-  Widget build(BuildContext context) {
-    final linkStyle = RgText.meta.copyWith(color: RgColors.textSecondary);
-    final release = news.kind == 'release';
-    // 카드 어디를 눌러도 소식 상세로(홈 「이번 주 바뀐 도구」와 같다). 상세가 열리면 새 글 점이 지워진다.
-    // 실기기 QA: 머리만 원문으로 열려 본문을 누르면 반응이 없었고, 원문을 열지 않으면 점이 남았다.
-    // 근거·릴리스 노트 링크와 공유·북마크는 제 동작이 먼저다.
-    return Semantics(
-      button: true,
-      child: RgPressable(
-        row: true,
-        onTap: () => context.push('/news/${Uri.encodeComponent(news.id)}'),
-        child: RgCard(
-      padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s18),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // 머리(출처·제목). 오른쪽 위에 공유·북마크
-        Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s8, children: [
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  NewsHead(news: news),
-                  const SizedBox(height: RgSpace.s6),
-                  KeepAllText(news.titleKo ?? news.titleEn, style: RgText.titleList),
-                  if (news.titleKo != null && !news.isUpdate) ...[ // 업데이트는 간추려 원제도 뺀다(상세에 있다)
-                    const SizedBox(height: RgSpace.s4),
-                    Text(news.titleEn, style: linkStyle),
-                  ],
-                ]),
-              ),
-              // 누르는 영역 44는 그대로 두고 모양만 카드 모서리 쪽으로(추천 카드와 같게)
-              // 업데이트 카드는 목록에서 바로 공유도
-              Transform.translate(offset: const Offset(RgSpace.s12, -RgSpace.s10), child: newsActions(news, share: true)),
-            ]),
-        // 업데이트(공지·릴리스)는 목록에서 간추려 보인다: 공지는 요약 두 줄, 릴리스는 주요 변경 두 개(각 두 줄).
-        // 요약·핵심 내용 전체와 근거는 눌러서 여는 상세에서(실기기 QA: 목록과 상세가 같은 내용을 되풀이했다).
-        if (news.isUpdate)
-          ..._brief(news)
-        else ...[
-          if (news.summaryKo case final s?) ...[
-            const SizedBox(height: RgSpace.s12),
-            KeepAllText(s, perSentence: true, style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
-          ],
-          if (news.keyPoints.isNotEmpty) ...[const SizedBox(height: RgSpace.s12), NewsPoints(news: news)],
-        ],
-        if (release) ...[
-          const SizedBox(height: RgSpace.s6),
-          Semantics(
-            link: true,
-            child: RgPressable(
-              onTap: () => _open(news.url),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 36),
-                child: Row(mainAxisSize: MainAxisSize.min, spacing: RgSpace.s2, children: [
-                  Text('릴리스 노트 전체 보기', style: linkStyle),
-                  RgIcon('arrow-up-right', size: 14, color: RgColors.textSecondary),
-                ]),
-              ),
-            ),
-          ),
-        ],
-      ]),
-        ),
-      ),
-    );
-  }
-
-  void _open(String url) => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-
-  List<Widget> _brief(OfficialNews n) {
-    final body = RgText.bodySmall.copyWith(color: RgColors.textBody);
-    final more = RgText.meta.copyWith(color: RgColors.textSecondary);
-    if (n.summaryKo case final s? when n.kind != 'release') {
-      return [
-        const SizedBox(height: RgSpace.s10),
-        KeepAllText(s, maxLines: 2, overflow: TextOverflow.ellipsis, style: body),
-      ];
-    }
-    final shown = n.keyPoints.take(2).toList();
-    if (shown.isEmpty) return const [];
-    return [
-      const SizedBox(height: RgSpace.s10),
-      for (final p in shown)
-        Padding(
-          padding: const EdgeInsets.only(bottom: RgSpace.s4),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s8, children: [
-            Padding(
-              padding: EdgeInsets.only(top: (body.fontSize! * body.height! - 4) / 2),
-              child: Container(width: 4, height: 4, decoration: BoxDecoration(color: RgColors.textTertiary, shape: BoxShape.circle)),
-            ),
-            Expanded(child: KeepAllText(p.text, maxLines: 2, overflow: TextOverflow.ellipsis, style: body)),
-          ]),
-        ),
-      if (n.keyPoints.length > shown.length) Text('외 ${n.keyPoints.length - shown.length}개 · 눌러서 모두 보기', style: more),
-    ];
-  }
-}
-
-String newsMeta(OfficialNews n) => [n.sourceLabel, ?n.categoryKo, newsDate(n)].join(' · ');
 
 // 머리 줄용: 출처는 칩이 보여 주므로 분류 · 날짜만
 String newsMetaShort(OfficialNews n) => [?n.categoryKo, newsDate(n)].join(' · ');

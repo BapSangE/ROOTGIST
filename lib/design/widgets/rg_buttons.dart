@@ -278,9 +278,9 @@ class RgFilterChip extends StatelessWidget {
               height: rgPillHeight(context, 36),
               padding: const EdgeInsets.symmetric(horizontal: RgSpace.s16),
               decoration: BoxDecoration(
-                color: selected ? RgColors.actionPrimary : null,
+                // 안 고른 칩은 홈 카드처럼 바탕 위 흰 면(테두리 없이)
+                color: selected ? RgColors.actionPrimary : RgColors.surfaceCard,
                 borderRadius: BorderRadius.circular(RgRadius.pill),
-                border: selected ? null : Border.all(color: RgColors.borderDefault),
               ),
               // Container(alignment:)는 가로로 꽉 차므로 Center(widthFactor: 1)로 세로만 가운데.
               child: Center(

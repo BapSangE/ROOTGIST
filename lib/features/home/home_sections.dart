@@ -13,7 +13,8 @@ import '../../design/widgets/rg_row_head.dart';
 import '../common/item_actions.dart';
 import '../common/term_text.dart';
 import '../explore/news_detail.dart' show modelSpec;
-import '../explore/official_news.dart' show newsKey;
+import '../explore/official_news.dart' show newsKey, newsActions;
+import '../explore/trending_models.dart' show VariantsLine, modelActions;
 import 'briefing.dart';
 
 // 홈 칸들(디자이너 시안 home_re 2026-10-31, design-preview는 ~/Downloads/home_re 원본).
@@ -167,6 +168,16 @@ class _NewsTime extends StatelessWidget {
   );
 }
 
+// 탐색 카드: 머리 글자들 오른쪽 위에 북마크(원 34, 누르는 자리 44). 홈(actions 없음)은 글자만 그대로
+Widget _withActions(Widget? actions, List<Widget> head) {
+  final column = Column(crossAxisAlignment: CrossAxisAlignment.start, children: head);
+  if (actions == null) return column;
+  return Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s8, children: [
+    Expanded(child: column),
+    Transform.translate(offset: const Offset(6, -6), child: actions),
+  ]);
+}
+
 void _openNews(BuildContext context, OfficialNews n) => context.push('/news/${Uri.encodeComponent(n.id)}');
 
 // 키워드 칩: 제목·요약에 나오는 사전 용어(한국어 표기) 앞에서 2개. 사전을 못 받았거나 없으면 칩 없이
@@ -201,11 +212,12 @@ class HomeStoriesCard extends StatelessWidget {
 }
 
 class HomeStoryRow extends StatelessWidget {
-  const HomeStoryRow({super.key, required this.news, required this.now, required this.last, required this.keywords});
+  const HomeStoryRow({super.key, required this.news, required this.now, required this.last, required this.keywords, this.explore = false});
   final OfficialNews news;
   final DateTime now;
   final bool last;
   final List<String> keywords;
+  final bool explore; // 탐색 발표 목록: 오른쪽 위 북마크, 요약 두 줄, 「원문 소개문만」 칩
 
   @override
   Widget build(BuildContext context) {
@@ -221,17 +233,20 @@ class HomeStoryRow extends StatelessWidget {
           padding: EdgeInsets.only(bottom: last ? 0 : RgSpace.s20),
           decoration: BoxDecoration(border: last ? null : Border(bottom: BorderSide(color: RgHome.divider))),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            _NewsTime(n, now),
-            const SizedBox(height: RgSpace.s6),
-            KeepAllText(n.titleKo ?? n.titleEn, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.homeTitle.copyWith(color: RgColors.textPrimary)),
+            _withActions(explore ? newsActions(n, visualSize: 34) : null, [
+              _NewsTime(n, now),
+              const SizedBox(height: RgSpace.s6),
+              KeepAllText(n.titleKo ?? n.titleEn, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.homeTitle.copyWith(color: RgColors.textPrimary)),
+            ]),
             if (one != null) ...[
               const SizedBox(height: RgSpace.s8),
-              Text(one, maxLines: 1, overflow: TextOverflow.ellipsis, style: RgText.homeSummary.copyWith(color: RgColors.textSecondary)),
+              Text(one, maxLines: explore ? 2 : 1, overflow: TextOverflow.ellipsis, style: RgText.homeSummary.copyWith(color: RgColors.textSecondary)),
             ],
             const SizedBox(height: RgSpace.s20),
             Wrap(spacing: RgSpace.s8, runSpacing: RgSpace.s8, children: [
               HomeChip(n.sourceLabel, background: tone?.background, foreground: tone?.foreground),
               for (final k in keywords) HomeChip(k),
+              if (explore && n.thin && !n.isHot) const HomeChip('원문 소개문만'),
             ]),
           ]),
         ),
@@ -242,9 +257,10 @@ class HomeStoryRow extends StatelessWidget {
 
 // 개발자 화제 카드(글마다 한 장): 시각 → 제목 → 사이트 · 추천 · 댓글
 class HomeTalkCard extends StatelessWidget {
-  const HomeTalkCard({super.key, required this.news, required this.now});
+  const HomeTalkCard({super.key, required this.news, required this.now, this.explore = false});
   final OfficialNews news;
   final DateTime now;
+  final bool explore; // 탐색 개발자 화제: 오른쪽 위 북마크, 요약 두 줄
 
   @override
   Widget build(BuildContext context) {
@@ -252,9 +268,15 @@ class HomeTalkCard extends StatelessWidget {
     return HomeCard(
       onTap: () => _openNews(context, n),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        _NewsTime(n, now),
-        const SizedBox(height: RgSpace.s12),
-        KeepAllText(n.titleKo ?? n.titleEn, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.homeTitle.copyWith(color: RgColors.textPrimary)),
+        _withActions(explore ? newsActions(n, visualSize: 34) : null, [
+          _NewsTime(n, now),
+          const SizedBox(height: RgSpace.s12),
+          KeepAllText(n.titleKo ?? n.titleEn, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.homeTitle.copyWith(color: RgColors.textPrimary)),
+        ]),
+        if (explore && n.summaryKo != null) ...[
+          const SizedBox(height: RgSpace.s8),
+          KeepAllText(n.summaryKo!, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.homeSummary.copyWith(color: RgColors.textSecondary)),
+        ],
         const SizedBox(height: 25),
         // 사이트는 왼쪽, 숫자(Hacker News 추천·댓글, GitHub는 별)는 오른쪽. 큰 글자로 한 줄에 안 들어가면 숫자가 다음 줄로
         Wrap(alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center, spacing: RgSpace.s6, runSpacing: RgSpace.s6, children: [
@@ -398,8 +420,10 @@ class HomeUpdateCard extends StatelessWidget {
 
 // 모델 카드: 큰 순위 숫자 → 이름 · 한 줄 설명 → 오른쪽 아래 라이선스 · 좋아요 · 다운로드
 class HomeModelCard extends StatelessWidget {
-  const HomeModelCard({super.key, required this.model});
+  const HomeModelCard({super.key, required this.model, this.explore = false, this.ago});
   final TrendingModel model;
+  final bool explore; // 탐색 모델 칸: 이름 옆 북마크, 아래 변형 줄
+  final String? ago; // 새로 나옴: 큰 순위 대신 머리 줄에 「3일 전 공개」
 
   @override
   Widget build(BuildContext context) {
@@ -408,18 +432,38 @@ class HomeModelCard extends StatelessWidget {
       padding: const EdgeInsets.all(RgSpace.s20),
       onTap: () => context.push('/model/${Uri.encodeComponent(m.id)}'),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s16, children: [
-        Semantics(label: '${m.rank}위', excludeSemantics: true, child: Text('${m.rank}', style: RgText.homeRank.copyWith(color: RgColors.textBody))),
+        if (ago == null)
+          Semantics(label: '${m.rank}위', excludeSemantics: true, child: Text('${m.rank}', style: RgText.homeRank.copyWith(color: RgColors.textBody))),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Text(m.name, style: RgText.homeTitle.copyWith(color: RgColors.textPrimary)),
-            const SizedBox(height: RgSpace.s6),
-            Text(modelSpec(m), maxLines: 1, overflow: TextOverflow.ellipsis, style: RgText.homeSummary.copyWith(color: RgColors.textSecondary)),
+            // 탐색: 위에 만든 곳 칩(회사 색) · 공개일(새로 나옴) · 「새로 진입」 점
+            if (explore) ...[
+              ValueListenableBuilder(
+                valueListenable: modelsSeen,
+                builder: (context, _, _) => Wrap(spacing: RgSpace.s8, runSpacing: RgSpace.s6, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                  HomeChip(m.maker, background: brandToneOf(m.maker)?.background, foreground: brandToneOf(m.maker)?.foreground),
+                  if (ago != null) Text(ago!, style: RgText.homeDate.copyWith(color: RgColors.textBody)),
+                  RgNewLabel(visible: enteredModel(m.id), label: '새로 진입'),
+                ]),
+              ),
+              const SizedBox(height: RgSpace.s12),
+            ],
+            // 북마크(누르는 자리 44)가 이름 한 줄보다 높아 설명까지 한 머리로 묶는다(이름과 설명 사이가 벌어지지 않게)
+            _withActions(explore ? modelActions(m, visualSize: 34) : null, [
+              Text(m.name, style: RgText.homeTitle.copyWith(color: RgColors.textPrimary)),
+              const SizedBox(height: RgSpace.s6),
+              Text(modelSpec(m), maxLines: 1, overflow: TextOverflow.ellipsis, style: RgText.homeSummary.copyWith(color: RgColors.textSecondary)),
+            ]),
             const SizedBox(height: 25),
             Wrap(alignment: WrapAlignment.end, spacing: RgSpace.s6, runSpacing: RgSpace.s6, children: [
               if (m.licenseKo != null) HomeStat(m.licenseKo!, label: '라이선스 ${m.licenseKo}'),
               HomeStat(countKo(m.likes ?? 0), icon: 'like-filled', label: '좋아요 ${countKo(m.likes ?? 0)}'),
               HomeStat(countKo(m.downloads ?? 0), icon: 'download-filled', label: '다운로드 ${countKo(m.downloads ?? 0)}'),
             ]),
+            if (explore && m.variants.isNotEmpty) ...[
+              const SizedBox(height: RgSpace.s8),
+              VariantsLine(model: m),
+            ],
           ]),
         ),
       ]),

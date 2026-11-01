@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../data/models.dart';
 import '../../data/repository.dart';
@@ -8,16 +7,16 @@ import '../../data/unread.dart';
 import '../../design/tokens.dart';
 import '../../design/typography.dart';
 import '../../design/widgets/rg_buttons.dart';
-import '../../design/widgets/rg_card.dart';
 import '../../design/widgets/rg_pressable.dart';
 import '../../design/widgets/rg_row_head.dart';
 import '../../design/widgets/rg_states.dart';
 import '../../design/widgets/rg_underline_tabs.dart';
 import '../common/item_actions.dart';
-import 'news_detail.dart';
+import '../home/home_sections.dart';
+import 'date_groups.dart';
 
 // S04 「모델」 칸(PROPOSALS P9 A안): Hugging Face 모델. 「트렌딩 | 새로 나옴」 두 칸. 누르면 모델 상세.
-// 트렌딩: HF 트렌딩 순 10개(1위는 다크 카드). 새로 나옴: 트렌딩 100위 안에서 최근 14일 안에 공개된 모델, 최신순 10개.
+// 트렌딩: HF 트렌딩 순 10개(홈 모델 카드, 큰 순위 숫자). 새로 나옴: 트렌딩 100위 안에서 최근 14일 안에 공개된 모델, 최신순 10개.
 // 같은 모델의 양자화판·형제 모델은 수집기가 원래 모델 아래로 묶는다(「변형 N개」).
 class TrendingModelsSection extends StatefulWidget {
   const TrendingModelsSection({super.key});
@@ -99,20 +98,26 @@ class _TrendingModelsSectionState extends State<TrendingModelsSection> {
                         style: RgText.bodySmall.copyWith(color: RgColors.textSecondary),
                       ),
                     )
-                  else if (_fresh) ...[
-                    // 새로 나옴: 다크 카드 없이 목록만, 번호는 이 칸 안의 순서
+                  else if (_fresh)
+                    // 새로 나옴: 공개일로 묶는다(최근 7일은 하루씩, 그 앞은 주). 큰 순위 대신 「3일 전 공개」
+                    DateGroups<TrendingModel>(
+                      items: models,
+                      at: (m) => m.createdAt!,
+                      now: now,
+                      builder: (context, rows) => Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: RgSpace.s16, children: [
+                          for (final m in rows) HomeModelCard(model: m, explore: true, ago: publishedAgo(m.createdAt!, now)),
+                        ]),
+                      ),
+                    )
+                  else ...[
+                    // 트렌딩: 홈 「모델 트렌드 순위」 카드 그대로(큰 순위 숫자), 10개
                     const SizedBox(height: RgSpace.s20),
-                    RgCard(
-                      child: Column(children: [
-                        for (final (i, m) in models.indexed) ModelRow(model: m, number: i + 1, fresh: true, last: i == models.length - 1),
-                      ]),
-                    ),
-                  ] else ...[
-                    // 1위도 같은 행·같은 순위 자리(디자인 피드백 2026-10-31 8번: 대표 카드는 순위가 두 방식으로 보였다)
-                    const SizedBox(height: RgSpace.s20),
-                    RgCard(
-                      child: Column(children: [
-                        for (final (i, m) in models.indexed) ModelRow(model: m, last: i == models.length - 1),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: RgSpace.s16, children: [
+                        for (final m in models) HomeModelCard(model: m, explore: true),
                       ]),
                     ),
                   ],
@@ -132,64 +137,8 @@ String publishedAgo(DateTime created, DateTime now) => switch (now.difference(cr
   final d => '$d일 전 공개',
 };
 
-// 모델 한 줄(탐색 목록, 홈 하이라이트): 순위 + 이름 + 한 줄 설명 + 라이선스·반응. 오른쪽에 공유·북마크.
-class ModelRow extends StatelessWidget {
-  const ModelRow({super.key, required this.model, required this.last, this.number, this.fresh = false});
-  final TrendingModel model;
-  final bool last;
-  final int? number; // 칸 안의 순서(새로 나옴). 없으면 트렌딩 순위
-  final bool fresh; // 새로 나옴 칸: 머리 줄에 공개일 · 크기
-
-  @override
-  Widget build(BuildContext context) {
-    final m = model;
-    return RgListRow(
-      showDivider: !last,
-      onTap: () => context.push('/model/${Uri.encodeComponent(m.id)}'),
-      trailing: modelActions(m),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s10, children: [
-        // 순위는 모든 행에서 같은 자리에 작은 「N위」(피드백 8번: 큰 숫자는 뜻이 안 보였다). 칩 줄 높이(24)에 맞춰 1위만 진하게
-        SizedBox(
-          width: 34,
-          child: Text(
-            '${number ?? m.rank}위',
-            maxLines: 1,
-            softWrap: false,
-            overflow: TextOverflow.visible,
-            style: RgText.meta.copyWith(
-              fontSize: 13,
-              height: 24 / 13,
-              fontWeight: FontWeight.w700,
-              color: (number ?? m.rank) == 1 ? RgColors.textPrimary : RgColors.textTertiary,
-            ),
-          ),
-        ),
-        Expanded(
-          // 칩 → 이름 → 한 줄 설명 → 라이선스·반응(한 줄 옅게) → 변형
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            // 칩은 발표한 곳(Hugging Face는 정보 출처일 뿐: 칸 안내 글과 상세에 적는다)
-            RgRowHead(chip: RgChip(m.maker, source: m.maker), isNew: enteredModel(m.id), newLabel: '새로 진입'),
-            const SizedBox(height: RgSpace.s6),
-            Text(m.name, style: RgText.titleList),
-            const SizedBox(height: RgSpace.s2),
-            KeepAllText(modelSpec(m), style: RgText.bodySmall.copyWith(color: RgColors.textBody)),
-            const SizedBox(height: RgSpace.s4),
-            Text(
-              fresh && m.createdAt != null
-                  ? [publishedAgo(m.createdAt!, clock()), m.taskKo].join(' · ')
-                  : [?m.licenseKo, '좋아요 ${countKo(m.likes ?? 0)}', '다운로드 ${countKo(m.downloads ?? 0)}'].join(' · '),
-              style: RgText.caption.copyWith(fontSize: 12.5, color: RgColors.textSecondary),
-            ),
-            if (m.variants.isNotEmpty) VariantsLine(model: m),
-          ]),
-        ),
-      ]),
-    );
-  }
-}
-
-ItemActions modelActions(TrendingModel m, {RgCircleVariant variant = RgCircleVariant.neutral, bool share = false}) =>
-    ItemActions(id: m.id, title: m.name, url: m.url, source: 'Hugging Face', kind: 'model', variant: variant, share: share);
+ItemActions modelActions(TrendingModel m, {RgCircleVariant variant = RgCircleVariant.neutral, bool share = false, double? visualSize}) =>
+    ItemActions(id: m.id, title: m.name, url: m.url, source: 'Hugging Face', kind: 'model', variant: variant, share: share, visualSize: visualSize);
 
 // 「변형 2개 · Omni-2B, VL-2B ›」: 누르면 아래로 펼쳐 변형마다 이름 · 만든 곳 · 양자화판/형제 모델(220ms 접힘,
 // 보관함과 같은 SizeTransition). 행 전체 누르기(상세)와 겹치지 않게 이 줄만 따로 누른다. 선택 틱.

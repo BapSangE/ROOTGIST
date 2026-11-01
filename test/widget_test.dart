@@ -23,7 +23,6 @@ import 'package:rootgist/design/typography.dart';
 import 'package:rootgist/design/theme.dart';
 import 'package:rootgist/design/tokens.dart';
 import 'package:rootgist/design/widgets/rg_buttons.dart';
-import 'package:rootgist/design/widgets/rg_card.dart';
 import 'package:rootgist/design/widgets/rg_row_head.dart';
 import 'package:rootgist/design/widgets/rg_pressable.dart';
 import 'package:rootgist/design/widgets/rg_segmented.dart';
@@ -31,6 +30,7 @@ import 'package:rootgist/design/widgets/rg_underline_tabs.dart';
 import 'package:flutter/semantics.dart';
 import 'package:rootgist/features/explore/explore_screen.dart';
 import 'package:rootgist/features/explore/official_news.dart';
+import 'package:rootgist/features/explore/date_groups.dart';
 import 'package:rootgist/features/common/term_text.dart';
 import 'package:rootgist/features/home/home_screen.dart';
 import 'package:rootgist/features/home/home_sections.dart';
@@ -48,7 +48,6 @@ Future<void> pumpApp(WidgetTester tester) async {
   bookmarks.value = {};
   readerDefaultMode.value = ReaderMode.together;
   readerScale.value = 1.0;
-  backdrop.value = Backdrop.white;
   exploreTab.value = 0;
   newsTab.value = 0;
   modelsFresh.value = false;
@@ -400,12 +399,13 @@ void main() {
     await settle(tester);
     // 통일 머리 줄: 출처 칩 + 시각(분류는 위계를 흐려 뺐다, 디자인 피드백 2026-10-31 4번)
     expect(find.text('OpenAI'), findsWidgets);
-    expect(find.text(keepAll(relativeKo(DateTime.utc(2026, 10, 17, 17), clock()))), findsWidgets); // UTC 17시 = KST 다음 날
+    expect(find.text(relativeKo(DateTime.utc(2026, 10, 17, 17), clock())), findsWidgets); // UTC 17시 = KST 다음 날
     expect(find.text(keepAll('가상의 예시 API를 소개합니다')), findsOneWidget);
     expect(find.text('Introducing a fictional example API'), findsNothing); // 발표 목록은 원제 없이 제목 + 두 줄 요약(브리핑 시안 C)
-    expect(find.text(keepAll('가상의 예시 API를 소개하는 가상 글이에요. 실제 내용이 아니에요.')), findsOneWidget);
-    expect(find.text('10월 18일'), findsWidgets); // 날짜 머리(오늘·어제가 아니면 날짜만)
-    expect(find.text(keepAll(relativeKo(DateTime.utc(2026, 10, 16, 14, 30), clock()))), findsWidgets); // 머리 줄은 시각만
+    expect(find.text('가상의 예시 API를 소개하는 가상 글이에요. 실제 내용이 아니에요.'), findsOneWidget);
+    expect(find.textContaining('10월', findRichText: true), findsWidgets); // 지난달 글은 한 달로 묶는다
+    expect(find.byType(HomeStoryRow), findsWidgets); // 홈 「오늘의 주요 소식」과 같은 행
+    expect(find.text(relativeKo(DateTime.utc(2026, 10, 16, 14, 30), clock())), findsWidgets); // 머리 줄은 시각만
     expect(find.text(keepAll('Fictional screening research for tests')), findsOneWidget); // 번역 없으면 원문만
     expect(find.text('Claude Code'), findsNothing); // 릴리스는 「업데이트」에
 
@@ -427,12 +427,11 @@ void main() {
 
     await tester.tap(find.text('업데이트'));
     await tester.pumpAndSettle();
-    expect(find.text(keepAll(relativeKo(DateTime.utc(2026, 10, 18, 12), clock()))), findsWidgets); // 머리 줄은 칩 + 시각
-    expect(find.text(keepAll('가상의 예시 도구가 추가됐어요')), findsOneWidget);
-    expect(find.text('릴리스 노트 전체 보기'), findsOneWidget);
-    // 업데이트는 목록에서 간추린다: 근거 알약 없이, 릴리스는 주요 변경 2개 + 「외 N개」(전체는 상세에서)
+    // 업데이트는 홈 「바뀐 도구」 카드: 시각 → 도구 이름 → 제목. 근거·변경 목록은 상세에서
+    expect(find.text(relativeKo(DateTime.utc(2026, 10, 18, 12), clock())), findsWidgets);
+    expect(find.byType(HomeUpdateCard), findsNWidgets(2));
+    expect(find.text(keepAll('Claude Code')), findsOneWidget);
     expect(find.text('근거 · 원문 1번째 문단'), findsNothing);
-    expect(find.text('외 1개 · 눌러서 모두 보기'), findsOneWidget);
     // 출처 칩 색: SDK 릴리스도 회사 색(보관함 저장 이름도 같은 색)
     expect(brandOf('openai_sdk'), brandOf('openai'));
     expect(brandOf('Anthropic Python SDK'), brandOf('anthropic'));
@@ -466,9 +465,10 @@ void main() {
     await settle(tester);
     expect(find.text('example-coder'), findsOneWidget);
     // 칩은 발표한 곳(Hugging Face는 정보 출처: 「Hugging Face 트렌딩 1위」), 한 줄 설명에는 만든 곳을 되풀이하지 않는다
-    expect(find.text(keepAll('400억 파라미터 텍스트 생성 모델')), findsOneWidget);
-    expect(find.widgetWithText(RgChip, 'example-lab'), findsWidgets);
-    expect(find.text('1위'), findsOneWidget); // 1위도 다른 행과 같은 순위 자리(피드백 8번)
+    expect(find.text('400억 파라미터 텍스트 생성 모델'), findsOneWidget);
+    expect(find.widgetWithText(HomeChip, 'example-lab'), findsWidgets);
+    expect(find.byType(HomeModelCard), findsNWidgets(2)); // 홈 「모델 트렌드 순위」 카드(큰 순위 숫자)
+    expect(find.byWidgetPredicate((w) => w is Semantics && w.properties.label == '1위'), findsOneWidget);
 
     await tester.tap(find.text('example-coder'));
     await settle(tester);
@@ -540,9 +540,10 @@ void main() {
     Finder more(String section) => find.descendant(of: find.widgetWithText(HomeSection, keepAll(section)), matching: find.bySemanticsLabel('더보기'));
     await tester.tap(more('바뀐 도구'));
     await settle(tester);
-    expect(find.text('릴리스 노트 전체 보기'), findsOneWidget); // 공식 소식 칸의 「업데이트」
+    expect(find.widgetWithText(RgUnderlineTabs, '업데이트'), findsOneWidget); // 공식 소식 칸의 「업데이트」
+    expect(find.byType(HomeUpdateCard), findsNWidgets(2)); // 홈 「바뀐 도구」와 같은 회사 색 카드
     // 업데이트 카드는 어디를 눌러도 소식 상세로(실기기 QA: 본문을 눌러도 반응이 없어 새 글 점이 안 지워졌다)
-    await tester.tap(find.byType(RgCard).first);
+    await tester.tap(find.byType(HomeUpdateCard).first);
     await settle(tester);
     expect(find.text('AI 요약'), findsWidgets);
     expect(find.bySemanticsLabel('원문 열기'), findsOneWidget); // 소식 상세 상단 바
@@ -604,6 +605,29 @@ void main() {
     readItems.value = {...readItems.value};
     await tester.pump();
     expect(dots, findsNothing);
+  });
+
+  test('날짜 묶음: 최근 7일은 하루, 이번 달은 주, 지난달부터 달, 지난해부터 해(한국 시간)', () {
+    final now = DateTime.utc(2026, 11, 20, 3); // KST 11월 20일(금) 정오
+    DateUnit unit(DateTime at) => dateKey(at, now).$1;
+    expect(unit(DateTime.utc(2026, 11, 20)), DateUnit.day);
+    expect(unit(DateTime.utc(2026, 11, 14)), DateUnit.day); // 6일 전
+    expect(unit(DateTime.utc(2026, 11, 13)), DateUnit.week); // 7일 전, 이번 달
+    expect(unit(DateTime.utc(2026, 10, 31)), DateUnit.month); // 지난달
+    expect(unit(DateTime.utc(2025, 12, 31)), DateUnit.year); // 지난해(아직 1년치가 없어 기능만)
+    // KST 월요일 0시 직전·직후(UTC 일요일 15시)
+    expect(weekStart(DateTime.utc(2026, 11, 8, 14, 59)), DateTime.utc(2026, 11, 2));
+    expect(weekStart(DateTime.utc(2026, 11, 8, 15)), DateTime.utc(2026, 11, 9));
+    final items = [
+      DateTime.utc(2026, 11, 20, 1), DateTime.utc(2026, 11, 19), DateTime.utc(2026, 11, 10),
+      DateTime.utc(2026, 11, 3), DateTime.utc(2026, 10, 5), DateTime.utc(2026, 10, 20), DateTime.utc(2025, 6, 1),
+    ];
+    final groups = groupByDate(items, (d) => d, now);
+    expect([for (final g in groups) dateLabel(g, now)], [
+      ('오늘', null), ('어제', null), ('지난주', '11월 9일 ~ 11월 15일'), ('11월 2일 ~ 11월 8일', null), ('10월', null), ('2025년', null),
+    ]);
+    expect(groups[4].rows, [DateTime.utc(2026, 10, 5), DateTime.utc(2026, 10, 20)]); // 묶음 안은 받은 순서
+    expect(dateLabel(groupByDate([DateTime.utc(2026, 11, 16)], (d) => d, now).single, now), ('11월 16일 월요일', null));
   });
 
   test('새 글 규칙: 기준 시각 전·하루 지난 글·읽은 글은 새 글이 아니다', () {
@@ -769,8 +793,8 @@ void main() {
 
     router.go('/settings');
     await tester.pumpAndSettle();
-    // 설정 행의 값은 오른쪽 끝(카드 안쪽 390 − 16 − 16 = 358)에 맞춘다. 가운데부터 놓이던 회귀를 막는다
-    expect(tester.getTopRight(find.text(keepAll(appVersion))).dx, moreOrLessEquals(358, epsilon: 1));
+    // 설정 행의 값은 오른쪽 끝(카드 안쪽 390 − 24 − 16 = 350)에 맞춘다. 가운데부터 놓이던 회귀를 막는다
+    expect(tester.getTopRight(find.text(keepAll(appVersion))).dx, moreOrLessEquals(350, epsilon: 1));
     await tester.tap(find.text('읽기 설정')); // 초록 기본 보기·글자 크기는 하위 화면으로(피드백 13)
     await settle(tester);
     await tester.tap(find.text('원문'));
@@ -1095,7 +1119,7 @@ void main() {
       'url': 'u', 'published_at': '2026-10-29T00:00:00Z', 'points': 331}).reaction, 'HN 추천 331'); // 공식 소식에 붙은 반응
   });
 
-  testWidgets('소식 · 화제 칸: Hacker News 점수 순 → GitHub 새 도구, 상세는 원문·HN 토론 링크', (tester) async {
+  testWidgets('소식 · 개발자 화제: 전체·Hacker News·GitHub 칩, 홈 카드, 상세는 원문·HN 토론 링크', (tester) async {
     tester.view.physicalSize = const Size(390, 2400);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -1108,20 +1132,27 @@ void main() {
     await settle(tester);
     await tester.tap(find.text('개발자 화제').last);
     await tester.pumpAndSettle();
-    expect(find.text('Hacker News · 최근 이틀'), findsOneWidget);
-    expect(find.text('GitHub · 이번 주 새 AI 도구'), findsOneWidget);
-    final first = tester.getTopLeft(find.text(keepAll('Example-4 가중치 공개'))).dy;
-    expect(first, lessThan(tester.getTopLeft(find.text(keepAll('LLM 글쓰기 문체에 관한 가상 글'))).dy)); // 점수 순
-    // 화제 행: 점수는 왼쪽 칸에 숫자 + 단위(점·별), 댓글·시각은 한 줄 옅게(피드백 5번)
-    expect(find.text('1,314'), findsOneWidget);
-    expect(find.textContaining('댓글 360'), findsOneWidget);
-    expect(find.text('179'), findsOneWidget);
-    expect(find.text('별'), findsWidgets);
-    // Hacker News는 상위 5건만 보이고 나머지는 「더 보기」로 펼친다. 몇 건 안 되면 접지 않는다
-    expect(hotFoldCount(2), 0);
-    expect(hotFoldCount(6), 0); // 1건 남기려고 접지 않는다
-    expect(hotFoldCount(20), 15);
-    expect(find.textContaining('건 더 보기'), findsNothing);
+    // 칩은 발표·업데이트처럼 「전체 | Hacker News | GitHub」. 카드는 홈 개발자 화제 카드(숫자는 아이콘 알약)
+    expect(find.widgetWithText(RgFilterChip, 'Hacker News'), findsOneWidget);
+    expect(find.widgetWithText(RgFilterChip, 'GitHub'), findsOneWidget);
+    expect(find.byType(HomeTalkCard), findsNWidgets(3));
+    double y(String t) => tester.getTopLeft(find.text(keepAll(t))).dy;
+    // 날짜로 묶는다: 어제(HN 두 건, 점수 순) → 10월 16일(GitHub). 같은 날 안에서는 HN·GitHub를 번갈아 놓는다
+    expect(y('Example-4 가중치 공개'), lessThan(y('LLM 글쓰기 문체에 관한 가상 글')));
+    expect(y('LLM 글쓰기 문체에 관한 가상 글'), lessThan(y('example-tool: 가상의 에이전트 도구')));
+    expect(find.textContaining('어제', findRichText: true), findsOneWidget); // 시계는 KST 10월 19일 새벽
+    Finder stat(String label) => find.byWidgetPredicate((w) => w is HomeStat && w.label == label);
+    expect(stat('추천 1,314'), findsOneWidget);
+    expect(stat('댓글 360'), findsOneWidget);
+    expect(stat('별 179'), findsOneWidget); // GitHub는 추천이 아니라 별
+    expect(find.text('추천'), findsNothing);
+    await tester.tap(find.widgetWithText(RgFilterChip, 'GitHub'));
+    await tester.pumpAndSettle();
+    expect(find.byType(HomeTalkCard), findsOneWidget);
+    await tester.tap(find.widgetWithText(RgFilterChip, 'Hacker News'));
+    await tester.pumpAndSettle();
+    expect(find.byType(HomeTalkCard), findsNWidgets(2));
+    expect(y('Example-4 가중치 공개'), lessThan(y('LLM 글쓰기 문체에 관한 가상 글'))); // 점수 순
     await tester.tap(find.text(keepAll('LLM 글쓰기 문체에 관한 가상 글')));
     await settle(tester);
     expect(find.text('Hacker News 토론'), findsOneWidget);
@@ -1301,41 +1332,18 @@ void main() {
     expect(MediaQuery.textScalerOf(tester.element(find.text(keepAll('6편이 올라왔어요')))).scale(1), 3.12);
   });
 
-  testWidgets('화면 바탕: 기본은 흰색, 읽기 설정에서 「종이」를 고르면 앱 전체가 바로 바뀌고 저장된다', (tester) async {
+  testWidgets('화면 바탕: 홈과 같은 회청 바탕 하나, 읽기 설정에 「화면 바탕」 고르기는 없다', (tester) async {
     tester.view.physicalSize = const Size(390, 2400);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await pumpApp(tester);
     Color scaffoldBg() => Theme.of(tester.element(find.text('홈'))).scaffoldBackgroundColor;
-    expect(scaffoldBg(), const Color(0xFFFFFFFF));
-
+    expect(scaffoldBg(), RgPalette.white.bgApp);
     router.go('/settings/reading');
     await settle(tester);
-    expect(find.text('화면 바탕'), findsOneWidget);
-    await tester.tap(find.text('종이'));
-    await tester.pumpAndSettle();
-    expect(backdrop.value, Backdrop.paper);
-    expect(scaffoldBg(), RgPalette.paper.bgApp); // 다시 그려 새 색을 읽는다
-    // 라우터가 들고 있는 하위 페이지(읽기 설정)의 바탕도 따라 바뀐다(실기기 QA: 흰 바탕이 남아 카드가 안 보였다)
-    bool pageBg(Color c) => find
-        .ancestor(of: find.text('화면 바탕'), matching: find.byWidgetPredicate((w) => w is ColoredBox && w.color == c))
-        .evaluate()
-        .isNotEmpty;
-    expect(pageBg(RgPalette.paper.bgApp), isTrue);
-    expect(pageBg(RgPalette.white.bgApp), isFalse);
-    expect(tester.takeException(), isNull);
-    final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getString('settings.backdrop'), 'paper');
-
-    // 종이 바탕에서도 화면이 깨지지 않는다
-    for (final path in ['/home', '/explore', '/library', '/settings']) {
-      router.go(path);
-      await settle(tester);
-      expect(tester.takeException(), isNull, reason: path);
-    }
-    backdrop.value = Backdrop.white;
-    await tester.pumpAndSettle();
-    expect(scaffoldBg(), const Color(0xFFFFFFFF));
+    expect(find.text('화면 모드'), findsOneWidget);
+    expect(find.text('화면 바탕'), findsNothing);
+    expect(find.text('종이'), findsNothing);
   });
 
   testWidgets('화면 모드: 「어둡게」면 바탕과 무관하게 어두운 색, 「기기 설정」은 기기 다크 모드를 따른다', (tester) async {
@@ -1483,11 +1491,10 @@ void main() {
     await slide(tester);
     await settle(tester);
     final colors = <String, Color?>{}, text = <String, Color?>{};
-    for (final e in find.byType(RgChip).evaluate()) {
-      final chip = e.widget as RgChip;
-      final box = tester.widget<Container>(find.descendant(of: find.byWidget(chip), matching: find.byType(Container)).first);
-      colors[chip.label] = (box.decoration as BoxDecoration).color;
-      text[chip.label] = tester.widget<Text>(find.descendant(of: find.byWidget(chip), matching: find.byType(Text))).style!.color;
+    for (final e in find.descendant(of: find.byType(HomeStoryRow), matching: find.byType(HomeChip)).evaluate()) {
+      final chip = e.widget as HomeChip;
+      colors[chip.label] = chip.background;
+      text[chip.label] = chip.foreground;
     }
     expect(colors['Anthropic'], RgBrand.anthropic.background);
     expect(colors['OpenAI'], RgBrand.openai.background);
@@ -1499,22 +1506,19 @@ void main() {
     expect(text['Anthropic'], RgBrand.anthropic.foreground);
   });
 
-  testWidgets('대표 카드: 홈은 시안의 회색 카드(흰 글자), 탐색은 다른 카드와 같은 면, 주제 칩은 중립 알약', (tester) async {
+  testWidgets('대표 카드: 홈·탐색 모두 시안의 회색 카드(흰 글자), 탐색 논문 목록도 홈 논문 행', (tester) async {
     tester.view.physicalSize = const Size(390, 2400);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await pumpApp(tester);
-    final home = tester.widget<Container>(find.descendant(of: find.byType(HomeFeaturedPaper), matching: find.byType(Container)).first);
-    expect((home.decoration as BoxDecoration).color, RgHome.paperCard);
-    Color face() => (tester.widget<Container>(find.descendant(of: find.byType(RgFeaturedCard).first, matching: find.byType(Container)).first)
+    Color face() => (tester.widget<Container>(find.descendant(of: find.byType(HomeFeaturedPaper).first, matching: find.byType(Container)).first)
             .decoration as BoxDecoration)
         .color!;
+    expect(face(), RgHome.paperCard);
     router.go('/explore');
     await settle(tester);
-    expect(face(), RgColors.surfaceCard);
-    final chip = find.descendant(of: find.byType(RgFeaturedCard).first, matching: find.byType(RgChip)).first;
-    final box = tester.widget<Container>(find.descendant(of: chip, matching: find.byType(Container)).first);
-    expect((box.decoration as BoxDecoration).color, RgColors.fillNeutral);
+    expect(face(), RgHome.paperCard); // 탐색도 홈 카드 기준(2026-11-01)
+    expect(find.byType(HomePaperRow), findsNWidgets(5)); // 그 밖의 논문
   });
 
   testWidgets('논문 상세 카드: AI 요약·핵심 내용에도 용어 강조, 카드 안에서 용어당 처음 1번, 누르면 진동과 시트', (tester) async {
@@ -1575,7 +1579,8 @@ void main() {
     expect(find.text('example-tiny'), findsOneWidget);
     expect(find.text('example-video'), findsNothing);
     expect(find.text('example-coder'), findsNothing); // 10월 15일 공개 → 14일 지남
-    expect(find.text('2일 전 공개 · 텍스트 생성'), findsOneWidget);
+    expect(find.text('2일 전 공개'), findsOneWidget);
+    expect(find.textContaining('10월 27일 화요일', findRichText: true), findsOneWidget); // 최근 7일은 공개일 하루씩
     final entered = find.byWidgetPredicate((w) => w is RgNewLabel && w.visible && w.label == '새로 진입');
     expect(entered, findsOneWidget); // 글자 대신 점, 화면 읽기에는 「새로 진입」
     await tester.tap(find.text('example-tiny'));

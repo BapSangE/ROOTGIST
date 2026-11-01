@@ -11,7 +11,6 @@ import '../../design/widgets/rg_card.dart';
 import '../../design/widgets/rg_pressable.dart';
 import '../../design/widgets/rg_row_head.dart';
 import '../../design/widgets/rg_states.dart';
-import '../common/item_actions.dart';
 import '../../data/unread.dart';
 import 'briefing_section.dart';
 import 'home_sections.dart';
@@ -119,7 +118,7 @@ class _HomeScreenState extends State<HomeScreen> {
     child: SizedBox(
       height: widget.date == null ? 44 : RgSpace.topBar,
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: widget.date == null ? RgSpace.gutterText : RgSpace.gutterCard),
+        padding: EdgeInsets.symmetric(horizontal: widget.date == null ? 20 : RgSpace.gutterCard), // 홈 로고 자리는 시안 그대로
         // 뒤로 화살표는 원 없이 16pt 왼쪽으로 당겨져 있어(RgBackButton), 워드마크도 그만큼 당긴다
         child: Row(
           children: [
@@ -335,12 +334,11 @@ class MoreLink extends StatelessWidget {
   );
 }
 
-// 그날의 논문: 주제 칩 + 추천 카드 + 목록. limit이 있으면(홈) 칩 없이 앞에서 그만큼만.
+// 그날의 논문(탐색 오늘의 논문, 지난 날짜 화면): 주제 칩 → 홈과 같은 회색 주요 논문 카드 → 바탕 위 논문 행(2026-11-01 홈 카드 기준)
 class DigestPapers extends StatefulWidget {
-  const DigestPapers({super.key, required this.digest, this.fallback, this.limit, this.title, this.pastDay = false});
+  const DigestPapers({super.key, required this.digest, this.fallback, this.title, this.pastDay = false});
   final Digest? digest;
   final Digest? fallback;
-  final int? limit;
   final bool pastDay; // S04에서 연 지난 날짜: 「오늘의」 대신 그 날짜
   final String? title; // 목록 묶음 제목을 바꿀 때(탐색). null이면 「새로 올라온 논문」/「그날 올라온 논문」
 
@@ -356,83 +354,56 @@ class _DigestPapersState extends State<DigestPapers> {
     final fallback = widget.fallback;
     final day = fallback ?? (widget.pastDay ? widget.digest : null); // 오늘이 아닌 날의 목록이면 그 날짜로 부른다
     final view = HomeView((fallback ?? widget.digest)?.papers ?? const [], _topic);
-    final limit = widget.limit;
-    final list = limit == null ? view.list : view.list.take(limit - (view.featured == null ? 0 : 1)).toList();
-    final chips = limit == null ? view.chips : const <String>[];
-    return ValueListenableBuilder(
-      valueListenable: bookmarks,
-      builder: (context, saved, _) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        if (chips.isNotEmpty) ...[
-          // 칩 시각 높이 36, 터치 44(더 큰 텍스트에서는 늘어난다). 시안의 위아래 20은 시각 기준이라 4씩 덜어낸다.
-          const SizedBox(height: RgSpace.s16),
-          SizedBox(
-            height: RgFilterChip.touchHeight(context),
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
-              itemCount: chips.length + 1,
-              separatorBuilder: (_, _) => const SizedBox(width: RgSpace.s8),
-              itemBuilder: (_, i) {
-                final topic = i == 0 ? null : chips[i - 1];
-                return RgFilterChip(
-                  label: topic == null ? '전체' : topicLabels[topic]!,
-                  selected: _topic == topic,
-                  onTap: () {
-                    analytics.category(topic);
-                    setState(() => _topic = topic);
-                  },
-                );
-              },
-            ),
+    final list = view.list;
+    final chips = view.chips;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      if (chips.isNotEmpty) ...[
+        // 칩 시각 높이 36, 터치 44(더 큰 텍스트에서는 늘어난다). 시안의 위아래 20은 시각 기준이라 4씩 덜어낸다.
+        const SizedBox(height: RgSpace.s16),
+        SizedBox(
+          height: RgFilterChip.touchHeight(context),
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
+            itemCount: chips.length + 1,
+            separatorBuilder: (_, _) => const SizedBox(width: RgSpace.s8),
+            itemBuilder: (_, i) {
+              final topic = i == 0 ? null : chips[i - 1];
+              return RgFilterChip(
+                label: topic == null ? '전체' : topicLabels[topic]!,
+                selected: _topic == topic,
+                onTap: () {
+                  analytics.category(topic);
+                  setState(() => _topic = topic);
+                },
+              );
+            },
           ),
-        ],
-        // 주제 칩을 바꾸면 아래 목록이 떠오르며 바뀐다(RgFilterSwitch)
-        RgFilterSwitch(
-          switchKey: _topic,
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        if (view.featured case final p?) ...[
-          SizedBox(height: chips.isEmpty ? RgSpace.s24 : RgSpace.s16),
-          _FeaturedCard(
-            paper: p,
-            compact: limit != null,
-            label: day == null ? '오늘의 주요 논문' : '${day.date.month}월 ${day.date.day}일 주요 논문',
-          ),
-        ],
-        if (list.isNotEmpty) ...[
-          if (limit == null)
-            SectionTitle(widget.title ?? (day == null ? '새로 올라온 논문' : '그날 올라온 논문'), count: '${list.length}편')
-          else
-            const SizedBox(height: RgSpace.s8),
-          // 홈은 카드 없이 바탕 위 행 + 가는 선(레퍼런스 013), 탐색은 카드 안
-          (limit == null ? (Widget c) => RgCard(child: c) : (Widget c) => c)(
-            Column(
-              children: [
-                for (final (i, p) in list.indexed)
-                  RgListRow(
-                    showDivider: i < list.length - 1,
-                    dividerInset: limit == null ? 0 : RgSpace.gutterText,
-                    // 카드 없는 행은 북마크 원이 화면 끝에 붙지 않게 오른쪽을 더 띄운다(보이는 원 오른쪽 16)
-                    padding: limit == null ? const EdgeInsets.fromLTRB(20, 18, 8, 18) : const EdgeInsets.fromLTRB(20, 18, 12, 18),
-                    onTap: () => context.push('/paper/${p.id}'),
-                    trailing: ItemActions(id: p.id, title: p.title, url: paperUrl(p.id)),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // 통일 머리 줄: 주제 칩(중립) · 날짜 · 저자 → 제목. 주제로 거르는 중이어도 칩은 그대로(모양을 바꾸지 않는다)
-                        RgRowHead(chip: p.topicLabel == null ? null : RgChip(p.topicLabel!), meta: '${p.date} · ${p.authors}'),
-                        const SizedBox(height: RgSpace.s6),
-                        KeepAllText(p.title, style: RgText.titleList),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-          ]),
         ),
-      ]),
-    );
+      ],
+      // 주제 칩을 바꾸면 아래 목록이 떠오르며 바뀐다(RgFilterSwitch)
+      RgFilterSwitch(
+        switchKey: _topic,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          if (view.featured case final p?) ...[
+            SizedBox(height: chips.isEmpty ? RgSpace.s24 : RgSpace.s16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
+              child: HomeFeaturedPaper(paper: p, label: day == null ? '오늘의 주요 논문' : '${day.date.month}월 ${day.date.day}일 주요 논문'),
+            ),
+          ],
+          if (list.isNotEmpty) ...[
+            SectionTitle(widget.title ?? (day == null ? '새로 올라온 논문' : '그날 올라온 논문'), count: '${list.length}편'),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: RgSpace.s20, children: [
+                for (final (i, p) in list.indexed) HomePaperRow(paper: p, last: i == list.length - 1),
+              ]),
+            ),
+          ],
+        ]),
+      ),
+    ]);
   }
 }
 
@@ -470,110 +441,6 @@ class _HomeSkeleton extends StatelessWidget {
           const SizedBox(height: RgSpace.s28 + 25 + RgSpace.s12),
           const RgSkeletonRows(count: 2),
         ],
-      ),
-    );
-  }
-}
-
-class _FeaturedCard extends StatelessWidget {
-  const _FeaturedCard({required this.paper, required this.label, this.compact = false});
-  final PaperItem paper;
-  final String label;
-  final bool compact; // 홈(브리핑 아래): 저자·불릿 대신 두 줄 요약
-
-  @override
-  Widget build(BuildContext context) {
-    final bullets = compact ? const <String>[] : paper.keyPoints.take(2); // G11
-    // iOS QA P5: 「자세히 읽기」 버튼 없이 카드 전체가 S02로(목록 행과 같은 방식). 북마크는 오른쪽 위에 따로.
-    // 대표 카드: 그날 가장 중요한 논문 하나. 면은 다른 카드와 같고(차콜은 밝은 카드 사이에서 튀었다) 큰 제목·불릿으로 띄운다.
-    final sub = RgText.meta.copyWith(color: RgColors.textSecondary);
-    return Semantics(
-      button: true,
-      child: RgPressable(
-        row: true,
-        onTap: () => context.push('/paper/${paper.id}'),
-        // 간격(디자인 피드백 2026-10-31 6번): 안쪽 20, 칩→제목 10, 제목→요약 8. 요약은 두 줄까지
-        child: RgFeaturedCard(
-          padding: const EdgeInsets.all(RgSpace.s20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                spacing: RgSpace.s8,
-                children: [
-                  Expanded(
-                    // 큰 글자에서 한 줄에 안 들어가면 다음 줄로
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: RgSpace.s6),
-                      child: Wrap(
-                        spacing: RgSpace.s8,
-                        runSpacing: RgSpace.s4,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          if (paper.topicLabel != null) RgChip(paper.topicLabel!),
-                          Text(label, style: RgText.caption.copyWith(color: RgColors.textSecondary)),
-                        ],
-                      ),
-                    ),
-                  ),
-                  // 누르는 영역 44는 그대로 두고 모양만 카드 모서리 쪽으로
-                  Transform.translate(
-                    offset: const Offset(RgSpace.s10, -RgSpace.s8),
-                    child: ValueListenableBuilder(
-                      valueListenable: bookmarks,
-                      builder: (_, saved, _) => RgBookmarkButton(
-                        saved: saved.containsKey(paper.id),
-                        variant: RgCircleVariant.neutral,
-                        visualSize: 36,
-                        onTap: () => toggleBookmark(paper.id, paper.title),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: RgSpace.s10),
-              HeadingTextScale(child: KeepAllText(paper.title, style: RgText.titleFeatured)),
-              const SizedBox(height: RgSpace.s8),
-              if (compact && paper.keyPoints.isNotEmpty)
-                KeepAllText(paper.keyPoints.first, maxLines: 2, overflow: TextOverflow.ellipsis, style: sub)
-              else
-                KeepAllText('${paper.authors} · ${paper.date}', style: sub),
-              if (bullets.isNotEmpty) ...[
-                const SizedBox(height: RgSpace.s16),
-                Column(
-                  spacing: RgSpace.s6,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    for (final b in bullets)
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        spacing: RgSpace.s10,
-                        children: [
-                          Container(
-                            width: 4,
-                            height: 4,
-                            // 첫 줄(행간 22 × 글자 배율)의 가운데. 고정 10이면 큰 글자에서 점이 위로 뜬다(에뮬레이터 QA)
-                            margin: EdgeInsets.only(top: (MediaQuery.textScalerOf(context).scale(22) - 4) / 2),
-                            decoration: BoxDecoration(color: RgColors.textTertiary, shape: BoxShape.circle),
-                          ),
-                          Expanded(
-                            // 실제 핵심 내용은 3~5줄짜리 문장이라 카드가 길어진다(2026-10-22 실데이터). 항목당 2줄, 전문은 S02.
-                            child: KeepAllText(
-                              b,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: RgText.bodySmall.copyWith(color: RgColors.textBody),
-                            ),
-                          ),
-                        ],
-                      ),
-                  ],
-                ),
-              ],
-            ],
-          ),
-        ),
       ),
     );
   }
