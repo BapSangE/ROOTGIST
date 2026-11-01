@@ -118,6 +118,34 @@ class BuildTest(unittest.TestCase):
         self.assertEqual(build.primary_topic([pending, ready], "0000.00002"), "optimization")
 
 
+class RetopicTest(unittest.TestCase):
+    def test_prompt_and_check(self):
+        from . import retopic
+        system, user = (m["content"] for m in retopic.build_messages("T", "S"))
+        self.assertIn("`robotics`=", system)
+        self.assertNotIn("term_difficulty", system)  # 분류 항목만 꺼낸다
+        self.assertIn('"eval"', user)
+        self.assertEqual(retopic.check({"topic_tags": ["vision", "optimization"]}), [])
+        for bad in ({"topic_tags": []}, {"topic_tags": ["vision", "vision"]}, {"topic_tags": ["biology"]}, []):
+            with self.subTest(bad):
+                self.assertTrue(retopic.check(bad))
+
+    def test_digest_topics(self):
+        from . import retopic
+
+        class FakeDb:
+            def select_all(self, table, query):
+                if table == "digest_papers":
+                    return [{"digest_date": "2026-10-31", "paper_id": "a", "is_featured": True},
+                            {"digest_date": "2026-10-31", "paper_id": "b", "is_featured": False},
+                            {"digest_date": "2026-10-30", "paper_id": "c", "is_featured": True}]
+                return [{"paper_id": "a", "topic_primary": "vision"}, {"paper_id": "b", "topic_primary": "robotics"},
+                        {"paper_id": "c", "topic_primary": "llm"}]
+
+        # 동률이면 주요 연구의 분야(G10), 바뀐 논문이 없는 날은 건드리지 않는다
+        self.assertEqual(retopic.digest_topics(FakeDb(), {"b"}), [{"digest_date": "2026-10-31", "primary_topic": "vision"}])
+
+
 class GlossaryLinkTest(unittest.TestCase):
     def test_single_sense_links_ambiguous_and_missing(self):
         from . import glossary

@@ -1,0 +1,33 @@
+# 저장된 논문의 분야만 다시 분류(worker/retopic.py, p2 프롬프트 v0.6.2의 9개 코드). 손으로 한 번 돌리는 작업이다.
+# 먼저 dry_run으로 바뀔 내용을 로그에서 보고, 괜찮으면 dry_run을 끄고 다시 돌린다(받은 분류는 worker_state에 남아 다시 부르지 않는다).
+# 매일 배치와 같은 LLM 키를 쓰므로 같은 concurrency 그룹으로 묶어 동시에 돌지 않게 한다.
+name: retopic
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "바뀔 내용만 보고 논문·다이제스트는 고치지 않는다"
+        type: boolean
+        default: true
+
+concurrency:
+  group: daily-batch
+  cancel-in-progress: false
+
+jobs:
+  retopic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install -r worker/requirements.txt
+      - run: python -m worker.retopic ${{ inputs.dry_run && '--dry-run' || '' }}
