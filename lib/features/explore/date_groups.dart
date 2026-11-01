@@ -3,12 +3,15 @@ import 'package:flutter/services.dart';
 
 import '../../design/tokens.dart';
 import '../../design/typography.dart';
+import '../../design/widgets/rg_card.dart';
 import '../../design/widgets/rg_pressable.dart';
 
 // 탐색 목록을 날짜로 묶는다(사용자 요청 2026-11-01). 최근 7일은 하루씩, 그보다 앞의 이번 달은 한 주(월~일)씩,
 // 지난달부터는 한 달씩, 지난해부터는 한 해씩(아직 1년치가 없어 해 묶음은 기능만 있다). 기준은 한국 시간.
-// 하루 묶음은 펼쳐 두고 주·달·해 묶음은 머리만 보이다 누르면 펼친다(하루 묶음이 없으면 맨 위 묶음을 펼친다).
-// 펼친 묶음도 앞 [fold]개만 보이고 나머지는 「N건 더 보기」로 그 자리에서 연다. 펼치고 접기는 220ms(동작 줄이기면 바로) + 선택 틱.
+// 하루 묶음은 펼쳐 두고 글 카드를 바로 보인다. 주·달·해 묶음은 「지난 논문」처럼 머리(「2026년 10월 · 12일치」)만 보이다 누르면
+// 날짜 줄(큰 날짜 숫자·요일, 「5건 · OpenAI 외」)을 흰 카드에 모아 펼치고, 날짜 줄을 누르면 그날 글 카드가 그 자리에서 펼쳐진다
+// (사용자 요청 2026-11-01). 하루 묶음이 없으면 맨 위 묶음을 펼쳐 둔다.
+// 펼친 하루도 앞 [fold]개만 보이고 나머지는 「N건 더 보기」로 그 자리에서 연다. 펼치고 접기는 220ms(동작 줄이기면 바로) + 선택 틱.
 
 enum DateUnit { day, week, month, year }
 
@@ -65,27 +68,29 @@ const _weekdays = ['월요일', '화요일', '수요일', '목요일', '금요�
       final range = '${s.month}월 ${s.day}일 ~ ${e.month}월 ${e.day}일';
       return weekStart(now).difference(s).inDays == 7 ? ('지난주', range) : (range, null);
     case DateUnit.month:
-      return ('${s.month}월', null);
+      return ('${s.year}년 ${s.month}월', null);
     case DateUnit.year:
       return ('${s.year}년', null);
   }
 }
 
 class DateGroups<T> extends StatefulWidget {
-  const DateGroups({super.key, required this.items, required this.at, required this.now, required this.builder, this.fold = 5});
+  const DateGroups({super.key, required this.items, required this.at, required this.now, required this.builder, this.tag, this.fold = 5});
   final List<T> items;
   final DateTime Function(T) at;
+  final String Function(T)? tag; // 날짜 줄의 「OpenAI 외」에 쓸 이름(출처 등). 그날 가장 많은 이름, 같으면 앞의 것
   final DateTime now;
   final Widget Function(BuildContext context, List<T> rows) builder; // 한 묶음의 보이는 행들 → 카드(들)
-  final int fold; // 펼친 묶음에서 처음 보이는 개수. 1개만 남으면 접지 않는다
+  final int fold; // 펼친 하루에서 처음 보이는 개수. 1개만 남으면 접지 않는다
 
   @override
   State<DateGroups<T>> createState() => _DateGroupsState<T>();
 }
 
 class _DateGroupsState<T> extends State<DateGroups<T>> {
-  final _open = <DateKey>{}; // 펼친 주·달·해
+  final _open = <DateKey>{}; // 펼친 주·달·해와 그 안에서 펼친 날
   final _all = <DateKey>{}; // 「더 보기」로 다 연 묶음
+  var _seeded = false; // 최근 7일 글이 없으면 처음 한 번 맨 위 날을 펼쳐 둔다(빈 날짜 줄만 보이지 않게)
 
   void _toggle(Set<DateKey> set, DateKey k) {
     HapticFeedback.selectionClick();
@@ -97,38 +102,153 @@ class _DateGroupsState<T> extends State<DateGroups<T>> {
     final d = RgMotion.of(context, RgMotion.base);
     final groups = groupByDate(widget.items, widget.at, widget.now);
     final noDays = groups.every((g) => g.unit != DateUnit.day);
+    if (!_seeded && groups.isNotEmpty) {
+      _seeded = true;
+      if (noDays) _open.add((DateUnit.day, _byDay(groups.first.rows).first.$1));
+    }
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       for (final (i, g) in groups.indexed) ...() {
-        final fixed = g.unit == DateUnit.day || (noDays && i == 0); // 늘 펼친 묶음(누르지 않는다)
-        final open = fixed || _open.contains(g.key);
-        final more = g.rows.length > widget.fold + 1 ? g.rows.length - widget.fold : 0;
-        final all = _all.contains(g.key);
         final (label, range) = dateLabel(g, widget.now);
+        if (g.unit == DateUnit.day) {
+          return [DateHeader(label: label, range: range, count: '${g.rows.length}건', open: true), _rows(g.key, g.rows)];
+        }
+        final fixed = noDays && i == 0; // 늘 펼친 묶음(누르지 않는다)
+        final open = fixed || _open.contains(g.key);
+        final days = _byDay(g.rows);
         return [
-          DateHeader(label: label, range: range, count: g.rows.length, open: open, onTap: fixed ? null : () => _toggle(_open, g.key)),
+          DateHeader(label: label, range: range, count: '${days.length}일치', open: open, onTap: fixed ? null : () => _toggle(_open, g.key)),
           AnimatedSize(
             duration: d,
             curve: RgMotion.curve,
             alignment: Alignment.topCenter,
-            child: !open
-                ? const SizedBox(width: double.infinity)
-                : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                    widget.builder(context, more > 0 && !all ? g.rows.take(widget.fold).toList() : g.rows),
-                    if (more > 0) _MoreButton(open: all, more: more, onTap: () => _toggle(_all, g.key)),
-                  ]),
+            child: open ? _days(days) : const SizedBox(width: double.infinity),
           ),
         ];
       }(),
     ]);
   }
+
+  // 한 묶음 안을 한국 날짜로 나눈다(최근 날부터, 날 안은 받은 순서)
+  List<(DateTime, List<T>)> _byDay(List<T> rows) {
+    final out = <DateTime, List<T>>{};
+    for (final r in rows) {
+      out.putIfAbsent(_kstDay(widget.at(r)), () => []).add(r);
+    }
+    final keys = out.keys.toList()..sort((a, b) => b.compareTo(a));
+    return [for (final k in keys) (k, out[k]!)];
+  }
+
+  // 날짜 줄을 흰 카드에 모은다. 펼친 날은 그 줄에서 카드를 끊고 아래에 그날 글 카드를 놓은 뒤 남은 줄로 카드를 다시 잇는다(카드 안에 카드를 겹치지 않게)
+  Widget _days(List<(DateTime, List<T>)> days) {
+    final out = <Widget>[];
+    var run = <Widget>[];
+    void flush() {
+      if (run.isEmpty) return;
+      out.add(RgCard(child: Column(children: run)));
+      run = [];
+    }
+
+    for (final (j, (day, rows)) in days.indexed) {
+      final key = (DateUnit.day, day);
+      final open = _open.contains(key);
+      run.add(_DayLine(day: day, count: rows.length, sub: _summary(rows), open: open, last: open || j == days.length - 1, onTap: () => _toggle(_open, key)));
+      if (open) {
+        flush();
+        out.add(Padding(padding: const EdgeInsets.only(top: RgSpace.s12, bottom: RgSpace.s20), child: _rows(key, rows)));
+      }
+    }
+    flush();
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: out);
+  }
+
+  // 「OpenAI 외」: 그날 가장 많은 이름(같으면 앞의 것), 다른 이름이 더 있으면 「외」
+  String? _summary(List<T> rows) {
+    final tag = widget.tag;
+    if (tag == null) return null;
+    final counts = <String, int>{};
+    for (final r in rows) {
+      counts.update(tag(r), (c) => c + 1, ifAbsent: () => 1);
+    }
+    final top = counts.entries.reduce((a, b) => b.value > a.value ? b : a).key;
+    return counts.length > 1 ? '$top 외' : top;
+  }
+
+  // 하루치 글 카드: 앞 [fold]개 + 「N건 더 보기」
+  Widget _rows(DateKey key, List<T> rows) {
+    final more = rows.length > widget.fold + 1 ? rows.length - widget.fold : 0;
+    final all = _all.contains(key);
+    return AnimatedSize(
+      duration: RgMotion.of(context, RgMotion.base),
+      curve: RgMotion.curve,
+      alignment: Alignment.topCenter,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        widget.builder(context, more > 0 && !all ? rows.take(widget.fold).toList() : rows),
+        if (more > 0) _MoreButton(open: all, more: more, onTap: () => _toggle(_all, key)),
+      ]),
+    );
+  }
 }
 
-// 묶음 머리: 「어제 ……… 4건」 「지난주  10월 19일 ~ 10월 25일 ……… 12건 ⌄」. 접히는 묶음은 누르면 펼친다
+// 날짜 줄(「지난 논문」의 날짜 줄과 같은 모양): 왼쪽 큰 날짜 숫자 + 요일, 가운데 「5건」 + 「OpenAI 외」, 오른쪽 ⌄(누르면 그날 글이 펼쳐져 ⌃)
+class _DayLine extends StatelessWidget {
+  const _DayLine({required this.day, required this.count, this.sub, required this.open, required this.last, required this.onTap});
+  final DateTime day;
+  final int count;
+  final String? sub;
+  final bool open;
+  final bool last;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final weekday = _weekdays[day.weekday - 1];
+    return Semantics(
+      label: '${day.month}월 ${day.day}일 $weekday, $count건${sub == null ? '' : ', $sub'}',
+      expanded: open,
+      excludeSemantics: true,
+      child: RgListRow(
+        padding: const EdgeInsets.fromLTRB(20, 14, 16, 14),
+        crossAxisAlignment: CrossAxisAlignment.center,
+        showDivider: !last,
+        onTap: onTap,
+        trailing: Padding(
+          padding: const EdgeInsets.only(left: RgSpace.s4),
+          child: AnimatedRotation(
+            turns: open ? -0.25 : 0.25, // 펼침 ▲ / 접힘 ▼
+            duration: RgMotion.of(context, RgMotion.base),
+            curve: RgMotion.curve,
+            child: RgIcon('chevron-right', size: 20, color: RgColors.textTertiary),
+          ),
+        ),
+        child: Row(spacing: RgSpace.s16, children: [
+          SizedBox(
+            width: 46,
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('${day.day}', style: RgText.titleDetail.copyWith(fontSize: 24, height: 1.1, fontWeight: FontWeight.w800, color: RgColors.textPrimary)),
+              Text(weekday, style: RgText.caption.copyWith(fontSize: 12, color: RgColors.textSecondary)),
+            ]),
+          ),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('$count건', style: RgText.titleList.copyWith(color: RgColors.textPrimary)),
+              if (sub != null) ...[
+                const SizedBox(height: RgSpace.s2),
+                Text(sub!, maxLines: 1, overflow: TextOverflow.ellipsis, style: RgText.meta.copyWith(color: RgColors.textSecondary)),
+              ],
+            ]),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+// 묶음 머리: 「어제 ……… 4건」 「지난주  10월 19일 ~ 10월 25일 ……… 5일치 ⌄」 「2026년 10월 ……… 12일치 ⌄」. 접히는 묶음은 누르면 펼친다
 class DateHeader extends StatelessWidget {
   const DateHeader({super.key, required this.label, this.range, required this.count, required this.open, this.onTap});
   final String label;
   final String? range;
-  final int count;
+  final String count; // 「4건」 「12일치」
   final bool open;
   final VoidCallback? onTap;
 
@@ -150,7 +270,7 @@ class DateHeader extends StatelessWidget {
             ),
           ),
         ),
-        Text('$count건', style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
+        Text(count, style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
         if (onTap != null)
           AnimatedRotation(
             turns: open ? -0.25 : 0.25, // 펼침 ▲ / 접힘 ▼

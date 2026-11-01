@@ -87,6 +87,20 @@ Future<void> settle(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+// 날짜 묶음의 접힌 주·달 머리와 날짜 줄을 모두 펼친다(지난 글은 날짜 줄 뒤에 접혀 있다)
+Future<void> openDates(WidgetTester tester) async {
+  for (var i = 0; i < 30; i++) {
+    final closed = find.descendant(
+      of: find.byWidgetPredicate((w) => w is DateGroups),
+      matching: find.byWidgetPredicate((w) => w is Semantics && w.properties.expanded == false && w.properties.label != null || w is DateHeader && !w.open && w.onTap != null),
+    );
+    if (closed.evaluate().isEmpty) return;
+    await Scrollable.ensureVisible(tester.element(closed.first), alignment: 0.3); // 아래 탭 바에 가리지 않게
+    await tester.tap(closed.first);
+    await tester.pumpAndSettle();
+  }
+}
+
 void main() {
   // 앱 시작과 같이 저장값을 한 번 읽고, 이후 변경을 저장하는 리스너를 단다.
   setUpAll(() async {
@@ -397,6 +411,7 @@ void main() {
     await tester.fling(find.byType(PageView), const Offset(-300, 0), 1000);
     await slide(tester); // 칸 넘김 애니메이션
     await settle(tester);
+    await openDates(tester);
     // 통일 머리 줄: 출처 칩 + 시각(분류는 위계를 흐려 뺐다, 디자인 피드백 2026-10-31 4번)
     expect(find.text('OpenAI'), findsWidgets);
     expect(find.text(relativeKo(DateTime.utc(2026, 10, 17, 17), clock())), findsWidgets); // UTC 17시 = KST 다음 날
@@ -427,6 +442,7 @@ void main() {
 
     await tester.tap(find.text('업데이트'));
     await tester.pumpAndSettle();
+    await openDates(tester);
     // 업데이트는 홈 「바뀐 도구」 카드: 시각 → 도구 이름 → 제목. 근거·변경 목록은 상세에서
     expect(find.text(relativeKo(DateTime.utc(2026, 10, 18, 12), clock())), findsWidgets);
     expect(find.byType(HomeUpdateCard), findsNWidgets(2));
@@ -541,9 +557,13 @@ void main() {
     await tester.tap(more('바뀐 도구'));
     await settle(tester);
     expect(find.widgetWithText(RgUnderlineTabs, '업데이트'), findsOneWidget); // 공식 소식 칸의 「업데이트」
+    await openDates(tester);
     expect(find.byType(HomeUpdateCard), findsNWidgets(2)); // 홈 「바뀐 도구」와 같은 회사 색 카드
     // 업데이트 카드는 어디를 눌러도 소식 상세로(실기기 QA: 본문을 눌러도 반응이 없어 새 글 점이 안 지워졌다)
-    await tester.tap(find.byType(HomeUpdateCard).first);
+    final notice = find.byWidgetPredicate((w) => w is HomeUpdateCard && w.news.kind == 'notice'); // 릴리스는 AI 요약이 없다
+    await Scrollable.ensureVisible(tester.element(notice), alignment: 0.3); // 아래 탭 바에 가리지 않게
+    await tester.pumpAndSettle();
+    await tester.tap(notice);
     await settle(tester);
     expect(find.text('AI 요약'), findsWidgets);
     expect(find.bySemanticsLabel('원문 열기'), findsOneWidget); // 소식 상세 상단 바
@@ -624,10 +644,40 @@ void main() {
     ];
     final groups = groupByDate(items, (d) => d, now);
     expect([for (final g in groups) dateLabel(g, now)], [
-      ('오늘', null), ('어제', null), ('지난주', '11월 9일 ~ 11월 15일'), ('11월 2일 ~ 11월 8일', null), ('10월', null), ('2025년', null),
+      ('오늘', null), ('어제', null), ('지난주', '11월 9일 ~ 11월 15일'), ('11월 2일 ~ 11월 8일', null), ('2026년 10월', null), ('2025년', null),
     ]);
     expect(groups[4].rows, [DateTime.utc(2026, 10, 5), DateTime.utc(2026, 10, 20)]); // 묶음 안은 받은 순서
     expect(dateLabel(groupByDate([DateTime.utc(2026, 11, 16)], (d) => d, now).single, now), ('11월 16일 월요일', null));
+  });
+
+  testWidgets('날짜 묶음 모양: 최근 7일은 글 카드, 지난 주·달은 「지난 논문」처럼 날짜 줄, 날짜 줄을 누르면 그날 글이 펼쳐진다', (tester) async {
+    final now = DateTime.utc(2026, 11, 20, 3);
+    final items = [
+      (DateTime.utc(2026, 11, 19), 'A'), (DateTime.utc(2026, 10, 29), 'B'), (DateTime.utc(2026, 10, 29, 2), 'C'), (DateTime.utc(2026, 10, 5), 'B'),
+    ];
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: SingleChildScrollView(
+          child: DateGroups<(DateTime, String)>(
+            items: items, at: (i) => i.$1, tag: (i) => i.$2, now: now,
+            builder: (context, rows) => Column(children: [for (final r in rows) Text('글 ${r.$2} ${r.$1.day}')]),
+          ),
+        ),
+      ),
+    ));
+    expect(find.text('글 A 19'), findsOneWidget); // 어제: 카드 그대로
+    expect(find.text('2일치'), findsOneWidget); // 2026년 10월: 날짜 줄 두 개(29일·5일)
+    expect(find.text('글 B 29'), findsNothing);
+    await tester.tap(find.text('2026년 10월', findRichText: true));
+    await tester.pumpAndSettle();
+    expect(find.text('2건'), findsOneWidget); // 29일 목요일 2건
+    expect(find.text('B 외'), findsOneWidget); // 같은 수면 앞의 이름 + 외
+    expect(find.text('목요일'), findsOneWidget);
+    await tester.tap(find.text('29'));
+    await tester.pumpAndSettle();
+    expect(find.text('글 B 29'), findsOneWidget);
+    expect(find.text('글 C 29'), findsOneWidget);
+    expect(find.text('글 B 5'), findsNothing); // 다른 날은 접힌 채
   });
 
   test('새 글 규칙: 기준 시각 전·하루 지난 글·읽은 글은 새 글이 아니다', () {
@@ -1171,6 +1221,7 @@ void main() {
     await tester.tap(find.text('소식'));
     await slide(tester);
     await settle(tester);
+    await openDates(tester);
     expect(find.text('지난번에 여기까지 봤어요'), findsOneWidget);
     expect(find.widgetWithText(RgFilterChip, 'OpenAI'), findsOneWidget);
     expect(find.widgetWithText(RgFilterChip, 'OpenAI 커뮤니티'), findsNothing); // 같은 회사는 한 칩
@@ -1490,6 +1541,7 @@ void main() {
     await tester.tap(find.text('소식'));
     await slide(tester);
     await settle(tester);
+    await openDates(tester);
     final colors = <String, Color?>{}, text = <String, Color?>{};
     for (final e in find.descendant(of: find.byType(HomeStoryRow), matching: find.byType(HomeChip)).evaluate()) {
       final chip = e.widget as HomeChip;

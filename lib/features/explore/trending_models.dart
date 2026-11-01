@@ -103,6 +103,7 @@ class _TrendingModelsSectionState extends State<TrendingModelsSection> {
                     DateGroups<TrendingModel>(
                       items: models,
                       at: (m) => m.createdAt!,
+                      tag: (m) => m.author,
                       now: now,
                       builder: (context, rows) => Padding(
                         padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),

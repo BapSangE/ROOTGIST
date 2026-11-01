@@ -140,13 +140,14 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
         ),
       ),
       // 홈 카드 모양(2026-11-01): 발표는 한 묶음(하루·주·달)에 흰 카드 하나(홈 「오늘의 주요 소식」 행), 업데이트는 글마다 회사 색 카드(홈 「바뀐 도구」).
-      // 최근 7일은 하루씩, 그 앞은 주·달·해로 묶는다(DateGroups). 발표·업데이트나 출처 칩을 바꾸면 목록이 떠오르며 바뀐다(RgFilterSwitch)
+      // 최근 7일은 하루씩, 그 앞은 주·달·해로 묶어 날짜 줄로 접는다(DateGroups, 「지난 논문」 모양). 발표·업데이트나 출처 칩을 바꾸면 목록이 떠오르며 바뀐다(RgFilterSwitch)
       RgFilterSwitch(
         switchKey: (_tab, _source),
         child: DateGroups<OfficialNews>(
           key: ValueKey((_tab, _source)),
           items: shown,
           at: (n) => n.publishedAt,
+          tag: (n) => n.sourceLabel,
           now: now,
           builder: (context, rows) => Padding(
             padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
@@ -227,6 +228,7 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
                 key: ValueKey(_hot),
                 items: shown,
                 at: (n) => n.publishedAt,
+                tag: (n) => n.sourceLabel,
                 now: now,
                 builder: (context, rows) => Padding(
                   padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
