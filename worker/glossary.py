@@ -105,9 +105,12 @@ def promote_candidates(db: Db) -> int:
 
 
 def preferred_terms(db: Db) -> list[tuple[str, str, str]]:
-    """사람이 승인한 의미의 (정규화 별칭, 별칭 원문, 한국어 표기). 프롬프트 v0.6의 preferred_terms 재료."""
+    """승인한 의미의 (정규화 별칭, 별칭 원문, 한국어 표기). 프롬프트 v0.6의 preferred_terms 재료.
+    AI 1차 검토를 마친 의미만 쓴다: 2026-11-02 일괄 승인한 미검토 의미에는 기계 번역 대응어(temperature → 기온,
+    weight → 무게)가 섞여 있어 그대로 넣으면 해설 번역이 틀어진다(DB list_terms와 같은 기준)."""
     senses = {s["sense_id"]: s["canonical_ko"] for s in db.select_all(
-        "term_senses", "review_status=eq.approved&canonical_ko=not.is.null&select=sense_id,canonical_ko&order=sense_id")}
+        "term_senses", "review_status=eq.approved&ai_review_status=eq.first_pass_complete&canonical_ko=not.is.null"
+        "&select=sense_id,canonical_ko&order=sense_id")}
     if not senses:
         return []
     aliases = db.select_all("term_aliases", "select=sense_id,surface_form&order=alias_id")
