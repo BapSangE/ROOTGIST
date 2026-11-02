@@ -1299,7 +1299,7 @@ void main() {
     calls.clear();
     expect((await repo.listOfficialNews()).single.titleKo, '제목');
     expect((await repo.listTrendingModels()).single.id, 'a/b');
-    expect(calls, ['/rest/v1/rpc/list_official_news {"lim":60}', '/rest/v1/rpc/list_trending_models {}']);
+    expect(calls, ['/rest/v1/rpc/list_official_news {"lim":400}', '/rest/v1/rpc/list_trending_models {}']);
     online = false;
     expect((await repo.listOfficialNews()).single.id, 'abc');
   });

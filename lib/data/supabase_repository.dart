@@ -89,7 +89,7 @@ class SupabaseRepository extends Repository {
   Future<List<OfficialNews>> listOfficialNews() async {
     final j = _officialNewsPreview.isNotEmpty
         ? jsonDecode(_officialNewsPreview)
-        : await _rpc('list_official_news', {'lim': 60}, 'official_news');
+        : await _rpc('list_official_news', {'lim': 400}, 'official_news');
     return [for (final n in j['items']) OfficialNews.fromJson(n)];
   }
 
