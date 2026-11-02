@@ -1320,6 +1320,23 @@ void main() {
     expect(find.text('SLAM'), findsOneWidget); // 원어만, 대응어 줄은 없음
   });
 
+  testWidgets('C02: 설명 끝 「예:」는 뜻 아래 예시 상자로, 괄호 안 「예:」는 뜻 그대로', (tester) async {
+    expect(splitExample('비율. 예: 10개 중 8개일 때 80%.'), ('비율.', '10개 중 8개일 때 80%.'));
+    expect(splitExample('구조.\n과거에는 전용 백본(예: ResNet, ViT)이 쓰였다'), ('구조.\n과거에는 전용 백본(예: ResNet, ViT)이 쓰였다', null));
+    expect(splitExample('예: 뜻 없이 예시만'), ('예: 뜻 없이 예시만', null));
+    final recall = GlossaryTerm.fromJson({
+      'term': 'recall', 'definition_ko': '실제 양성 중 찾아낸 비율. 예: 스팸 10개 중 8개를 찾으면 80%.', 'sentence_ids': ['A01'],
+    });
+    await tester.pumpWidget(MaterialApp(
+      home: Builder(builder: (context) => TextButton(onPressed: () => showTermSheet(context, recall), child: const Text('열기'))),
+    ));
+    await tester.tap(find.text('열기'));
+    await tester.pumpAndSettle();
+    expect(find.text(keepAll('실제 양성 중 찾아낸 비율.')), findsOneWidget);
+    expect(find.text('예시'), findsOneWidget);
+    expect(find.text(keepAll('스팸 10개 중 8개를 찾으면 80%.')), findsOneWidget);
+  });
+
   testWidgets('Q03: 라벨만 남긴 버튼도 화면 읽기 탭 동작이 있다', (tester) async {
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(body: RgCircleButton(semanticLabel: '공유', icon: 'share', onTap: () {})),
