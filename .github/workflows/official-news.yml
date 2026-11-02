@@ -1,0 +1,35 @@
+# 공식 소식·HF 트렌딩 모델만 오후에 한 번 더 받는다(사용자 결정 2026-11-02). 새벽 daily-batch의 official-news 잡과 같은 일.
+# 미국 회사 발표·Hacker News 화제는 KST 밤~새벽에 많이 올라와 새벽 한 번만으로는 낮 소식이 다음 날까지 밀린다.
+# 논문은 다시 돌리지 않는다: 처리 날짜(KST 어제)가 같고 노출 상위 10편은 첫 실행 때 정해지며, 늦게 온 논문은 다음 날 D-1 보충이 채운다.
+# 번역·요약 캐시는 worker_state 테이블에 있어 새 글만 LLM을 부른다(몇 분).
+# 같은 LLM 키를 쓰므로 daily-batch·retopic과 같은 concurrency 그룹으로 묶어 동시에 돌지 않게 한다.
+name: official-news
+
+on:
+  schedule:
+    # UTC 05:17 = KST 14:17. GitHub 예약은 2~4시간 늦게 시작하기도 해서(daily-batch 주석) 실제로는 오후~저녁에 돈다.
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: daily-batch
+  cancel-in-progress: false
+
+jobs:
+  official-news:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+      NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install -r worker/requirements.txt
+      - name: 공식 소식·트렌딩 모델
+        run: python -m worker.official_news
