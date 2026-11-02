@@ -1351,36 +1351,29 @@ void main() {
     expect(find.text('inference-time compute'), findsNothing);
   });
 
-  testWidgets('Q02: 접근성 최대 글자(AX5, 3.12배)에서도 화면마다 넘침이 없다', (tester) async {
+  testWidgets('기기 글자 크기: 기기에서 최대(AX5, 3.12배)·굵은 텍스트로 해도 앱 글자는 그대로', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     tester.platformDispatcher.textScaleFactorTestValue = 3.12;
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    tester.platformDispatcher.accessibilityFeaturesTestValue = const FakeAccessibilityFeatures(boldText: true);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
     await pumpApp(tester);
-
-    for (final path in ['/home', '/explore', '/explore/2026-10-18', '/library', '/settings', '/settings/reading', '/settings/source', '/paper/0000.00001', '/paper/0000.00001/reader']) {
-      router.go('/home');
-      await settle(tester);
-      path.startsWith('/paper') ? router.push(path) : router.go(path);
-      await settle(tester);
-      for (var i = 0; i < 6; i++) {
-        await tester.drag(find.byType(Scrollable).first, const Offset(0, -700), warnIfMissed: false);
-        await tester.pumpAndSettle();
-      }
-      expect(tester.takeException(), isNull, reason: path);
-    }
-    // 화면 틀(탭바)은 1.35배, 큰 제목은 2배에서 멈추고 본문은 그대로 커진다
     router.go('/home');
     await settle(tester);
-    await tester.drag(find.byType(Scrollable).first, const Offset(0, 20000)); // 앞에서 내려 둔 홈을 맨 위로
-    await tester.pumpAndSettle();
-    expect(MediaQuery.textScalerOf(tester.element(find.text('홈'))).scale(1), 1.35);
-    // 홈 칸 제목(28)은 2배에서 멈추고, 부제는 그대로 커진다
+    expect(MediaQuery.textScalerOf(tester.element(find.text('홈'))).scale(1), 1.0);
+    expect(MediaQuery.boldTextOf(tester.element(find.text('홈'))), isFalse);
     final title = find.text(keepAll('오늘의 논문'));
     await tester.scrollUntilVisible(title, 300, scrollable: find.byType(Scrollable).first);
-    expect(MediaQuery.textScalerOf(tester.element(title)).scale(1), 2);
-    expect(MediaQuery.textScalerOf(tester.element(find.text(keepAll('6편이 올라왔어요')))).scale(1), 3.12);
+    expect(MediaQuery.textScalerOf(tester.element(title)).scale(1), 1.0);
+    // 앱 안 「글자 크기」는 그대로 듣는다
+    router.push('/paper/0000.00001');
+    await settle(tester);
+    readerScale.value = 1.3;
+    await tester.pump();
+    expect(MediaQuery.textScalerOf(tester.element(find.text('핵심 내용'))).scale(1), 1.3);
+    readerScale.value = 1.0;
   });
 
   testWidgets('화면 바탕: 홈과 같은 회청 바탕 하나, 읽기 설정에 「화면 바탕」 고르기는 없다', (tester) async {

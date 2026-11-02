@@ -152,8 +152,15 @@ class _RootgistAppState extends State<RootgistApp> with WidgetsBindingObserver, 
       theme: rgTheme,
       themeAnimationStyle: AnimationStyle.noAnimation, // 색 전환은 아래 크로스페이드가 맡는다(동작 줄이기면 바로)
       routerConfig: router,
+      // 기기 설정의 글자 크기·굵은 텍스트는 따르지 않는다(사용자 결정 2026-11-02). 글자 크기는 앱 안 「글자 크기」 4단계로만 바꾼다
       builder: (context, child) => Stack(fit: StackFit.expand, children: [
-        RepaintBoundary(key: _appKey, child: child),
+        RepaintBoundary(
+          key: _appKey,
+          child: MediaQuery(
+            data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling, boldText: false),
+            child: child!,
+          ),
+        ),
         if (_before case final image?)
           IgnorePointer(
             child: FadeTransition(
