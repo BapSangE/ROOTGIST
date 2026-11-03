@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../data/guide.dart';
 import '../../data/repository.dart';
 import '../../data/settings.dart';
 import '../../data/unread.dart';
@@ -64,6 +65,7 @@ class SettingsScreen extends StatelessWidget {
         ]),
         group('안내'),
         _SettingsCard(children: [
+          _Row(icon: 'circle-help', label: '사용 방법', onTap: () => context.go('/settings/guide')),
           // 안 읽은 공지가 있으면 오른쪽에 새 글 점
           FutureBuilder(
             future: loadNotices(),
@@ -498,7 +500,7 @@ class DataSourceScreen extends StatelessWidget {
     '그날 upvote가 많은 상위 10편을 골라요. 이 순서는 Hugging Face 이용자들의 반응이고, ROOTGIST가 논문을 평가한 결과가 아니에요.',
     '각 논문의 원문은 상세 화면의 Hugging Face·arXiv 링크에서 확인할 수 있어요. 논문 제목과 초록은 arXiv가 CC0으로 공개한 정보예요.',
     // 공식 소식·모델(docs/RIGHTS.md 3·4장): 출처와 「원문이 아니라 AI 정리」라는 점, 삭제 요청 창구를 밝힌다.
-    '공식 소식은 OpenAI·Anthropic·Google DeepMind·Google Research·Hugging Face·Meta·NVIDIA의 공식 블로그(Hugging Face 블로그에 회사 계정이 쓴 글 포함)와 개발자 공지, Claude Code·SDK·API 릴리스 노트에서 모아요. 제목과 요약·핵심 내용은 AI가 원문을 보고 한국어로 정리한 것이고, 글 전체는 각 원문 링크에서 읽을 수 있어요.',
+    '공식 소식은 OpenAI·Anthropic·Google DeepMind·Google Research·Hugging Face·Meta·NVIDIA의 공식 블로그(Hugging Face 블로그에 회사 계정이 쓴 글 포함)와 개발자 공지, Claude Code·SDK·API 릴리스 노트에서 모아요. 데이터센터·AI 인프라 소식은 Google·Microsoft·Amazon 공식 블로그에서 그 주제 글만 골라요. 제목과 요약·핵심 내용은 AI가 원문을 보고 한국어로 정리한 것이고, 글 전체는 각 원문 링크에서 읽을 수 있어요.',
     '「개발자 화제」는 Hacker News에서 개발자들이 많이 본 AI 글과 GitHub의 새 AI 저장소예요. 숫자는 Hacker News 추천(upvote) 수·GitHub 별 수이고, 요약은 원문 사이트가 허용할 때만 만들어요.',
     '모델은 Hugging Face 트렌딩 순위와 각 모델 카드에 적힌 제작사 설명을 바탕으로 해요. 점수는 제작사가 직접 측정해 밝힌 값이에요.',
     // 출처 배지의 회사 대표 색(RgBrand)과 함께 둔다(docs/RIGHTS.md 4장)
@@ -665,4 +667,177 @@ List<(MdBlock, String)> markdownBlocks(String md) {
   }
   flush();
   return out;
+}
+
+
+// 설정 › 사용 방법(시안 design-preview/src/onboarding_guide.html 3장): 기능 사용법·자주 묻는 질문·다시 보기·문의.
+// 회원가입·로그인이 없어 그 문답은 두지 않고, 이 앱에 실제로 생길 질문(번역 오류, 저장, 사용 기록, 데이터 삭제)을 둔다.
+// 개발 용어(캐시·토큰·API)를 쓰지 않는다. 사용법 줄을 누르면 그 화면으로 간다.
+class GuideScreen extends StatelessWidget {
+  const GuideScreen({super.key});
+
+  static const _faq = [
+    ('새 논문은 언제 올라와요?', '매일 아침 6시쯤이에요. 주말에는 새 논문이 발표되지 않아 가장 최근 논문을 보여 드려요. 공식 소식은 오후에 한 번 더 모아요.'),
+    ('번역이 어색하거나 틀린 것 같아요', '요약과 번역은 논문 초록만 보고 AI가 만들어서 틀릴 수 있어요. 중요한 내용은 원문에서 확인해 주시고, 아래 「문의하기」로 알려 주시면 고칠게요.'),
+    ('회원가입이나 로그인이 필요한가요?', '아니요. 설치하면 바로 쓸 수 있고, 이름이나 이메일을 받지 않아요.'),
+    ('저장한 글이 사라졌어요', '저장한 글과 읽기 설정은 이 기기에만 남아요. 앱을 지웠다 다시 설치하거나 기기를 바꾸면 옮겨지지 않아요.'),
+    ('사용 기록을 보내나요?', '기본으로는 보내지 않아요. 설정 › 사용 분석을 켠 경우에만 화면 방문 같은 익명 기록을 보내고, 본문이나 이메일은 보내지 않아요.'),
+    ('데이터를 지우고 싶어요', '저장한 글과 설정은 앱을 지우면 함께 지워져요. 사용 분석으로 보낸 기록은 설정 › 분석 데이터 삭제 요청으로 지울 수 있어요.'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    Widget group(String label) => Padding(
+      padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s28, RgSpace.gutterText, RgSpace.s8),
+      child: Semantics(header: true, child: Text(label, style: RgText.caption.copyWith(fontWeight: FontWeight.w600, color: RgColors.textSecondary))),
+    );
+    return ListView(
+      padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top, bottom: RgSpace.bottomScrollInset),
+      children: [
+        SizedBox(
+          height: RgSpace.topBar,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
+            child: Row(children: [RgBackButton(onTap: () => context.pop())]),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s12, RgSpace.gutterText, 0),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            HeadingTextScale(child: Semantics(header: true, child: Text('사용 방법', style: RgText.titleDetail))),
+            const SizedBox(height: RgSpace.s6),
+            KeepAllText('회원가입 없이 바로 써요. 저장한 글은 이 기기에만 남아요.', style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
+          ]),
+        ),
+        group('기능 사용법'),
+        _SettingsCard(children: [
+          _HowRow(title: '오늘의 논문 읽기', steps: const ['홈', '논문 카드', '원문과 번역 보기'], onTap: () => context.go('/home')),
+          _HowRow(title: '어려운 용어 뜻 보기', steps: const ['읽기 화면', '형광펜 용어', '뜻·예시'], marked: 1),
+          _HowRow(title: '회사별 소식 보기', steps: const ['탐색', '소식', '회사 칩'], onTap: () => context.go('/explore')),
+          _HowRow(title: '나중에 읽을 글 저장하기', steps: const ['책갈피', '보관함'], onTap: () => context.go('/library')),
+          _HowRow(title: '글자 크기·어두운 화면', steps: const ['설정', '읽기 설정'], onTap: () => context.go('/settings/reading')),
+        ]),
+        group('자주 묻는 질문'),
+        _SettingsCard(children: [for (final (q, a) in _faq) _FaqRow(question: q, answer: a)]),
+        group('다시 보기'),
+        _SettingsCard(children: [
+          _Row(icon: 'book', label: '처음 안내 다시 보기', onTap: () => context.push('/welcome')),
+          _Row(
+            icon: 'sparkles',
+            label: '도움말 다시 보기',
+            chevron: false,
+            onTap: () {
+              HapticFeedback.selectionClick();
+              tipsSeen.value = {};
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(const SnackBar(content: Text('읽기 화면과 소식에서 도움말이 다시 떠요'), duration: Duration(seconds: 3)));
+            },
+          ),
+        ]),
+        group('문의 · 약관'),
+        _SettingsCard(children: [
+          _Row(icon: 'mail', label: '문의하기', onTap: () => _contact(context)),
+          _Row(icon: 'scale', label: '이용 안내', onTap: () => context.go('/settings/terms')),
+          _Row(icon: 'file-text', label: '개인정보 처리방침', onTap: () => context.go('/settings/privacy')),
+        ]),
+      ],
+    );
+  }
+}
+
+// 사용법 한 줄: 제목 + 누르는 순서를 버튼 모양 조각으로(「홈 › 논문 카드 › 원문과 번역 보기」). marked는 형광펜 색 조각.
+class _HowRow extends StatelessWidget {
+  const _HowRow({required this.title, required this.steps, this.onTap, this.marked});
+  final String title;
+  final List<String> steps;
+  final VoidCallback? onTap;
+  final int? marked;
+
+  @override
+  Widget build(BuildContext context) {
+    final row = Padding(
+      padding: const EdgeInsets.symmetric(vertical: RgSpace.s16),
+      child: Row(children: [
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title, style: RgText.titleList.copyWith(fontSize: 16)),
+            const SizedBox(height: RgSpace.s10),
+            Semantics(
+              label: steps.join(', 다음 '),
+              child: ExcludeSemantics(
+                child: Wrap(spacing: RgSpace.s4, runSpacing: RgSpace.s6, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                  for (final (i, s) in steps.indexed) ...[
+                    if (i > 0) RgIcon('chevron-right', size: 14, color: RgColors.textTertiary),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: RgSpace.s10, vertical: RgSpace.s4),
+                      decoration: BoxDecoration(
+                        color: i == marked ? RgColors.highlight : RgColors.fillNeutral,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(s, style: RgText.caption.copyWith(fontWeight: FontWeight.w600, color: RgColors.textPrimary)),
+                    ),
+                  ],
+                ]),
+              ),
+            ),
+          ]),
+        ),
+        if (onTap != null) RgIcon('chevron-right', size: 18, color: RgColors.textTertiary),
+      ]),
+    );
+    return Semantics(button: onTap != null, child: RgPressable(onTap: onTap, child: row));
+  }
+}
+
+// 자주 묻는 질문 한 줄: 누르면 답이 펼쳐진다(높이 220ms, 화살표가 아래 → 위로 돌아감). 「동작 줄이기」면 바로.
+class _FaqRow extends StatefulWidget {
+  const _FaqRow({required this.question, required this.answer});
+  final String question, answer;
+
+  @override
+  State<_FaqRow> createState() => _FaqRowState();
+}
+
+class _FaqRowState extends State<_FaqRow> {
+  var _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final d = RgMotion.of(context, RgMotion.base);
+    return Semantics(
+      button: true,
+      expanded: _open,
+      child: RgPressable(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          setState(() => _open = !_open);
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: RgSpace.s16),
+          child: AnimatedSize(
+            duration: d,
+            curve: RgMotion.curve,
+            alignment: Alignment.topCenter,
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Row(spacing: RgSpace.s8, children: [
+                Expanded(child: KeepAllText(widget.question, style: RgText.titleList.copyWith(fontSize: 16))),
+                AnimatedRotation(
+                  turns: _open ? -0.25 : 0.25,
+                  duration: d,
+                  curve: RgMotion.curve,
+                  child: RgIcon('chevron-right', size: 16, color: RgColors.textTertiary),
+                ),
+              ]),
+              if (_open)
+                Padding(
+                  padding: const EdgeInsets.only(top: RgSpace.s8),
+                  child: KeepAllText(widget.answer, perSentence: true, style: RgText.bodySmall.copyWith(color: RgColors.textBody)),
+                ),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
 }

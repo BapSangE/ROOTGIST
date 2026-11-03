@@ -11,6 +11,8 @@ import '../../design/widgets/rg_buttons.dart';
 import '../../design/widgets/rg_segmented.dart';
 import '../../design/widgets/rg_states.dart';
 import '../common/term_text.dart';
+import '../guide/coach_marks.dart';
+import '../../data/guide.dart';
 import 'text_size_sheet.dart';
 
 // S03 초록 원문·번역 리더 (HANDOFF 7.4). 기본 모드는 S06 설정값.
@@ -34,10 +36,12 @@ class _ReaderScreenState extends State<ReaderScreen> {
         });
       }
       if (mounted) analytics.readerLoaded(widget.paperId);
+      _tips(p);
       return p;
     }),
   );
   final _keys = <String, GlobalKey>{}; // 문장 순서대로 들어간다
+  final _controlsKey = GlobalKey(); // 처음 안내: 아래 조절 알약
   final _scroll = ScrollController();
   var _mode = readerDefaultMode.value;
 
@@ -57,6 +61,26 @@ class _ReaderScreenState extends State<ReaderScreen> {
   }
 
   void _onScale() => _keepPosition(() => setState(() {}));
+
+  // 처음 읽기 화면을 열면 도움말 두 장: 형광펜 용어가 있는 첫 문장, 아래 조절 알약. 화면이 밀려 들어온 뒤에 띄운다.
+  void _tips(PaperDetail p) {
+    if (tipsSeen.value.contains(tipReader)) return;
+    final marked = {...firstHighlights(p, korean: true).keys, ...firstHighlights(p).keys};
+    final first = p.sentences.where((s) => s.kind == 'text' && marked.contains(s.id)).firstOrNull;
+    Future<void>.delayed(const Duration(milliseconds: 450), () async {
+      if (!mounted) return;
+      final pair = first == null ? null : _keys[first.id];
+      final scroll = RgMotion.of(context, RgMotion.base);
+      if (pair?.currentContext case final ctx? when ctx.mounted && widget.initialSentenceId == null) {
+        await Scrollable.ensureVisible(ctx, alignment: 0.2, duration: scroll);
+      }
+      if (!mounted) return;
+      await showCoachMarks(context, tipReader, [
+        if (pair != null) CoachStep(target: pair, title: '형광펜 용어를 눌러 보세요', body: '뜻과 예시, 이 논문에서 쓰인 문장을 보여 드려요.'),
+        CoachStep(target: _controlsKey, title: '보는 방식과 글자 크기', body: '번역만, 원문과 함께, 원문만 중에 고르고 「가」로 글자 크기를 바꿔요.'),
+      ]);
+    });
+  }
 
   void _keepPosition(VoidCallback change) {
     final viewportTop = MediaQuery.paddingOf(context).top + RgSpace.topBar;
@@ -220,7 +244,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
           right: RgSpace.gutterText,
           bottom: barBottom,
           child: ChromeTextScale(
-            child: Row(spacing: RgSpace.s8, children: [
+            child: Row(key: _controlsKey, spacing: RgSpace.s8, children: [
               Expanded(
                 child: RgSegmented(
                   ink: true,

@@ -9,6 +9,8 @@ import 'design/widgets/rg_bottom_tab_bar.dart';
 import 'debug/widget_gallery.dart';
 import 'features/explore/explore_screen.dart';
 import 'features/explore/news_detail.dart';
+import 'features/guide/onboarding_screen.dart';
+import 'data/guide.dart';
 import 'features/home/home_screen.dart';
 import 'features/library/library_screen.dart';
 import 'features/paper/paper_screen.dart';
@@ -43,7 +45,8 @@ class _PageBackground extends StatelessWidget {
 }
 
 final router = GoRouter(
-  initialLocation: '/home',
+  // 처음 실행이면 온보딩부터(저장값은 main이 라우터를 처음 쓰기 전에 읽는다)
+  initialLocation: onboardingDone.value ? '/home' : '/welcome',
   routes: [
     StatefulShellRoute.indexedStack(
       builder: (context, state, shell) => AppShell(shell: shell),
@@ -70,11 +73,14 @@ final router = GoRouter(
               GoRoute(path: 'privacy', pageBuilder: (_, state) => _page(state, const PrivacyScreen())),
               GoRoute(path: 'terms', pageBuilder: (_, state) => _page(state, const TermsScreen())),
               GoRoute(path: 'notices', pageBuilder: (_, state) => _page(state, const NoticesScreen())),
+              GoRoute(path: 'guide', pageBuilder: (_, state) => _page(state, const GuideScreen())),
             ],
           ),
         ]),
       ],
     ),
+    // 첫 실행 온보딩(탭바 없이). 설정 › 사용 방법에서 다시 열면 위로 쌓였다가 닫힌다
+    GoRoute(path: '/welcome', pageBuilder: (_, state) => _page(state, const OnboardingScreen())),
     // 공식 소식·모델 상세도 논문 상세처럼 쉘 위로 푸시한다. 탭바는 _detailPage가 따로 단다(들어온 탭 그대로). 탐색 탭 안에 두면 홈·보관함에서 열었을 때
     // 탭이 탐색으로 바뀌고 뒤로 가기가 탐색으로 갔다(실기기 QA). id는 encodeComponent(모델 id에 / 가 있다).
     GoRoute(

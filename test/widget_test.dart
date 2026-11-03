@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:rootgist/app_shell.dart';
+import 'package:rootgist/data/guide.dart';
 import 'package:rootgist/data/models.dart';
 import 'package:rootgist/data/repository.dart';
 import 'package:rootgist/data/settings.dart';
@@ -58,6 +59,7 @@ Future<void> pumpApp(WidgetTester tester) async {
   readItems.value = {};
   modelsSeen.value = {};
   newsSeenAt.value = null;
+  tipsSeen.value = {tipReader, tipNews};
   clock = DateTime.now;
   // 홈 키워드 칩이 바로 사전을 부른다: 지난 테스트의 끝나지 않은 요청을 물려받지 않게 새로, 실제 비동기에서 미리 받아 둔다
   resetDictionary();
@@ -108,6 +110,9 @@ void main() {
       'bookmarks': jsonEncode([Bookmark('0000.00002', '저장된 논문', DateTime(2026, 10, 15)).toJson()]),
       'settings.readerMode': 'original',
       'settings.readerScale': 1.15,
+      // 처음 안내·도움말은 본 것으로(따로 확인하는 테스트에서 비운다)
+      'guide.onboardingDone.v1': true,
+      'guide.tipsSeen': [tipReader, tipNews],
     });
     await initStorage();
   });
@@ -1405,6 +1410,48 @@ void main() {
     expect(find.text('화면 모드'), findsOneWidget);
     expect(find.text('화면 바탕'), findsNothing);
     expect(find.text('종이'), findsNothing);
+  });
+
+  testWidgets('사용 방법: 설정에서 열고, 자주 묻는 질문 펼치기, 도움말 다시 보기, 처음 안내 4장 넘기고 돌아오기', (tester) async {
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+    router.go('/settings');
+    await settle(tester);
+    await tester.tap(find.text('사용 방법'));
+    await settle(tester);
+    expect(find.text('기능 사용법'), findsOneWidget);
+    expect(find.text('자주 묻는 질문'), findsOneWidget);
+
+    Finder keep(String text) => find.byWidgetPredicate((w) => w is KeepAllText && w.text == text);
+    const answer = '아니요. 설치하면 바로 쓸 수 있고, 이름이나 이메일을 받지 않아요.';
+    expect(keep(answer), findsNothing);
+    await tester.tap(keep('회원가입이나 로그인이 필요한가요?'));
+    await tester.pumpAndSettle();
+    expect(keep(answer), findsOneWidget);
+
+    expect(tipsSeen.value, isNotEmpty);
+    await tester.tap(find.text('도움말 다시 보기'));
+    await tester.pump();
+    expect(tipsSeen.value, isEmpty);
+    expect(find.text('읽기 화면과 소식에서 도움말이 다시 떠요'), findsOneWidget);
+    tipsSeen.value = {tipReader, tipNews};
+
+    onboardingDone.value = false;
+    addTearDown(() => onboardingDone.value = true);
+    await tester.tap(find.text('처음 안내 다시 보기'));
+    await settle(tester);
+    expect(find.text('건너뛰기'), findsOneWidget);
+    for (var i = 0; i < 3; i++) {
+      await tester.tap(find.text('다음'));
+      await tester.pumpAndSettle();
+    }
+    expect(find.text('시작하기'), findsOneWidget);
+    await tester.tap(find.text('시작하기'));
+    await settle(tester);
+    expect(onboardingDone.value, isTrue);
+    expect(find.text('기능 사용법'), findsOneWidget); // 다시 보기로 열었으면 닫히고 사용 방법으로
   });
 
   testWidgets('화면 모드: 「어둡게」면 바탕과 무관하게 어두운 색, 「기기 설정」은 기기 다크 모드를 따른다', (tester) async {

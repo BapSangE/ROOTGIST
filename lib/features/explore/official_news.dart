@@ -18,6 +18,8 @@ import '../../design/widgets/rg_row_head.dart';
 import '../common/item_actions.dart';
 import '../home/home_sections.dart';
 import 'date_groups.dart';
+import '../guide/coach_marks.dart';
+import '../../data/guide.dart';
 
 // S04 「공식 소식」 칸(PROPOSALS P8d·P9 A안). 발표(연구소 블로그) | 업데이트(커뮤니티 공지·릴리스).
 // 글마다 AI 요약과 핵심 내용만 한국어로 보이고, 핵심 내용은 원문의 근거 문단으로, 상세는 원문 링크로 보낸다.
@@ -34,6 +36,19 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
   bool get _updates => _tab == 1;
   String? _source; // null = 전체
   String? _hot; // 개발자 화제 칩: null 전체, 'hn', 'github'
+  final _chipsKey = GlobalKey(); // 처음 안내: 회사 칩 줄
+
+  // 소식 칸을 처음 열고 회사 칩이 보이면 도움말 한 장. 탐색의 다른 칸에 있거나 다른 탭이면 다음 기회에
+  void _tip() {
+    if (tipsSeen.value.contains(tipNews)) return;
+    Future<void>.delayed(const Duration(milliseconds: 400), () {
+      if (!mounted || exploreTab.value != 1 || !(ModalRoute.of(context)?.isCurrent ?? false)) return;
+      if (_chipsKey.currentContext == null || !TickerMode.valuesOf(context).enabled) return;
+      showCoachMarks(context, tipNews, [
+        CoachStep(target: _chipsKey, title: '회사별로 골라 보기', body: '관심 있는 회사만 눌러서 소식을 좁혀 봐요. 옆으로 밀면 논문·모델로 바뀌어요.'),
+      ]);
+    });
+  }
 
   // 홈 「업데이트 더 보기」로 들어오면 업데이트를, 「공식 발표 더 보기」면 발표를 고른다
   void _jump() {
@@ -58,6 +73,7 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
   void initState() {
     super.initState();
     exploreJump.addListener(_jump);
+    exploreTab.addListener(_tip); // 탐색에서 소식 칸으로 넘어오면(칸은 미리 그려 둔다)
     // 목록을 받으면 이번 맨 위 발표 시각을 기록(다음에 열 때 선 자리). 그리는 도중이 아니라 다음 프레임에
     _req.future.then((all) {
       final newest = all.where((n) => !n.isUpdate && !n.isHot).map((n) => n.publishedAt).fold<DateTime?>(null, (a, b) => a == null || b.isAfter(a) ? b : a);
@@ -65,9 +81,17 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
     }, onError: (_) {});
   }
 
+  // 다른 탭에 있다가 탐색 탭이 보이게 되면(TickerMode가 바뀐다) 다시 확인
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (TickerMode.valuesOf(context).enabled) _tip();
+  }
+
   @override
   void dispose() {
     exploreJump.removeListener(_jump);
+    exploreTab.removeListener(_tip);
     _req.dispose();
     super.dispose();
   }
@@ -124,9 +148,11 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
     final sources = [for (final g in newsGroups) if (present.contains(g)) MapEntry(g, g)];
     final shown = [for (final n in kind) if (_source == null || newsGroup(n.source) == _source) n];
     final now = clock();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _tip());
     return [
       const SizedBox(height: RgSpace.s14),
       SizedBox(
+        key: _chipsKey,
         height: RgFilterChip.touchHeight(context),
         child: ListView(
           scrollDirection: Axis.horizontal,

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../design/tokens.dart';
+import 'guide.dart';
 import 'repository.dart';
 import 'settings.dart';
 import 'unread.dart';
@@ -35,6 +36,8 @@ Future<void> initStorage() async {
   readerDefaultMode.value = ReaderMode.values.asNameMap()[prefs.getString('settings.readerMode')] ?? ReaderMode.together;
   prefs.remove('settings.backdrop'); // 「종이」 바탕을 뺐다(2026-11-01). 남은 값은 지운다
   appearance.value = Appearance.values.asNameMap()[prefs.getString('settings.appearance')] ?? Appearance.system;
+  onboardingDone.value = prefs.getBool('guide.onboardingDone.v1') ?? false;
+  tipsSeen.value = {...?prefs.getStringList('guide.tipsSeen')};
   final scale = prefs.getDouble('settings.readerScale');
   if (readerScales.any((s) => s.$1 == scale)) readerScale.value = scale!;
 
@@ -46,4 +49,6 @@ Future<void> initStorage() async {
   readerDefaultMode.addListener(() => prefs.setString('settings.readerMode', readerDefaultMode.value.name));
   readerScale.addListener(() => prefs.setDouble('settings.readerScale', readerScale.value));
   appearance.addListener(() => prefs.setString('settings.appearance', appearance.value.name));
+  onboardingDone.addListener(() => prefs.setBool('guide.onboardingDone.v1', onboardingDone.value));
+  tipsSeen.addListener(() => prefs.setStringList('guide.tipsSeen', tipsSeen.value.toList()));
 }

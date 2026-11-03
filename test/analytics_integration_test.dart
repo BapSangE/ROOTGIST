@@ -37,6 +37,8 @@ void main() {
       );
       SharedPreferences.setMockInitialValues({
         'settings.analyticsConsent.v1': true,
+        'guide.onboardingDone.v1': true,
+        'guide.tipsSeen': ['reader', 'news'],
       });
       await initStorage();
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);

@@ -63,6 +63,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/icons/
+    - assets/branding/rootgist_symbol.svg # 첫 실행 온보딩 첫 장
     - fixtures/
     - fixtures/digests/
     - fixtures/papers/
