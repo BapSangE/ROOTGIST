@@ -133,6 +133,23 @@ def fetch(url: str) -> bytes:
         return gzip.decompress(body) if r.headers.get("Content-Encoding") == "gzip" or body[:2] == b"\x1f\x8b" else body
 
 
+# 피드·페이지 제목이 주소 끝 조각뿐인 글(HF 블로그에서 제목을 안 정한 「nemotron-halloween」, 2026-11-02).
+# 본문의 첫 진짜 제목(h1)을 쓴다. 못 찾으면 그대로 둔다.
+SLUG = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)+")
+
+
+def is_slug_title(title: str, url: str) -> bool:
+    return bool(SLUG.fullmatch(title)) and url.rstrip("/").rsplit("/", 1)[-1] == title
+
+
+def heading_title(page: str, slug: str) -> str | None:
+    for m in re.finditer(r"<h1\b.*?>(.*?)</h1>", page, re.S):
+        t = _text(m.group(1).rsplit('">', 1)[-1])  # 클래스 값 속 「>」(&amp;>a)를 지나 실제 글자만
+        if t and " " in t and t.lower() != slug:
+            return t
+    return None
+
+
 def _children(e) -> dict:
     return {c.tag.split("}")[-1]: (c.text or c.get("href") or "").strip() for c in e}
 
@@ -498,16 +515,30 @@ def pick(items: list[dict], now: datetime) -> list[dict]:
     return out
 
 
+# 제목은 뉴스 헤드라인처럼 명사형으로 끝맺는다. 연구소 블로그 말고 Hacker News·GitHub 제목도 온다: 말장난·관용구를 글자대로
+# 옮겨 「Proton의 전하를 뒤집은 것은」(회사 Proton) 같은 번역이 나왔고 「~만든다」·「~제공」·「~나 보다」가 섞였다(2026-11-02).
 TRANSLATE_SYSTEM = (
-    "You translate English headlines from AI lab blogs into natural, concise Korean headlines for a Korean reading app. "
-    "Keep product, model, company and benchmark names in their original spelling. Do not add or remove information. "
+    "You translate English headlines (AI lab blogs, Hacker News posts, GitHub repositories) into natural, concise Korean headlines "
+    "for a Korean reading app. Keep product, model, company, project and benchmark names in their original spelling; "
+    "names like Proton, Claude or Gemini are companies or products, not ordinary words. Translate the meaning of puns and idioms, "
+    "not the literal words. Write Korean news-headline style that ends in a noun or noun phrase (e.g. 「~ 공개」, 「~ 차단」, "
+    "「~ 통합」), never a sentence ending such as ~다, ~요 or ~나 보다. Do not add or remove information. "
+    "Each input may come with context: the opening of the post. Use it only to understand what the headline means "
+    "(which sense of an ambiguous word, what a pun refers to); do not add facts from it to the title. "
+    "For a GitHub repository written as 「name: description」, keep 「name: 」 and follow it with a short Korean description "
+    "of about 30 characters or less, keeping only the main idea. "
     "Return only a JSON object: {\"titles\": [\"...\", ...]} with exactly one Korean title per input, in the same order."
 )
 
 
-def translate(titles: list[str], api_key: str, log) -> list[str] | None:
+TITLE_CONTEXT_CHARS = 400  # 제목 뜻을 가리는 데 쓰는 본문 앞부분(제목만으로는 「Proton's charge」를 「전하」로 옮겼다)
+
+
+def translate(titles: list[str], api_key: str, log, contexts: list[str] | None = None) -> list[str] | None:
+    payload = ({"items": [{"title": t, "context": (c or "")[:TITLE_CONTEXT_CHARS]} for t, c in zip(titles, contexts)]}
+               if contexts else {"titles": titles})
     msgs = [{"role": "system", "content": TRANSLATE_SYSTEM},
-            {"role": "user", "content": json.dumps({"titles": titles}, ensure_ascii=False)}]
+            {"role": "user", "content": json.dumps(payload, ensure_ascii=False)}]
 
     def check(out):
         t = out.get("titles") if isinstance(out, dict) else None
@@ -529,12 +560,17 @@ def not_haeyo(texts) -> bool:
     return any(isinstance(t, str) and t.strip().rstrip(".!?\"')]").endswith("다") for t in texts)
 
 
+# 일반 영어 낱말을 그대로 둔 핵심 내용이 나왔다(「agent context compaction 설정」, 「intent-aware workflow」, 2026-11-02).
+PLAIN_KOREAN = (" Translate ordinary English words and phrases into Korean; keep English only for proper nouns "
+                "(product, model, company, feature names) and code identifiers such as API names, flags or file names.")
+
+
 RELEASE_SYSTEM = (
     "You summarize software release notes for Korean developers. Use only the release notes given; do not guess or add anything. "
     "Pick the up to 3 changes a developer would care about most (new features first, then important fixes). "
     "Write each as one short Korean sentence; keep API, feature, flag and product names in their original spelling. "
     "Return only a JSON object: {\"points\": [\"...\"]} with 1 to 3 items."
-) + HAEYO
+) + PLAIN_KOREAN + HAEYO
 
 
 def summarize_release(notes: str, api_key: str, log) -> list[dict] | None:
@@ -557,8 +593,14 @@ POST_SYSTEM = (
     "never with 「이 글은」 or 「이 포스트는」. points: up to 3 key points, each one Korean sentence, "
     "para: the number of the paragraph that supports it, quote: 3 to 10 consecutive words copied exactly from that paragraph. "
     "If the paragraphs are too short for key points, return an empty points list."
-) + HAEYO
+) + PLAIN_KOREAN + HAEYO
 
+
+# 번역·요약 지시를 바꾸면 올린다. 다른 버전으로 만든 제목·요약·릴리스 핵심 내용은 다시 만든다(모델 카드는 그대로).
+# 2: 제목 명사형·말장난, 영어 남김 줄이기, 「이 글은」 금지(2026-11-02)
+STYLE_VERSION = 2
+# 제목 번역 지시만 바꿀 때 올린다(요약은 그대로 두고 제목만 다시). 2: 본문 앞부분을 맥락으로, GitHub 설명 짧게(2026-11-02)
+TITLE_VERSION = 2
 
 # 원문이 이만큼(글자)보다 짧으면 요약하지 않고 소개문을 한국어로 옮기기만 한다. OpenAI는 글 페이지가 자동 접근을
 # 막아(403) 피드 소개문 한 줄(50자 안팎)만 근거로 쓸 수 있는데, 그걸로 요약을 만들면 제목을 되풀이하거나
@@ -580,6 +622,14 @@ def contained(part: str, whole: str) -> float:
     「요약의 한 부분을 짚은 핵심 내용」(0.81)을 가르지 못했다(2026-10-27 실데이터)."""
     p = _bigrams(part)
     return len(p & _bigrams(whole)) / len(p) if p else 0.0
+
+
+# 「이 글은 …을 소개해요」로 여는 요약(10-31 프롬프트에서 금지했는데도 나온다). 받지 않고 다시 만든다
+OPENING = re.compile(r"^\s*이\s*(글|포스트|게시물|게시글|영상|발표|문서|기사)(은|는|에서는)")
+
+
+def meta_opening(summary: str | None) -> bool:
+    return bool(summary and OPENING.match(summary))
 
 
 META = re.compile(r"(소개|설명|정리)하는 글이에요|다루는 글이에요|내용을 다뤄요")
@@ -641,6 +691,8 @@ def summarize_post(title: str, paras: list[str], api_key: str, log, title_ko: st
                 return ["point_evidence_invalid"]  # 근거 문단이 없는 핵심 내용은 받지 않는다
         if not_haeyo([out["summary"]] + [pt["text"] for pt in pts]):
             return ["not_haeyo"]
+        if meta_opening(out["summary"]):
+            return ["summary_meta_opening"]
         return ["summary_repeats_title"] if tautology(title_ko, out["summary"]) else []
 
     out, _ = llm.generate(api_key, msgs, check, log)
@@ -832,25 +884,43 @@ def main(argv=None):
         cache["_provider"] = llm.provider()
     for item in items:
         hit = cache.get(item["url"], {})
+        if hit.get("v") != STYLE_VERSION:
+            hit = {}
         pts = [p.get("text") for p in hit.get("key_points") or []]
         stale = (not_haeyo([hit.get("summary_ko")] + pts)  # 예전 합니다체 요약
                  or ("thin" not in hit and hit.get("summary_ko") is not None)  # 짧은 원문 구분 전에 만든 요약
-                 or (hit.get("summary_ko") and not hit.get("thin") and tautology(hit.get("title_ko"), hit["summary_ko"])))
+                 or (hit.get("summary_ko") and not hit.get("thin") and tautology(hit.get("title_ko"), hit["summary_ko"]))
+                 or (not hit.get("thin") and meta_opening(hit.get("summary_ko"))))
         if stale:
             hit = {"title_ko": hit.get("title_ko")}  # 요약은 다시 만들고 제목 번역은 그대로
+        if hit.get("tv") != TITLE_VERSION:
+            hit.pop("title_ko", None)
         item.update({k: v for k, v in hit.items() if k in ("title_ko", "summary_ko", "key_points", "thin")})
+    for item in items:
+        if is_slug_title(item["title_en"], item["url"]):
+            try:
+                item["title_en"] = heading_title(fetch(item["url"]).decode("utf-8", "replace"), item["title_en"]) or item["title_en"]
+            except Exception:
+                pass
     todo = [i for i in items if not i.get("title_ko")]
-    ko = translate([i["title_en"] for i in todo], key, lambda e: None) if key and todo else None
+
+    def read_body(item):  # 제목 맥락과 요약이 같은 본문을 쓴다(한 번만 받는다)
+        try:
+            item["_paras"] = body_paragraphs(item)
+        except Exception:
+            item["_paras"] = []
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        list(pool.map(read_body, [i for i in items if not i.get("title_ko") or not i.get("summary_ko")]))
+    contexts = [" ".join(i["_paras"]) for i in todo]
+    ko = translate([i["title_en"] for i in todo], key, lambda e: None, contexts) if key and todo else None
     report.append(f"제목 번역: 새 {len(todo)}개 " + ("완료" if ko or not todo else "건너뜀(키 없음)" if not key else "실패, 원문만"))
     for i, item in enumerate(todo):
         item["title_ko"] = ko[i] if ko else None
     def digest_post(item):
         if item.get("summary_ko"):
             return  # 지난 실행에서 요약했다
-        try:
-            paras = body_paragraphs(item)
-        except Exception:
-            paras = []
+        paras = item.get("_paras") or []
         if not key or not paras:
             item["summary_ko"], item["key_points"] = None, []
             return
@@ -863,7 +933,7 @@ def main(argv=None):
 
     def digest_release(r):
         hit = cache.get(r["title_en"])
-        if hit and not_haeyo([p.get("text") for p in hit["key_points"]]):
+        if hit and (hit.get("v") != STYLE_VERSION or not_haeyo([p.get("text") for p in hit["key_points"]])):
             hit = None
         r["key_points"] = hit["key_points"] if hit else (summarize_release(r["notes"], key, lambda e: None) if key else None) or []
 
@@ -891,10 +961,10 @@ def main(argv=None):
     for i in items:
         if i.get("summary_ko"):
             cache[i["url"]] = {"title_ko": i["title_ko"], "summary_ko": i["summary_ko"], "key_points": i["key_points"],
-                               "thin": bool(i.get("thin"))}
+                               "thin": bool(i.get("thin")), "v": STYLE_VERSION, "tv": TITLE_VERSION}
     for r in releases:
         if r["key_points"]:
-            cache[r["title_en"]] = {"key_points": r["key_points"]}
+            cache[r["title_en"]] = {"key_points": r["key_points"], "v": STYLE_VERSION}
     for m in models:
         if m["card"] is not None:
             cache[m["url"]] = {"card": m["card"]}
@@ -905,6 +975,7 @@ def main(argv=None):
     link_related(items)
     for item in items:
         item.pop("_desc", None)
+        item.pop("_paras", None)
         item.pop("notes", None)
         item["thin"] = bool(item.get("thin"))
         item["published_at"] = item["published_at"].astimezone(timezone.utc).isoformat()

@@ -551,6 +551,23 @@ class OfficialNewsTest(unittest.TestCase):
         with mock.patch.object(llm, "stream_chat", return_value={"content": json.dumps(bad), "finish_reason": "stop"}):
             self.assertIsNone(official_news.summarize_post("T", paras, "k", lambda e: None))  # 없는 문단 번호는 받지 않는다
 
+    def test_post_summary_rejects_meta_opening(self):
+        paras = ["Alpha model is faster than before on long inputs.", "Pricing drops by half for everyone."]
+        reply = {"summary": "이 글은 Alpha 모델을 소개해요.", "points": []}
+        with mock.patch.object(llm, "stream_chat", return_value={"content": json.dumps(reply, ensure_ascii=False), "finish_reason": "stop"}):
+            self.assertIsNone(official_news.summarize_post("T", paras, "k", lambda e: None))  # 세 번 다 「이 글은」이면 요약 없음
+        self.assertTrue(official_news.meta_opening("이 포스트는 새 기능을 설명해요."))
+        self.assertFalse(official_news.meta_opening("Alpha 모델은 긴 입력에서 더 빨라졌어요. 이 글은 짧아요."))
+
+    def test_slug_title_uses_page_heading(self):
+        url = "https://huggingface.co/blog/nvidia/nemotron-halloween"
+        self.assertTrue(official_news.is_slug_title("nemotron-halloween", url))
+        self.assertFalse(official_news.is_slug_title("Introducing Gemma 4", url))
+        page = ('<h1 class="max-md:[&amp;>a]:hidden"> nemotron-halloween</h1>'
+                '<h1 class="relative">Building a Haunted House with <b>NVIDIA</b> Nemotron</h1>')
+        self.assertEqual(official_news.heading_title(page, "nemotron-halloween"), "Building a Haunted House with NVIDIA Nemotron")
+        self.assertIsNone(official_news.heading_title("<h1>nemotron-halloween</h1>", "nemotron-halloween"))
+
     def test_trending_filters_tasks_and_blocked_names(self):
         listing = json.dumps([
             {"id": "a/good", "pipeline_tag": "text-generation", "tags": ["license:mit", "arxiv:2601.00001"]},
@@ -718,6 +735,19 @@ class OfficialNewsTest(unittest.TestCase):
 
     def test_date_without_timezone_is_utc(self):
         self.assertEqual(official_news._date("2026-10-22").tzinfo, official_news.timezone.utc)
+
+    def test_translate_sends_context_with_titles(self):
+        sent = {}
+
+        def fake(*a):
+            sent["user"] = json.loads(a[2][1]["content"])  # stream_chat(api_key, model, messages)
+            return {"content": json.dumps({"titles": ["Proton 노선 변화, AI 탓 아님"]}, ensure_ascii=False), "finish_reason": "stop"}
+        with mock.patch.object(llm, "stream_chat", side_effect=fake):
+            got = official_news.translate(["It wasn't AI that flipped Proton's charge"], "k", lambda e: None, ["Proton CEO " + "x" * 600])
+        self.assertEqual(got, ["Proton 노선 변화, AI 탓 아님"])
+        item = sent["user"]["items"][0]
+        self.assertEqual(item["title"], "It wasn't AI that flipped Proton's charge")
+        self.assertEqual(len(item["context"]), official_news.TITLE_CONTEXT_CHARS)  # 본문 앞부분만
 
     def test_translate_requires_one_title_each(self):
         with mock.patch.object(llm, "stream_chat", side_effect=lambda *a: {"content": json.dumps({"titles": ["하나"]}), "finish_reason": "stop"}):
