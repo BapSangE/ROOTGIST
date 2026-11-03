@@ -7,8 +7,9 @@ name: official-news
 
 on:
   schedule:
-    # UTC 05:17 = KST 14:17. GitHub 예약은 2~4시간 늦게 시작하기도 해서(daily-batch 주석) 실제로는 오후~저녁에 돈다.
-    - cron: "17 5 * * *"
+    # 정시 시작은 Supabase pg_cron이 KST 14:17에 workflow_dispatch로 한다(20261103090000_cron_dispatch.sql).
+    # 아래는 예비: UTC 06:17 = KST 15:17. GitHub 예약은 3~6시간 늦게 시작하기도 해서 늦게 돌면 그 사이 소식을 더 받는다.
+    - cron: "17 6 * * *"
   workflow_dispatch:
 
 concurrency:
