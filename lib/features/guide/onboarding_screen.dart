@@ -26,10 +26,10 @@ class _Slide {
 }
 
 const _slides = [
-  _Slide('매일 아침,\n화제의 AI 논문을\n한국어로', '영어 초록을 3줄 요약과 문장별 번역으로 쉽게 읽어요.', _LogoArt()),
-  _Slide('주목받은 논문 10편을\n3줄로', '전 세계 연구자가 많이 본 논문을 매일 아침 6시쯤 골라 드려요. 주말에는 쉬어요.', _HomeArt()),
-  _Slide('원문과 번역을\n문장마다 나란히', '어려운 용어는 형광펜을 누르면 뜻과 예시가 나와요.', _ReaderArt()),
-  _Slide('연구소 소식과\n화제의 모델까지', '탐색에서 공식 발표, 개발자 화제, 인기 모델을 한곳에서 봐요.', _ExploreArt()),
+  _Slide('매일 아침,\n화제의 AI 소식을\n한국어로', '공식 발표와 개발자 화제, 주목받은 논문과 모델을 한곳에서 쉽게 봐요.', _LogoArt()),
+  _Slide('연구소 발표부터\n개발자 화제까지', 'OpenAI·Anthropic·Google 같은 곳의 소식을 요약과 함께 모아 드려요.', _ExploreArt()),
+  _Slide('주목받은 논문도\n3줄로', '많이 본 AI 논문을 매일 아침 골라 3줄 요약으로 보여 드려요.', _HomeArt()),
+  _Slide('어려운 용어는\n형광펜으로', '형광펜을 누르면 뜻과 예시가 나와요. 논문은 원문과 번역을 문장마다 나란히 봐요.', _ReaderArt()),
 ];
 
 class _OnboardingScreenState extends State<OnboardingScreen> {

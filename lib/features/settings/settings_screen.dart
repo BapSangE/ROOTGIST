@@ -677,8 +677,9 @@ class GuideScreen extends StatelessWidget {
   const GuideScreen({super.key});
 
   static const _faq = [
-    ('새 논문은 언제 올라와요?', '매일 아침 6시쯤이에요. 주말에는 새 논문이 발표되지 않아 가장 최근 논문을 보여 드려요. 공식 소식은 오후에 한 번 더 모아요.'),
-    ('번역이 어색하거나 틀린 것 같아요', '요약과 번역은 논문 초록만 보고 AI가 만들어서 틀릴 수 있어요. 중요한 내용은 원문에서 확인해 주시고, 아래 「문의하기」로 알려 주시면 고칠게요.'),
+    ('새 소식은 언제 올라와요?', '공식 소식과 개발자 화제는 하루 두 번, 아침 6시쯤과 오후 3시쯤 모아요. 논문은 매일 아침 올라오고, 주말에는 새 논문이 없어 가장 최근 논문을 보여 드려요.'),
+    ('어디의 소식을 모아요?', 'OpenAI·Anthropic·Google·Meta·NVIDIA 같은 곳의 공식 블로그와 Hacker News·GitHub 화제, Hugging Face 인기 모델이에요. 전체 목록은 설정 › 데이터 출처에 있어요.'),
+    ('요약이나 번역이 틀린 것 같아요', '요약과 번역은 AI가 원문을 보고 만들어서 틀릴 수 있어요. 중요한 내용은 원문 링크에서 확인해 주시고, 아래 「문의하기」로 알려 주시면 고칠게요.'),
     ('회원가입이나 로그인이 필요한가요?', '아니요. 설치하면 바로 쓸 수 있고, 이름이나 이메일을 받지 않아요.'),
     ('저장한 글이 사라졌어요', '저장한 글과 읽기 설정은 이 기기에만 남아요. 앱을 지웠다 다시 설치하거나 기기를 바꾸면 옮겨지지 않아요.'),
     ('사용 기록을 보내나요?', '기본으로는 보내지 않아요. 설정 › 사용 분석을 켠 경우에만 화면 방문 같은 익명 기록을 보내고, 본문이나 이메일은 보내지 않아요.'),
@@ -711,10 +712,11 @@ class GuideScreen extends StatelessWidget {
         ),
         group('기능 사용법'),
         _SettingsCard(children: [
-          _HowRow(title: '오늘의 논문 읽기', steps: const ['홈', '논문 카드', '원문과 번역 보기'], onTap: () => context.go('/home')),
-          _HowRow(title: '어려운 용어 뜻 보기', steps: const ['읽기 화면', '형광펜 용어', '뜻·예시'], marked: 1),
+          _HowRow(title: '오늘의 주요 소식 보기', steps: const ['홈', '오늘의 주요 소식'], onTap: () => context.go('/home')),
           _HowRow(title: '회사별 소식 보기', steps: const ['탐색', '소식', '회사 칩'], onTap: () => context.go('/explore')),
-          _HowRow(title: '나중에 읽을 글 저장하기', steps: const ['책갈피', '보관함'], onTap: () => context.go('/library')),
+          _HowRow(title: '어려운 용어 뜻 보기', steps: const ['형광펜 용어', '뜻·예시'], marked: 0),
+          _HowRow(title: '논문을 번역과 함께 읽기', steps: const ['탐색', '논문', '번역과 함께 읽기'], onTap: () => context.go('/explore')),
+          _HowRow(title: '나중에 읽을 글 저장하기', steps: const ['저장 버튼', '보관함'], icons: const {0: 'bookmark'}, onTap: () => context.go('/library')),
           _HowRow(title: '글자 크기·어두운 화면', steps: const ['설정', '읽기 설정'], onTap: () => context.go('/settings/reading')),
         ]),
         group('자주 묻는 질문'),
@@ -748,11 +750,12 @@ class GuideScreen extends StatelessWidget {
 
 // 사용법 한 줄: 제목 + 누르는 순서를 버튼 모양 조각으로(「홈 › 논문 카드 › 원문과 번역 보기」). marked는 형광펜 색 조각.
 class _HowRow extends StatelessWidget {
-  const _HowRow({required this.title, required this.steps, this.onTap, this.marked});
+  const _HowRow({required this.title, required this.steps, this.onTap, this.marked, this.icons = const {}});
   final String title;
-  final List<String> steps;
+  final List<String> steps; // 화면 읽기는 이 글자로 읽는다
   final VoidCallback? onTap;
   final int? marked;
+  final Map<int, String> icons; // 앱에서 글자 없이 아이콘인 버튼은 그 아이콘으로(책갈피)
 
   @override
   Widget build(BuildContext context) {
@@ -775,7 +778,10 @@ class _HowRow extends StatelessWidget {
                         color: i == marked ? RgColors.highlight : RgColors.fillNeutral,
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Text(s, style: RgText.caption.copyWith(fontWeight: FontWeight.w600, color: RgColors.textPrimary)),
+                      child: switch (icons[i]) {
+                        final icon? => RgIcon(icon, size: 16, color: RgColors.textPrimary),
+                        _ => Text(s, style: RgText.caption.copyWith(fontWeight: FontWeight.w600, color: RgColors.textPrimary)),
+                      },
                     ),
                   ],
                 ]),
