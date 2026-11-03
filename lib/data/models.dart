@@ -273,6 +273,7 @@ class OfficialNews {
     'Release' => '릴리스',
     'AI Research' || 'NVIDIA Research' => '연구', // Meta 엔지니어링 블로그·NVIDIA
     'Hugging Face Blog' => 'Hugging Face 블로그', // HF 블로그에 회사 계정이 쓴 글(칩은 그 회사)
+    'Infrastructure' => '인프라', // 데이터센터·AI 인프라 글(worker INFRA_*)
     _ => null,
   };
 }

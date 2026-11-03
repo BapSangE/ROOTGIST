@@ -74,6 +74,16 @@ KEEP_CATEGORIES = {
     "nvidia_dev": {"Agentic AI / Generative AI", "NVIDIA Research"},  # 개발자 블로그: 하루 몇 편, AI 쪽만
 }
 DROP_CATEGORIES = {"nvidia": {"Gaming", "GeForce NOW", "Cloud Gaming"}}
+# 데이터센터·AI 인프라 소식(사용자 요청 2026-11-03). 위 분류 필터가 버리던 인프라 글도 받고, 분류는 「Infrastructure」로 붙인다.
+# 인프라 분류: 그 분류면 제목과 상관없이 받는다(Meta 「Prometheus: 기가와트급 슈퍼클러스터」, NVIDIA AI 팩토리 글이 빠지고 있었다).
+INFRA_CATEGORIES = {"meta": {"Data Center Engineering", "Core Infra"}, "nvidia": {"AI Infrastructure", "AI Factory"}}
+# 정책·회사 글이 섞인 분류: 제목에 인프라 낱말이 있을 때만(OpenAI는 데이터센터 부지 글을 Global Affairs로 낸다).
+INFRA_BY_TITLE = {"openai": {"Global Affairs", "Company"}}
+# 회사 전체 소식 피드: 제목에 인프라 낱말이 있는 글만 받는다.
+INFRA_FEEDS = {"google", "microsoft", "azure", "amazon"}
+INFRA_WORDS = re.compile(
+    r"data ?cent(?:er|re)s?|gigawatts?|megawatts?|\b\d+(?:\.\d+)?\s?[GM]W\b|supercomput\w*|superclusters?|AI factor(?:y|ies)|"
+    r"infrastructure|power plants?|nuclear|power grid|energy grid|liquid cooling|Stargate", re.I)
 # HF 블로그의 /blog/<계정>/<글>은 누구나 쓸 수 있는 커뮤니티 글이라, 알려진 회사 계정만 그 회사 소식으로 받는다.
 # 칩은 그 회사, 분류 자리에 「Hugging Face 블로그」. 계정 → (출처 id, 표시 이름)
 HF_BLOG_ORGS = {
@@ -95,6 +105,12 @@ RSS_SOURCES = [
     ("nvidia_dev", "NVIDIA 개발자", "https://developer.nvidia.com/blog/feed"),
     # 공지 게시판만(직원 글). 일반 게시판은 하루 30개 넘는 사용자 질문이라 넣지 않는다.
     ("openai_community", "OpenAI 커뮤니티", "https://community.openai.com/c/announcements/6.rss"),
+    # 데이터센터 소식(INFRA_FEEDS). 모두 robots.txt가 자동 수집을 막지 않는다(2026-11-03 확인).
+    # Cloudflare·Open Compute Project는 robots.txt가 막고, AMD·Intel·Oracle은 피드가 없거나 접근을 막는다. 업계 언론은 넣지 않는다.
+    ("google", "Google", "https://blog.google/inside-google/infrastructure/rss/"),
+    ("microsoft", "Microsoft", "https://blogs.microsoft.com/feed/"),
+    ("azure", "Microsoft Azure", "https://azure.microsoft.com/en-us/blog/feed/"),
+    ("amazon", "Amazon", "https://www.aboutamazon.com/news/feed"),
 ]
 RELEASE_DAYS = 7  # 릴리스는 이번 주 것을 한 항목으로
 RELEASE_SOURCES = [
@@ -175,11 +191,16 @@ def from_rss(source: str, label: str, url: str) -> list[dict]:
         # RSS는 <category>글자</category>, Atom은 <category term="…"/>
         cats = [html.unescape(t) for c in item if c.tag.split("}")[-1] == "category" and (t := (c.text or c.get("term") or "").strip())]
         link = k.get("link", "")
-        if source in KEEP_CATEGORIES and not set(cats) & KEEP_CATEGORIES[source]:
+        title = html.unescape(k.get("title", "")).strip()
+        infra = bool(set(cats) & INFRA_CATEGORIES.get(source, set())
+                     or (source in INFRA_FEEDS or set(cats) & INFRA_BY_TITLE.get(source, set())) and INFRA_WORDS.search(title))
+        if source in INFRA_FEEDS and not infra:
             continue
-        if set(cats) & DROP_CATEGORIES.get(source, set()) or (source == "nvidia" and any(c.startswith("GTC") for c in cats)):
-            continue  # NVIDIA 행사(GTC) 기간 글은 지역 사례·홍보가 대부분
-        src, lab, cat = source, label, (cats[0] if cats else None)
+        if not infra and source in KEEP_CATEGORIES and not set(cats) & KEEP_CATEGORIES[source]:
+            continue
+        if set(cats) & DROP_CATEGORIES.get(source, set()) or (source == "nvidia" and not infra and any(c.startswith("GTC") for c in cats)):
+            continue  # NVIDIA 행사(GTC) 기간 글은 지역 사례·홍보가 대부분(인프라 발표는 받는다)
+        src, lab, cat = source, label, ("Infrastructure" if infra else cats[0] if cats else None)
         if source == "huggingface":
             path = link.split("/blog/", 1)[-1].strip("/").split("/")
             if len(path) == 2 and path[0] in HF_BLOG_ORGS:
@@ -192,7 +213,7 @@ def from_rss(source: str, label: str, url: str) -> list[dict]:
         notice = source.endswith("_community")
         out.append({"source": src, "source_label": lab, "kind": "notice" if notice else "post",
                     "category": "Announcement" if notice else cat,
-                    "title_en": html.unescape(k.get("title", "")).strip(), "url": link, "published_at": when,
+                    "title_en": title, "url": link, "published_at": when,
                     "_desc": k.get("description") or k.get("summary") or ""})  # 공지 본문·OpenAI 소개문
     return out
 
@@ -455,7 +476,7 @@ def link_related(items: list[dict], limit: int = 3):
 
 # 같은 회사의 공식 출처끼리 같은 발표를 따로 실으면(회사 블로그 + 그 회사의 HF 블로그 글 + 커뮤니티 공지) 하나만 남긴다.
 # 남기는 순서: 회사 자체 블로그(개발자 블로그 포함) > HF 블로그의 회사 계정 > 커뮤니티 공지. 같으면 먼저 올라온 글.
-COMPANY = {"openai_community": "openai", "deepmind": "google", "google_research": "google", "nvidia_dev": "nvidia"}
+COMPANY = {"openai_community": "openai", "deepmind": "google", "google_research": "google", "nvidia_dev": "nvidia", "azure": "microsoft"}
 SAME_DAYS, SAME_TITLE = 3, 0.6  # 3일 안, 영문 제목 글자쌍 겹침 60% 이상이면 같은 발표
 
 

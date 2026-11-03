@@ -501,6 +501,25 @@ class OfficialNewsTest(unittest.TestCase):
             got = official_news.from_rss("nvidia", "NVIDIA", "x")
         self.assertEqual([i["title_en"] for i in got], ["Open model"])  # 게임 글은 빼고
 
+    def test_infra_posts_kept_as_infrastructure(self):
+        item = lambda t, *cats: (f"<item><title>{t}</title><link>https://x/{len(t)}</link><pubDate>Sun, 25 Oct 2026 10:00:00 GMT</pubDate>"
+                                 + "".join(f"<category>{c}</category>" for c in cats) + "</item>")
+        feed = lambda *items: ("<?xml version='1.0'?><rss><channel>" + "".join(items) + "</channel></rss>").encode()
+        cases = [
+            ("meta", [item("Inside Prometheus", "Core Infra", "Data Center Engineering"), item("Ads", "ML Applications")], ["Inside Prometheus"]),
+            ("nvidia", [item("Power bottleneck", "AI Infrastructure", "GTC 2026"), item("Europe projects", "AI", "GTC 2026")], ["Power bottleneck"]),
+            # 정책 분류는 제목에 인프라 낱말이 있을 때만
+            ("openai", [item("Building AI infrastructure in Michigan", "Global Affairs"), item("Letter on cyber policy", "Global Affairs")],
+             ["Building AI infrastructure in Michigan"]),
+            ("amazon", [item("Amazon data center communities"), item("What's new on Prime Video")], ["Amazon data center communities"]),
+            ("microsoft", [item("Azure Maia to multi-gigawatt deployments"), item("Copilot for students")], ["Azure Maia to multi-gigawatt deployments"]),
+        ]
+        for source, items, want in cases:
+            with mock.patch.object(official_news, "fetch", return_value=feed(*items)):
+                got = official_news.from_rss(source, source, "x")
+            self.assertEqual([i["title_en"] for i in got], want, source)
+            self.assertEqual({i["category"] for i in got}, {"Infrastructure"}, source)
+
     def test_pick_counts_per_source(self):
         mk = lambda src, h: {"source": src, "published_at": self.NOW - official_news.timedelta(hours=h)}
         items = [mk("huggingface", h) for h in range(7)] + [mk("nvidia", 10)]
