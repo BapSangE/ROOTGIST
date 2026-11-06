@@ -8,7 +8,13 @@ abstract class RgText {
   static const sansFallback = ['Apple SD Gothic Neo', 'Noto Sans KR'];
   static const serif = 'SourceSerif4';
 
-  static TextStyle _s(double size, double lh, FontWeight w, double ls, {bool isSerif = false}) => TextStyle(
+  static TextStyle _s(
+    double size,
+    double lh,
+    FontWeight w,
+    double ls, {
+    bool isSerif = false,
+  }) => TextStyle(
     fontFamily: isSerif ? serif : sans,
     fontFamilyFallback: isSerif ? const ['Georgia'] : sansFallback,
     fontSize: size,
@@ -19,7 +25,8 @@ abstract class RgText {
   );
 
   // Ink & Paper 글자 체계(design-preview/DESIGN_SYSTEM.md 3장). 보조 글자는 피드백대로 14 아래로 내리지 않는다.
-  static TextStyle get display => _s(34, 40, FontWeight.w800, -1.0); // 탭 화면 표제(탐색·보관함·설정)
+  static TextStyle get display =>
+      _s(34, 40, FontWeight.w800, -1.0); // 탭 화면 표제(탐색·보관함·설정)
   static TextStyle get displayHome => display; // 홈 헤드라인
   static TextStyle get titleDetail => _s(26, 34, FontWeight.w700, -0.6);
   static TextStyle get titleReader => _s(21, 29, FontWeight.w700, -0.4);
@@ -33,23 +40,41 @@ abstract class RgText {
   static TextStyle get bodySmall => _s(14.5, 22, FontWeight.w400, 0);
   static TextStyle get meta => _s(14, 20, FontWeight.w400, 0);
   static TextStyle get caption => _s(13, 18, FontWeight.w400, 0);
-  static TextStyle get eyebrow => _s(13, 17, FontWeight.w600, 0); // 행 위 주제·종류(한국어는 자간 없음)
-  static TextStyle get caps => _s(11.5, 14, FontWeight.w600, 1.6); // 영문 대문자 머리말(OPENAI · ANTHROPIC · GOOGLE)
+  static TextStyle get eyebrow =>
+      _s(13, 17, FontWeight.w600, 0); // 행 위 주제·종류(한국어는 자간 없음)
+  static TextStyle get caps => _s(
+    11.5,
+    14,
+    FontWeight.w600,
+    1.6,
+  ); // 영문 대문자 머리말(OPENAI · ANTHROPIC · GOOGLE)
+  static TextStyle get feedTitle => _s(16, 25, FontWeight.w500, -0.32);
+  static TextStyle get primaryTab => _s(20, 25, FontWeight.w500, 0);
+  static TextStyle get secondaryTab => _s(16, 25, FontWeight.w500, 0);
+  static TextStyle get filterLabel => _s(14, 25, FontWeight.w500, 0);
   static TextStyle get rank => _s(30, 32, FontWeight.w800, -1.0); // 모델 순위 숫자
-  static TextStyle get tabLabel => _s(13, 16, FontWeight.w500, 0); // 피드백: 11/14는 너무 작았다
-  static TextStyle get serifTogether => _s(15, 24, FontWeight.w400, 0, isSerif: true); // 번역이 주, 원문은 대조용
-  static TextStyle get serifOnly => _s(18, 30, FontWeight.w400, 0, isSerif: true);
-  static TextStyle get serifTerm => _s(26, 32, FontWeight.w600, 0, isSerif: true);
-  static TextStyle get serifSubtitle => _s(16, 23, FontWeight.w400, 0, isSerif: true);
-  static TextStyle get wordmark => _s(15, 18, FontWeight.w800, 3.3); // 자간 0.22em
+  static TextStyle get tabLabel =>
+      _s(14, 18, FontWeight.w500, 0); // 첨부 시안 하단 라벨
+  static TextStyle get serifTogether =>
+      _s(15, 24, FontWeight.w400, 0, isSerif: true); // 번역이 주, 원문은 대조용
+  static TextStyle get serifOnly =>
+      _s(18, 30, FontWeight.w400, 0, isSerif: true);
+  static TextStyle get serifTerm =>
+      _s(26, 32, FontWeight.w600, 0, isSerif: true);
+  static TextStyle get serifSubtitle =>
+      _s(16, 23, FontWeight.w400, 0, isSerif: true);
+  static TextStyle get wordmark =>
+      _s(15, 18, FontWeight.w700, 3.3); // 자간 0.22em
   // 홈(디자이너 시안 home_re 2026-10-31). 자간 −0.02em. 칸 제목 줄 높이는 시안(25)보다 넉넉히: 한글 두 줄·큰 글자에서 겹친다
   static TextStyle get homeSection => _s(28, 34, FontWeight.w700, -0.56);
   static TextStyle get homeSub => _s(16, 21, FontWeight.w400, 0); // 칸 부제
   static TextStyle get homeMore => _s(14, 18, FontWeight.w500, 0); // 「더보기」
-  static TextStyle get homeTitle => _s(18, 23.4, FontWeight.w500, -0.36); // 카드 안 글 제목
+  static TextStyle get homeTitle =>
+      _s(18, 23.4, FontWeight.w500, -0.36); // 카드 안 글 제목
   static TextStyle get homeSummary => _s(14, 19, FontWeight.w400, -0.28);
   static TextStyle get homeDate => _s(12, 15, FontWeight.w400, -0.24);
-  static TextStyle get homeLabel => _s(14, 17, FontWeight.w500, -0.28); // 「오늘의 주요 논문」 「10시간 전」
+  static TextStyle get homeLabel =>
+      _s(14, 17, FontWeight.w500, -0.28); // 「오늘의 주요 논문」 「10시간 전」
   static TextStyle get homeChip => _s(12, 16, FontWeight.w500, 0); // 칩·알약
   static TextStyle get homeMeta => _s(13, 19, FontWeight.w400, 0); // 사이트·저자
   static TextStyle get homeFeatured => _s(24, 31, FontWeight.w700, -0.48);
@@ -58,11 +83,15 @@ abstract class RgText {
 }
 
 // HANDOFF 9.3: Flutter에 keep-all이 없어 어절 안 글자 사이에 word joiner(U+2060)를 넣는다.
-String keepAll(String s) => s.split(' ').map((w) => w.runes.map(String.fromCharCode).join('⁠')).join(' ');
+String keepAll(String s) => s
+    .split(' ')
+    .map((w) => w.runes.map(String.fromCharCode).join('⁠'))
+    .join(' ');
 
 // 문장마다 줄을 바꾼다(피드백: 「정리했어요. 글 전체를 …」처럼 문장이 이어 붙어 한 덩어리로 보였다).
 // 한글·닫는 괄호 뒤 마침표 다음 공백에서만 나눠 「3.0배」 같은 수치는 건드리지 않는다.
-String byLine(String s) => s.trim().split(RegExp(r'(?<=[가-힣)\]」][.!?])\s+')).join('\n');
+String byLine(String s) =>
+    s.trim().split(RegExp(r'(?<=[가-힣)\]」][.!?])\s+')).join('\n');
 
 // keepAll로 그리되 화면 읽기(TalkBack·VoiceOver)에는 숨은 문자 없는 원래 문장을 넘긴다.
 // perSentence: 안내 문구·요약·공지 본문처럼 여러 문장인 글은 문장마다 줄을 바꾼다.
@@ -101,7 +130,8 @@ class ChromeTextScale extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => MediaQuery.withClampedTextScaling(maxScaleFactor: 1.35, child: child);
+  Widget build(BuildContext context) =>
+      MediaQuery.withClampedTextScaling(maxScaleFactor: 1.35, child: child);
 }
 
 // 21pt 이상 큰 제목은 글자 배율을 2배에서 멈춘다. 접근성 최대(3.12배)에서 홈 헤드라인이 94pt가 돼
@@ -111,5 +141,6 @@ class HeadingTextScale extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => MediaQuery.withClampedTextScaling(maxScaleFactor: 2, child: child);
+  Widget build(BuildContext context) =>
+      MediaQuery.withClampedTextScaling(maxScaleFactor: 2, child: child);
 }

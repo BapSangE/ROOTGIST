@@ -18,15 +18,23 @@ class RgPalette {
     required this.newDot,
     required this.newText,
   });
-  final Color bgApp, bgReading, surfaceCard, fill, line, divider, grabber, newDot, newText;
+  final Color bgApp,
+      bgReading,
+      surfaceCard,
+      fill,
+      line,
+      divider,
+      grabber,
+      newDot,
+      newText;
 
   static const white = RgPalette(
-    bgApp: Color(0xFFEDEFF2), // 홈과 같은 회청 바탕(보조 글자 대비 4.6:1)
+    bgApp: Color(0xFFFFFFFF), // 사용자 제공 2026-11-04 HTML: 흰 바탕
     bgReading: Color(0xFFFFFFFF), // 리더는 흰 종이 그대로
     surfaceCard: Color(0xFFFFFFFF), // 흰 카드 + 아주 옅은 그림자(RgShadow.card)
-    fill: Color(0xFFE3E6EA), // 흰 카드 위 칩·태그, 바탕 위 세그먼트 바닥 둘 다 보이는 차가운 회색
-    line: Color(0xFFDDE0E5),
-    divider: Color(0xFFE8EAED), // 카드 안 행 사이(홈 카드 구분선과 같은 밝기)
+    fill: Color(0xFFF4F4F4), // 흰 카드 위 칩·태그, 바탕 위 세그먼트 바닥 둘 다 보이는 차가운 회색
+    line: Color(0xFFE6E6E6),
+    divider: Color(0xFFE6E6E6), // 카드 안 행 사이(홈 카드 구분선과 같은 밝기)
     grabber: Color(0xFFD0D4DA),
     newDot: Color(0xFFF0362B), // 선명한 빨강
     newText: Color(0xFFD42A20), // 「새 글」 글자: 점보다 한 단계 진하게(회색 카드 위 4.6:1)
@@ -50,7 +58,9 @@ enum Appearance { system, light, dark }
 
 final appearance = ValueNotifier(Appearance.system);
 final platformDark = ValueNotifier(false); // 기기 설정의 다크 모드(main.dart가 맞춘다)
-bool get isDark => appearance.value == Appearance.dark || (appearance.value == Appearance.system && platformDark.value);
+bool get isDark =>
+    appearance.value == Appearance.dark ||
+    (appearance.value == Appearance.system && platformDark.value);
 RgPalette get _p => isDark ? RgPalette.dark : RgPalette.white;
 RgInk get _i => isDark ? RgInk.dark : RgInk.light;
 
@@ -70,14 +80,26 @@ class RgInk {
     required this.pressOverlay,
     required this.thumb,
   });
-  final Color surfaceRaised, textPrimary, textBody, textSecondary, textTertiary, highlight, highlightActive,
-      actionPrimary, onAction, overlayDim, pressOverlay, thumb;
+  final Color surfaceRaised,
+      textPrimary,
+      textBody,
+      textSecondary,
+      textTertiary,
+      highlight,
+      highlightActive,
+      actionPrimary,
+      onAction,
+      overlayDim,
+      pressOverlay,
+      thumb;
 
   static const light = RgInk(
-    surfaceRaised: Color(0xFFFFFFFF), // 늘 흰 면: 탭바, 시트, 세그먼트 선택 알약, 외곽선 버튼, 하단 버튼 줄
-    textPrimary: Color(0xFF0E0E0D),
-    textBody: Color(0xFF33332F),
-    textSecondary: Color(0xFF6B6B65), // 바탕 대비 5.0:1
+    surfaceRaised: Color(
+      0xFFFFFFFF,
+    ), // 늘 흰 면: 탭바, 시트, 세그먼트 선택 알약, 외곽선 버튼, 하단 버튼 줄
+    textPrimary: Color(0xFF1F1F1C),
+    textBody: Color(0xFF434343),
+    textSecondary: Color(0xFF767676), // 흰 바탕에서 보조 글자 대비 4.5:1
     textTertiary: Color(0xFF9B9B94), // 번호·셰브론 같은 장식만
     highlight: Color(0xFFFFEFA3), // 리더 용어(레퍼런스 011)
     highlightActive: Color(0xFFFFE27A),
@@ -89,7 +111,9 @@ class RgInk {
   );
   // 어두운 화면: 면은 바탕 → 카드 → 떠 있는 면 순으로 밝아지고, 주 버튼은 밝은 면 + 검정 글자로 뒤집힌다.
   static const dark = RgInk(
-    surfaceRaised: Color(0xFF222220), // 탭바·시트·하단 버튼 줄: 카드와 같은 밝기(밝으면 화면 아래가 떠 보인다)
+    surfaceRaised: Color(
+      0xFF222220,
+    ), // 탭바·시트·하단 버튼 줄: 카드와 같은 밝기(밝으면 화면 아래가 떠 보인다)
     textPrimary: Color(0xFFEDEDE9),
     textBody: Color(0xFFCFCFC9),
     textSecondary: Color(0xFFA3A39C), // 카드 대비 6.3:1
@@ -128,13 +152,22 @@ abstract class RgColors {
   static Color get textTertiary => _i.textTertiary;
   static Color get highlight => _i.highlight;
   static Color get highlightActive => _i.highlightActive;
-  static Color get actionPrimary => _i.actionPrimary; // 주 버튼 면(밝은 화면 검정, 어두운 화면 밝은 회색)
+  static Color get actionPrimary =>
+      _i.actionPrimary; // 주 버튼 면(밝은 화면 검정, 어두운 화면 밝은 회색)
   static Color get onAction => _i.onAction; // 주 버튼 위 글자
   static Color get overlayDim => _i.overlayDim;
   static Color get pressOverlay => _i.pressOverlay; // 눌림 덮개
   static Color get thumb => _i.thumb; // 세그먼트 선택 알약·슬라이더 손잡이
 
-  static Color get hotScore => isDark ? const Color(0xFFF59E5B) : const Color(0xFFC2410C); // 화제 점수(카드 위 4.6:1·7:1)
+  static Color get hotScore => isDark
+      ? const Color(0xFFF59E5B)
+      : const Color(0xFFC2410C); // 화제 점수(카드 위 4.6:1·7:1)
+  static Color get navigationInactive =>
+      isDark ? const Color(0xFF85857F) : const Color(0xFFB8B8B8);
+  static Color get navigationActive =>
+      isDark ? textPrimary : const Color(0xFF191A1B);
+  static Color get navigationLabel =>
+      isDark ? textSecondary : const Color(0xFF767676);
   static const onInkMuted = Color(0xFFA9A9A2); // 리더 검정 조절 알약의 고르지 않은 칸
 }
 
@@ -142,17 +175,29 @@ abstract class RgColors {
 // 다른 화면도 흰색 바탕 팔레트를 이 면에 맞췄다(2026-10-31). 홈 칩·알약·논문 카드처럼 홈에만 있는 색은 여기 둔다.
 abstract class RgHome {
   static bool get _custom => !isDark;
-  static Color get bg => _custom ? const Color(0xFFEDEFF2) : _p.bgApp;
+  static Color get bg => _custom ? const Color(0xFFFFFFFF) : _p.bgApp;
   static Color get card => _custom ? const Color(0xFFFFFFFF) : _p.surfaceCard;
-  static List<BoxShadow> get cardShadow => isDark ? const [] : const [BoxShadow(color: Color(0x08000000), blurRadius: 15)];
-  static Color get chip => isDark ? const Color(0x1AFFFFFF) : const Color(0x14000000); // 키워드·주제 칩
-  static Color get statPill => isDark ? const Color(0xFF2C2C2A) : const Color(0xFFF4F4F4); // 추천·댓글·좋아요·다운로드 알약
-  static Color get statText => isDark ? const Color(0x99FFFFFF) : const Color(0x66000000);
-  static Color get divider => isDark ? const Color(0x1AFFFFFF) : const Color(0x1A000000); // 카드 안 행 사이
-  static Color get dividerOnBg => isDark ? const Color(0x24FFFFFF) : const Color(0x33000000); // 바탕 위 논문 행 사이
-  static Color get ring => isDark ? const Color(0xFF2E2E2B) : const Color(0xFFD0D4DA); // 바탕 위 북마크 원
-  static Color get paperCard => isDark ? const Color(0xFF3A3E45) : const Color(0xFF777D86); // 오늘의 주요 논문
-  static Color get paperRing => isDark ? const Color(0xFF2C2F35) : const Color(0xFF5F6369);
+  static List<BoxShadow> get cardShadow => isDark
+      ? const []
+      : const [BoxShadow(color: Color(0x08000000), blurRadius: 4)];
+  static Color get chip =>
+      isDark ? const Color(0x1AFFFFFF) : const Color(0x14000000); // 키워드·주제 칩
+  static Color get statPill => isDark
+      ? const Color(0xFF2C2C2A)
+      : const Color(0xFFF4F4F4); // 추천·댓글·좋아요·다운로드 알약
+  static Color get statText =>
+      isDark ? const Color(0x99FFFFFF) : const Color(0x66000000);
+  static Color get divider =>
+      isDark ? const Color(0x1AFFFFFF) : const Color(0x1A000000); // 카드 안 행 사이
+  static Color get dividerOnBg => isDark
+      ? const Color(0x24FFFFFF)
+      : const Color(0x33000000); // 바탕 위 논문 행 사이
+  static Color get ring =>
+      isDark ? const Color(0xFF2E2E2B) : const Color(0xFFE8E8E8); // 바탕 위 북마크 원(시안 Home: 33pt 옅은 회색, 탐색과 같은 면)
+  static Color get paperCard =>
+      isDark ? const Color(0xFF3A3E45) : const Color(0xFF474747); // 오늘의 주요 논문
+  static Color get paperRing =>
+      isDark ? const Color(0xFF2C2F35) : const Color(0xFF353535);
 }
 
 // 출처 칩 색(디자인 피드백 2026-10-31 A안): 원색·쌩 검정 대신 「연한 바탕 + 같은 계열 진한 글자」 한 규칙.
@@ -160,22 +205,69 @@ abstract class RgHome {
 // Google은 4색 조합을 흉내 내지 않고 파랑 하나만. 로고 모양·글꼴은 따라 하지 않는다. 권리 검토: docs/RIGHTS.md 4장.
 // 시안: design-preview/src/feedback_2026-10-31.html, 피그마 「홈·탐색 A안」.
 class RgBrandTone {
-  const RgBrandTone(this.bg, this.fg, this.darkBg, this.darkFg, {this.cardBg, this.ringBg});
+  const RgBrandTone(
+    this.bg,
+    this.fg,
+    this.darkBg,
+    this.darkFg, {
+    this.cardBg,
+    this.ringBg,
+  });
   final Color bg, fg, darkBg, darkFg;
-  final Color? cardBg, ringBg; // 홈 「바뀐 도구」 카드 면·북마크 원(디자이너 시안 home_re 2026-10-31). 없으면 칩 면에서 만든다
+  final Color? cardBg,
+      ringBg; // 홈 「바뀐 도구」 카드 면·북마크 원(디자이너 시안 home_re 2026-10-31). 없으면 칩 면에서 만든다
   Color get background => isDark ? darkBg : bg;
   Color get foreground => isDark ? darkFg : fg;
-  Color get card => isDark ? darkBg : (cardBg ?? Color.lerp(bg, const Color(0xFF000000), 0.05)!);
-  Color get ring => isDark ? Color.lerp(darkBg, const Color(0xFFFFFFFF), 0.08)! : (ringBg ?? Color.lerp(card, const Color(0xFF000000), 0.08)!);
+  Color get card => isDark
+      ? darkBg
+      : (cardBg ?? Color.lerp(bg, const Color(0xFF000000), 0.05)!);
+  Color get ring => isDark
+      ? Color.lerp(darkBg, const Color(0xFFFFFFFF), 0.08)!
+      : (ringBg ?? Color.lerp(card, const Color(0xFF000000), 0.08)!);
 }
 
 abstract class RgBrand {
-  static const anthropic = RgBrandTone(Color(0xFFF6E3D6), Color(0xFF8A3D1E), Color(0xFF3D271D), Color(0xFFF2B79A), cardBg: Color(0xFFEADED6), ringBg: Color(0xFFD9CAC0)); // 살구
-  static const openai = RgBrandTone(Color(0xFFE6E6E2), Color(0xFF2E2E2B), Color(0xFF34342F), Color(0xFFDCDCD6), cardBg: Color(0xFFDADADA), ringBg: Color(0xFFBFBFBF)); // 회색(흑백 브랜드)
-  static const google = RgBrandTone(Color(0xFFDDE8FA), Color(0xFF1A4F9E), Color(0xFF1C2A42), Color(0xFFA9C7F5)); // 하늘
-  static const huggingface = RgBrandTone(Color(0xFFFFF0BA), Color(0xFF6B5400), Color(0xFF3A3215), Color(0xFFF3D774)); // 노랑
-  static const nvidia = RgBrandTone(Color(0xFFE5F1CF), Color(0xFF3E6400), Color(0xFF26331A), Color(0xFFBEDC8C)); // 연두
-  static const meta = RgBrandTone(Color(0xFFE3E6FA), Color(0xFF3A47A8), Color(0xFF23264A), Color(0xFFB4BCF5)); // 남색
+  static const anthropic = RgBrandTone(
+    Color(0xFFF6E3D6),
+    Color(0xFF8A3D1E),
+    Color(0xFF3D271D),
+    Color(0xFFF2B79A),
+    cardBg: Color(0xFFEADED6),
+    ringBg: Color(0xFFD9CAC0),
+  ); // 살구
+  static const anthropicUpdate = Color(0xFFC96E50); // 시안: 바뀐 도구·업데이트 목록의 Claude 도구 이름(20pt 굵게, 라이트 전용)
+  static const openai = RgBrandTone(
+    Color(0xFFE6E6E2),
+    Color(0xFF2E2E2B),
+    Color(0xFF34342F),
+    Color(0xFFDCDCD6),
+    cardBg: Color(0xFFDADADA),
+    ringBg: Color(0xFFBFBFBF),
+  ); // 회색(흑백 브랜드)
+  static const google = RgBrandTone(
+    Color(0xFFDDE8FA),
+    Color(0xFF1A4F9E),
+    Color(0xFF1C2A42),
+    Color(0xFFA9C7F5),
+  ); // 하늘
+  static const huggingface = RgBrandTone(
+    Color(0xFFFFF0BA),
+    Color(0xFF6B5400),
+    Color(0xFF3A3215),
+    Color(0xFFF3D774),
+  ); // 노랑
+  static const nvidia = RgBrandTone(
+    Color(0xFFE5F1CF),
+    Color(0xFF3E6400),
+    Color(0xFF26331A),
+    Color(0xFFBEDC8C),
+  ); // 연두
+  static const meta = RgBrandTone(
+    Color(0xFFE3E6FA),
+    Color(0xFF3A47A8),
+    Color(0xFF23264A),
+    Color(0xFFB4BCF5),
+  ); // 남색
   static const xai = openai;
 }
 
@@ -188,12 +280,27 @@ abstract class RgMotion {
   static const base = Duration(milliseconds: 220); // 미끄러짐·접힘·탭 넘김
   static const curve = Curves.easeOutCubic;
   static const pressScale = 0.98; // 행·카드 눌림
-  static Duration of(BuildContext context, Duration d) => MediaQuery.disableAnimationsOf(context) ? Duration.zero : d;
+  static Duration of(BuildContext context, Duration d) =>
+      MediaQuery.disableAnimationsOf(context) ? Duration.zero : d;
 }
 
 abstract class RgSpace {
-  static const s2 = 2.0, s4 = 4.0, s6 = 6.0, s8 = 8.0, s10 = 10.0, s12 = 12.0, s14 = 14.0,
-      s16 = 16.0, s18 = 18.0, s20 = 20.0, s22 = 22.0, s24 = 24.0, s28 = 28.0, s32 = 32.0, s36 = 36.0, s40 = 40.0;
+  static const s2 = 2.0,
+      s4 = 4.0,
+      s6 = 6.0,
+      s8 = 8.0,
+      s10 = 10.0,
+      s12 = 12.0,
+      s14 = 14.0,
+      s16 = 16.0,
+      s18 = 18.0,
+      s20 = 20.0,
+      s22 = 22.0,
+      s24 = 24.0,
+      s28 = 28.0,
+      s32 = 32.0,
+      s36 = 36.0,
+      s40 = 40.0;
   // 카드·글 좌우 여백은 홈 시안과 같은 24(2026-10-31, 이전 16·20). 홈은 homeGutter를 따로 쓴다
   static const gutterCard = 24.0, gutterText = 24.0, gutterReader = 24.0;
   // 탭바가 바닥에 붙어(Scaffold.bottomNavigationBar) 본문이 그 위에서 끝난다. 스크롤 끝 여백만.
@@ -203,13 +310,23 @@ abstract class RgSpace {
 }
 
 abstract class RgRadius {
-  static const card = 28.0, cardDark = 28.0, // 홈 카드와 같은 둥글기(이전 22·26)
-      sheet = 30.0, box = 16.0, badge = 10.0, term = 4.0, pill = 999.0;
+  static const card = 28.0,
+      cardDark =
+          28.0, // 홈 카드와 같은 둥글기(이전 22·26)
+      sheet = 30.0,
+      box = 16.0,
+      badge = 10.0,
+      term = 4.0,
+      pill = 999.0;
 }
 
 // 그림자: 카드의 아주 옅은 번짐(홈 시안, 어두운 화면엔 없음)과 세그먼트의 선택 알약(1px, 6%).
 abstract class RgShadow {
   static List<BoxShadow> get card => RgHome.cardShadow;
-  static const segment = [BoxShadow(color: Color(0x0F000000), offset: Offset(0, 1), blurRadius: 2)];
-  static const thumb = [BoxShadow(color: Color(0x40000000), offset: Offset(0, 1), blurRadius: 4)]; // 글자 크기 슬라이더
+  static const segment = [
+    BoxShadow(color: Color(0x0F000000), offset: Offset(0, 1), blurRadius: 2),
+  ];
+  static const thumb = [
+    BoxShadow(color: Color(0x40000000), offset: Offset(0, 1), blurRadius: 4),
+  ]; // 글자 크기 슬라이더
 }

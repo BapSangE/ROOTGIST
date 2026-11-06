@@ -10,7 +10,7 @@ import '../../design/typography.dart';
 import '../../design/widgets/rg_buttons.dart';
 import '../../design/widgets/rg_card.dart';
 import '../../design/widgets/rg_pressable.dart';
-import '../../design/widgets/rg_underline_tabs.dart';
+import '../../design/widgets/rg_new_dot.dart';
 import '../../design/widgets/rg_states.dart';
 import '../../data/unread.dart';
 import '../home/briefing.dart';
@@ -32,7 +32,8 @@ class OfficialNewsSection extends StatefulWidget {
 
 class _OfficialNewsSectionState extends State<OfficialNewsSection> {
   final _req = Reloadable(repository.listOfficialNews);
-  late var _tab = newsTab.value = exploreJump.value?.newsTab ?? 0; // 0 발표, 1 업데이트, 2 화제
+  late var _tab = newsTab.value =
+      exploreJump.value?.newsTab ?? 0; // 0 발표, 1 업데이트, 2 화제
   bool get _updates => _tab == 1;
   String? _source; // null = 전체
   String? _hot; // 개발자 화제 칩: null 전체, 'hn', 'github'
@@ -42,10 +43,21 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
   void _tip() {
     if (tipsSeen.value.contains(tipNews)) return;
     Future<void>.delayed(const Duration(milliseconds: 400), () {
-      if (!mounted || exploreTab.value != 1 || !(ModalRoute.of(context)?.isCurrent ?? false)) return;
-      if (_chipsKey.currentContext == null || !TickerMode.valuesOf(context).enabled) return;
+      if (!mounted ||
+          exploreTab.value != 1 ||
+          !(ModalRoute.of(context)?.isCurrent ?? false)) {
+        return;
+      }
+      if (_chipsKey.currentContext == null ||
+          !TickerMode.valuesOf(context).enabled) {
+        return;
+      }
       showCoachMarks(context, tipNews, [
-        CoachStep(target: _chipsKey, title: '회사별로 골라 보기', body: '관심 있는 회사만 눌러서 소식을 좁혀 봐요. 옆으로 밀면 논문·모델로 바뀌어요.'),
+        CoachStep(
+          target: _chipsKey,
+          title: '회사별로 골라 보기',
+          body: '관심 있는 회사만 눌러서 소식을 좁혀 봐요. 옆으로 밀면 논문·모델로 바뀌어요.',
+        ),
       ]);
     });
   }
@@ -66,8 +78,11 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
   final DateTime? _seenBefore = newsSeenAt.value;
 
   // 지난번에 본 글 중 가장 새것(선은 그 글 바로 위에)
-  OfficialNews? _firstSeen(List<OfficialNews> list) =>
-      _seenBefore == null ? null : list.where((n) => n.publishedAt.compareTo(_seenBefore) <= 0).firstOrNull;
+  OfficialNews? _firstSeen(List<OfficialNews> list) => _seenBefore == null
+      ? null
+      : list
+            .where((n) => n.publishedAt.compareTo(_seenBefore) <= 0)
+            .firstOrNull;
 
   @override
   void initState() {
@@ -76,8 +91,15 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
     exploreTab.addListener(_tip); // 탐색에서 소식 칸으로 넘어오면(칸은 미리 그려 둔다)
     // 목록을 받으면 이번 맨 위 발표 시각을 기록(다음에 열 때 선 자리). 그리는 도중이 아니라 다음 프레임에
     _req.future.then((all) {
-      final newest = all.where((n) => !n.isUpdate && !n.isHot).map((n) => n.publishedAt).fold<DateTime?>(null, (a, b) => a == null || b.isAfter(a) ? b : a);
-      if (newest != null) WidgetsBinding.instance.addPostFrameCallback((_) => newsSeenAt.value = newest);
+      final newest = all
+          .where((n) => !n.isUpdate && !n.isHot)
+          .map((n) => n.publishedAt)
+          .fold<DateTime?>(null, (a, b) => a == null || b.isAfter(a) ? b : a);
+      if (newest != null) {
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => newsSeenAt.value = newest,
+        );
+      }
     }, onError: (_) {});
   }
 
@@ -105,10 +127,8 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
         builder: (context, snap) => ListView(
           padding: const EdgeInsets.only(bottom: RgSpace.bottomScrollInset),
           children: [
-            const SizedBox(height: RgSpace.s12),
-            // 밑줄 탭: 위 알약 세그먼트(논문·공식 소식·모델)와 위계를 나눈다
-            RgUnderlineTabs(
-              labels: const ['발표', '업데이트', '개발자 화제'], // 홈 「개발자 화제」 배지·카드와 같은 이름
+            ExploreSectionTabs(
+              labels: const ['발표', '업데이트', 'HOT'],
               selected: _tab,
               onTap: (i) => setState(() {
                 _tab = newsTab.value = i;
@@ -121,9 +141,17 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
                 const SizedBox(height: RgSpace.s20),
                 RgErrorCard(error: snap.error, onRetry: _req.reload),
               ],
-              AsyncSnapshot(connectionState: ConnectionState.done) => _list(context, snap.data!),
+              AsyncSnapshot(connectionState: ConnectionState.done) => _list(
+                context,
+                snap.data!,
+              ),
               _ => const [
-                RgSkeleton(child: Padding(padding: EdgeInsets.only(top: RgSpace.s20), child: RgSkeletonRows(count: 4))),
+                RgSkeleton(
+                  child: Padding(
+                    padding: EdgeInsets.only(top: RgSpace.s20),
+                    child: RgSkeletonRows(count: 4),
+                  ),
+                ),
               ],
             },
           ],
@@ -134,39 +162,48 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
 
   List<Widget> _list(BuildContext context, List<OfficialNews> all) {
     if (_tab == 2) return _hotList(context, all);
-    final kind = [for (final n in all) if (!n.isHot && n.isUpdate == _updates) n];
+    final kind = [
+      for (final n in all)
+        if (!n.isHot && n.isUpdate == _updates) n,
+    ];
     if (kind.isEmpty) {
       return [
         Padding(
-          padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s24, RgSpace.gutterText, 0),
-          child: KeepAllText('아직 모은 소식이 없어요', style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
+          padding: const EdgeInsets.fromLTRB(
+            RgSpace.gutterText,
+            RgSpace.s24,
+            RgSpace.gutterText,
+            0,
+          ),
+          child: KeepAllText(
+            '아직 모은 소식이 없어요',
+            style: RgText.bodySmall.copyWith(color: RgColors.textSecondary),
+          ),
         ),
       ];
     }
     // 칩은 회사 묶음(출처 19개 → 6개, 시안 C). 순서는 고정(글 순서대로면 날마다 칩 자리가 바뀐다)
     final present = {for (final n in kind) newsGroup(n.source)};
-    final sources = [for (final g in newsGroups) if (present.contains(g)) MapEntry(g, g)];
-    final shown = [for (final n in kind) if (_source == null || newsGroup(n.source) == _source) n];
+    final sources = [
+      for (final g in newsGroups)
+        if (present.contains(g)) MapEntry(g, g),
+    ];
+    final shown = [
+      for (final n in kind)
+        if (_source == null || newsGroup(n.source) == _source) n,
+    ];
     final now = clock();
     WidgetsBinding.instance.addPostFrameCallback((_) => _tip());
     return [
-      const SizedBox(height: RgSpace.s14),
-      SizedBox(
+      ExploreTextFilters(
         key: _chipsKey,
-        height: RgFilterChip.touchHeight(context),
-        child: ListView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
-          children: [
-            for (final (id, label) in [(null, '전체'), ...sources.map((e) => (e.key, e.value))]) ...[
-              RgFilterChip(label: label, selected: _source == id, onTap: () => setState(() => _source = id)),
-              const SizedBox(width: RgSpace.s8),
-            ],
-          ],
-        ),
+        labels: ['전체', ...sources.map((e) => e.value)],
+        selected: _source == null
+            ? 0
+            : sources.indexWhere((e) => e.key == _source) + 1,
+        onTap: (i) =>
+            setState(() => _source = i == 0 ? null : sources[i - 1].key),
       ),
-      // 홈 카드 모양(2026-11-01): 발표는 한 묶음(하루·주·달)에 흰 카드 하나(홈 「오늘의 주요 소식」 행), 업데이트는 글마다 회사 색 카드(홈 「바뀐 도구」).
-      // 최근 7일은 하루씩, 그 앞은 주·달·해로 묶어 날짜 줄로 접는다(DateGroups, 「지난 논문」 모양). 발표·업데이트나 출처 칩을 바꾸면 목록이 떠오르며 바뀐다(RgFilterSwitch)
       RgFilterSwitch(
         switchKey: (_tab, _source),
         child: DateGroups<OfficialNews>(
@@ -175,43 +212,52 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
           at: (n) => n.publishedAt,
           tag: (n) => n.sourceLabel,
           now: now,
+          showDayHeaders: !_updates,
           builder: (context, rows) => Padding(
-            padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
-            child: _updates
-                ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: RgSpace.s10, children: [
-                    for (final n in rows) HomeUpdateCard(news: n, now: now),
-                  ])
-                : HomeCard(
-                    padding: const EdgeInsets.fromLTRB(20, 28, 20, 28),
-                    child: FutureBuilder(
-                      future: dictionary(),
-                      initialData: dictionaryValue,
-                      builder: (context, snap) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 32, children: [
-                        for (final (i, n) in rows.indexed) ...[
-                          // 지난번에 본 맨 위 글 앞에 「여기까지 봤어요」 선
-                          if (_seenBefore case final seen? when n.publishedAt.compareTo(seen) <= 0 && shown.first.publishedAt.isAfter(seen) && _firstSeen(shown) == n)
-                            const _ReadLine(),
-                          HomeStoryRow(news: n, now: now, last: i == rows.length - 1, keywords: newsKeywords(n, snap.data ?? const []), explore: true),
-                        ],
-                      ]),
-                    ),
-                  ),
+            padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final n in rows) ...[
+                  if (_seenBefore case final seen?
+                      when !_updates &&
+                          n.publishedAt.compareTo(seen) <= 0 &&
+                          shown.first.publishedAt.isAfter(seen) &&
+                          _firstSeen(shown) == n)
+                    const _ReadLine(),
+                  _ExploreNewsRow(news: n, update: _updates),
+                ],
+              ],
+            ),
           ),
         ),
       ),
       Padding(
-        padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s12, RgSpace.gutterText, 0),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s6, children: [
-          Padding(padding: EdgeInsets.only(top: 2), child: RgIcon('info', size: 14, color: RgColors.textSecondary)),
-          Expanded(
-            child: KeepAllText(
-              _updates
-                  ? '공지 요약과 릴리스 노트 요약은 AI가 원문만 보고 정리했어요. 정확한 내용은 원문에서 확인해요.'
-                  : '제목·요약·핵심 내용은 AI가 원문만 보고 한국어로 정리했어요. 글 전체를 옮기지 않으니 자세한 내용은 원문에서 읽어요.',
-              perSentence: true, style: RgText.caption.copyWith(color: RgColors.textSecondary),
+        padding: const EdgeInsets.fromLTRB(
+          RgSpace.gutterText,
+          RgSpace.s12,
+          RgSpace.gutterText,
+          0,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: RgSpace.s6,
+          children: [
+            Padding(
+              padding: EdgeInsets.only(top: 2),
+              child: RgIcon('info', size: 14, color: RgColors.textSecondary),
             ),
-          ),
-        ]),
+            Expanded(
+              child: KeepAllText(
+                _updates
+                    ? '공지 요약과 릴리스 노트 요약은 AI가 원문만 보고 정리했어요. 정확한 내용은 원문에서 확인해요.'
+                    : '제목·요약·핵심 내용은 AI가 원문만 보고 한국어로 정리했어요. 글 전체를 옮기지 않으니 자세한 내용은 원문에서 읽어요.',
+                perSentence: true,
+                style: RgText.caption.copyWith(color: RgColors.textSecondary),
+              ),
+            ),
+          ],
+        ),
       ),
     ];
   }
@@ -220,35 +266,63 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
   // 점수 단위가 달라(HN 추천 · GitHub 별) 한 줄로 섞어 세우지 않는다: 각자 점수 순, 「전체」는 둘을 한 개씩 번갈아 놓는다.
   List<Widget> _hotList(BuildContext context, List<OfficialNews> all) {
     final now = clock();
-    int byPoints(OfficialNews a, OfficialNews b) => (b.points ?? 0).compareTo(a.points ?? 0);
-    final hn = [for (final n in all) if (n.isHot && !n.isGithub) n]..sort(byPoints);
-    final gh = [for (final n in all) if (n.isGithub) n]..sort(byPoints);
+    int byPoints(OfficialNews a, OfficialNews b) =>
+        (b.points ?? 0).compareTo(a.points ?? 0);
+    final hn = [
+      for (final n in all)
+        if (n.isHot && !n.isGithub) n,
+    ]..sort(byPoints);
+    final gh = [
+      for (final n in all)
+        if (n.isGithub) n,
+    ]..sort(byPoints);
     final shown = switch (_hot) {
       'hn' => hn,
       'github' => gh,
-      _ => [for (var i = 0; i < hn.length || i < gh.length; i++) ...[if (i < hn.length) hn[i], if (i < gh.length) gh[i]]],
+      _ => [
+        for (var i = 0; i < hn.length || i < gh.length; i++) ...[
+          if (i < hn.length) hn[i],
+          if (i < gh.length) gh[i],
+        ],
+      ],
     };
     return [
-      const SizedBox(height: RgSpace.s14),
-      SizedBox(
-        height: RgFilterChip.touchHeight(context),
-        child: ListView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
-          children: [
-            for (final (id, label) in [(null, '전체'), if (hn.isNotEmpty) ('hn', 'Hacker News'), if (gh.isNotEmpty) ('github', 'GitHub')]) ...[
-              RgFilterChip(label: label, selected: _hot == id, onTap: () => setState(() => _hot = id)),
-              const SizedBox(width: RgSpace.s8),
-            ],
-          ],
+      ExploreTextFilters(
+        labels: [
+          '전체',
+          if (hn.isNotEmpty) 'Hacker News',
+          if (gh.isNotEmpty) 'GitHub',
+        ],
+        selected: [
+          null,
+          if (hn.isNotEmpty) 'hn',
+          if (gh.isNotEmpty) 'github',
+        ].indexOf(_hot),
+        onTap: (i) => setState(
+          () => _hot = [
+            null,
+            if (hn.isNotEmpty) 'hn',
+            if (gh.isNotEmpty) 'github',
+          ][i],
         ),
       ),
+      const SizedBox(height: RgSpace.s16),
       RgFilterSwitch(
         switchKey: (_tab, _hot),
         child: shown.isEmpty
             ? Padding(
-                padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s24, RgSpace.gutterText, 0),
-                child: KeepAllText('아직 모은 개발자 화제가 없어요', style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
+                padding: const EdgeInsets.fromLTRB(
+                  RgSpace.gutterText,
+                  RgSpace.s24,
+                  RgSpace.gutterText,
+                  0,
+                ),
+                child: KeepAllText(
+                  '아직 모은 개발자 화제가 없어요',
+                  style: RgText.bodySmall.copyWith(
+                    color: RgColors.textSecondary,
+                  ),
+                ),
               )
             : DateGroups<OfficialNews>(
                 key: ValueKey(_hot),
@@ -256,33 +330,230 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
                 at: (n) => n.publishedAt,
                 tag: (n) => n.sourceLabel,
                 now: now,
+                showDayHeaders: false,
                 builder: (context, rows) => Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: RgSpace.s16, children: [
-                    for (final n in rows) HomeTalkCard(news: n, now: now, explore: true),
-                  ]),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: RgSpace.gutterText,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    spacing: RgSpace.s12,
+                    children: [for (final n in rows) _ExploreHotCard(news: n)],
+                  ),
                 ),
               ),
       ),
       Padding(
-        padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s12, RgSpace.gutterText, 0),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s6, children: [
-          Padding(padding: EdgeInsets.only(top: 2), child: RgIcon('info', size: 14, color: RgColors.textSecondary)),
-          Expanded(
-            child: KeepAllText(
-              '개발자들이 많이 본 글과 새 도구예요. 공식 발표가 아니라 각 사이트의 글이고, 숫자는 Hacker News 추천(upvote)·댓글 수와 GitHub 별 수예요. 요약은 원문 사이트가 허용할 때만 AI가 만들어요.',
-              perSentence: true, style: RgText.caption.copyWith(color: RgColors.textSecondary),
+        padding: const EdgeInsets.fromLTRB(
+          RgSpace.gutterText,
+          RgSpace.s12,
+          RgSpace.gutterText,
+          0,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: RgSpace.s6,
+          children: [
+            Padding(
+              padding: EdgeInsets.only(top: 2),
+              child: RgIcon('info', size: 14, color: RgColors.textSecondary),
             ),
-          ),
-        ]),
+            Expanded(
+              child: KeepAllText(
+                '개발자들이 많이 본 글과 새 도구예요. 공식 발표가 아니라 각 사이트의 글이고, 숫자는 Hacker News 추천(upvote)·댓글 수와 GitHub 별 수예요. 요약은 원문 사이트가 허용할 때만 AI가 만들어요.',
+                perSentence: true,
+                style: RgText.caption.copyWith(color: RgColors.textSecondary),
+              ),
+            ),
+          ],
+        ),
       ),
     ];
   }
 }
 
+// 발표는 제목과 출처·날짜만, 업데이트는 도구 이름과 변경 제목을 보인다.
+// 원래 소식 상세·북마크·읽음 상태는 그대로 연결한다.
+class _ExploreNewsRow extends StatelessWidget {
+  const _ExploreNewsRow({required this.news, required this.update});
+  final OfficialNews news;
+  final bool update;
+
+  @override
+  Widget build(BuildContext context) {
+    final n = news;
+    final version = RegExp(r'v[\d.]+(?:~v[\d.]+)?')
+        .firstMatch(n.titleEn)
+        ?.group(0);
+    final titleColor = update && newsGroup(n.source) == 'Anthropic'
+        ? updateTitleColor(n.source)
+        : null;
+    // 시안: 둘째 줄은 「Claude Code 업데이트 4건」까지만, 버전은 셋째 줄에만
+    final title = n.titleKo ?? n.titleEn;
+    final line2 = update
+        ? title.replaceAll(RegExp(r'\s*\(v[\d.]+(?:~v[\d.]+)?\)'), '').trim()
+        : title;
+    return Semantics(
+      button: true,
+      child: RgPressable(
+        row: true,
+        onTap: () => context.push('/news/${Uri.encodeComponent(n.id)}'),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: RgSpace.s16),
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: RgHome.divider)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: RgSpace.s12,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        KeepAllText(
+                          update ? n.sourceLabel : n.titleKo ?? n.titleEn,
+                          style: update
+                              ? RgText.homeUpdate.copyWith(
+                                  fontWeight: FontWeight.w500,
+                                  color: titleColor ?? RgColors.textPrimary,
+                                )
+                              : RgText.titleList.copyWith(
+                                  fontSize: 16,
+                                  height: 25 / 16,
+                                  fontWeight: FontWeight.w500,
+                                  letterSpacing: -0.32,
+                                ),
+                        ),
+                        if (update) ...[
+                          const SizedBox(height: RgSpace.s4),
+                          KeepAllText(
+                            line2.isEmpty ? title : line2,
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                            style: RgText.homeSummary.copyWith(
+                              color: RgColors.textBody,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  newsActions(n, visualSize: 40),
+                ],
+              ),
+              const SizedBox(height: RgSpace.s8),
+              ValueListenableBuilder(
+                valueListenable: readItems,
+                builder: (context, _, _) => Wrap(
+                  spacing: RgSpace.s6,
+                  runSpacing: RgSpace.s4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      [
+                        if (!update) n.sourceLabel,
+                        if (update && version != null) '($version)',
+                        newsDate(n),
+                      ].join(' · '),
+                      style: RgText.homeMeta.copyWith(
+                        color: RgColors.textSecondary,
+                      ),
+                    ),
+                    RgNewLabel(visible: isNew(newsKey(n), n.publishedAt)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ExploreHotCard extends StatelessWidget {
+  const _ExploreHotCard({required this.news});
+  final OfficialNews news;
+
+  @override
+  Widget build(BuildContext context) {
+    final n = news;
+    return HomeCard(
+      radius: 20,
+      padding: const EdgeInsets.all(RgSpace.s20),
+      onTap: () => context.push('/news/${Uri.encodeComponent(n.id)}'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: RgSpace.s12,
+            children: [
+              Expanded(
+                child: KeepAllText(
+                  n.titleKo ?? n.titleEn,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: RgText.titleList.copyWith(
+                    fontSize: 16,
+                    height: 25 / 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              newsActions(n, visualSize: 40),
+            ],
+          ),
+          const SizedBox(height: RgSpace.s20),
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: RgSpace.s8,
+            runSpacing: RgSpace.s8,
+            children: [
+              Text(
+                newsDate(n),
+                style: RgText.homeMeta.copyWith(color: RgColors.textSecondary),
+              ),
+              Wrap(
+                spacing: RgSpace.s6,
+                runSpacing: RgSpace.s6,
+                children: [
+                  if (n.points != null)
+                    HomeStat(
+                      countKo(n.points!),
+                      icon: n.isGithub ? 'star-filled' : 'thumbs-up',
+                      label:
+                          '${n.sourceLabel} ${n.isGithub ? '별' : '추천'} ${countKo(n.points!)}',
+                    ),
+                  if (!n.isGithub && n.comments != null)
+                    HomeStat(
+                      countKo(n.comments!),
+                      icon: 'message-circle',
+                      label: '댓글 ${countKo(n.comments!)}',
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // 상세 화면 「관련 소식」 한 줄: 출처·날짜 + 제목, 그리고 두 글을 잇는 문장(관련 글의 핵심 내용 중 겹치는 이름이 나오는 것).
 class RelatedRow extends StatelessWidget {
-  const RelatedRow({super.key, required this.news, required this.about, required this.last});
+  const RelatedRow({
+    super.key,
+    required this.news,
+    required this.about,
+    required this.last,
+  });
   final OfficialNews news;
   final OfficialNews about; // 지금 보고 있는 글
   final bool last;
@@ -298,15 +569,21 @@ class RelatedRow extends StatelessWidget {
         padding: EdgeInsets.only(top: 2, right: RgSpace.s12),
         child: RgIcon('chevron-right', size: 18, color: RgColors.textTertiary),
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        NewsHead(news: n),
-        const SizedBox(height: RgSpace.s6),
-        KeepAllText(n.titleKo ?? n.titleEn, style: RgText.titleList),
-        if (hint != null) ...[
-          const SizedBox(height: RgSpace.s4),
-          KeepAllText(hint, style: RgText.bodySmall.copyWith(color: RgColors.textBody)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          NewsHead(news: n),
+          const SizedBox(height: RgSpace.s6),
+          KeepAllText(n.titleKo ?? n.titleEn, style: RgText.titleList),
+          if (hint != null) ...[
+            const SizedBox(height: RgSpace.s4),
+            KeepAllText(
+              hint,
+              style: RgText.bodySmall.copyWith(color: RgColors.textBody),
+            ),
+          ],
         ],
-      ]),
+      ),
     );
   }
 }
@@ -320,7 +597,13 @@ String? relatedHint(OfficialNews related, OfficialNews about) {
       .toList();
   for (final p in related.keyPoints) {
     final t = p.text.toLowerCase().replaceAll(RegExp(r'\s+'), '-');
-    if (key.any((k) => t.contains(k.replaceFirst(RegExp(r'^(introducing|developing|building)-'), '')))) return p.text;
+    if (key.any(
+      (k) => t.contains(
+        k.replaceFirst(RegExp(r'^(introducing|developing|building)-'), ''),
+      ),
+    )) {
+      return p.text;
+    }
   }
   return null;
 }
@@ -340,8 +623,12 @@ class NewsHead extends StatelessWidget {
       meta: news.isHot
           ? [?news.reaction, relativeKo(news.publishedAt, clock())].join(' · ')
           : release
-              ? [releaseTag(news), relativeKo(news.publishedAt, clock()), ?news.reaction].join(' · ')
-              : [relativeKo(news.publishedAt, clock()), ?news.reaction].join(' · '),
+          ? [
+              releaseTag(news),
+              relativeKo(news.publishedAt, clock()),
+              ?news.reaction,
+            ].join(' · ')
+          : [relativeKo(news.publishedAt, clock()), ?news.reaction].join(' · '),
       isNew: isNew(newsKey(news), news.publishedAt),
     ),
   );
@@ -350,15 +637,23 @@ class NewsHead extends StatelessWidget {
 String releaseTag(OfficialNews n) {
   if (n.kind != 'release') return '공지';
   final ver = RegExp(r'v[\d.]+(?:~(v[\d.]+))?').firstMatch(n.titleEn);
-  final count = RegExp(r'\((\d+) (?:releases?|changes?)\)').firstMatch(n.titleEn)?.group(1);
+  final count = RegExp(r'\((\d+) (?:releases?|changes?)\)')
+      .firstMatch(n.titleEn)
+      ?.group(1);
   final last = ver == null ? null : (ver.group(1) ?? ver.group(0));
   return [?last, if (count != null) '$count건'].join(' · ');
 }
 
 String newsKey(OfficialNews n) => 'news:${n.id}';
-bool hasNewNews(Iterable<OfficialNews> news) => news.any((n) => isNew(newsKey(n), n.publishedAt));
+bool hasNewNews(Iterable<OfficialNews> news) =>
+    news.any((n) => isNew(newsKey(n), n.publishedAt));
 
-ItemActions newsActions(OfficialNews n, {RgCircleVariant variant = RgCircleVariant.neutral, bool share = false, double? visualSize}) => ItemActions(
+ItemActions newsActions(
+  OfficialNews n, {
+  RgCircleVariant variant = RgCircleVariant.neutral,
+  bool share = false,
+  double? visualSize,
+}) => ItemActions(
   id: n.id,
   title: n.titleKo ?? n.titleEn,
   url: n.url,
@@ -370,7 +665,8 @@ ItemActions newsActions(OfficialNews n, {RgCircleVariant variant = RgCircleVaria
 );
 
 // 머리 줄용: 출처는 칩이 보여 주므로 분류 · 날짜만
-String newsMetaShort(OfficialNews n) => [?n.categoryKo, newsDate(n)].join(' · ');
+String newsMetaShort(OfficialNews n) =>
+    [?n.categoryKo, newsDate(n)].join(' · ');
 
 String newsDate(OfficialNews n) {
   final k = n.publishedAt.toUtc().add(const Duration(hours: 9));
@@ -385,35 +681,55 @@ class NewsPoints extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s14, children: [
-      for (final (i, p) in news.keyPoints.indexed)
-        // 번호는 본문과 같은 15pt, 간격 8(S02 핵심 내용과 같다)
-        Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s8, children: [
-          Text('${i + 1}', style: RgText.bodySummary.copyWith(fontWeight: FontWeight.w700)),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              TermText(p.text, highlights: highlights?.elementAtOrNull(i) ?? const [], style: RgText.bodySummary),
-              if (p.para != null)
-                Semantics(
-                  link: true,
-                  label: '근거, ${_evidence(p)}',
-                  excludeSemantics: true,
-                  onTap: () => _open(news.evidenceUrl(p)),
-                  child: RgPressable(
-                    onTap: () => _open(news.evidenceUrl(p)),
-                    child: EvidencePill(label: '근거 · ${_evidence(p)}'),
-                  ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: RgSpace.s14,
+      children: [
+        for (final (i, p) in news.keyPoints.indexed)
+          // 번호는 본문과 같은 15pt, 간격 8(S02 핵심 내용과 같다)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: RgSpace.s8,
+            children: [
+              Text(
+                '${i + 1}',
+                style: RgText.bodySummary.copyWith(fontWeight: FontWeight.w700),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TermText(
+                      p.text,
+                      highlights: highlights?.elementAtOrNull(i) ?? const [],
+                      style: RgText.bodySummary,
+                    ),
+                    if (p.para != null)
+                      Semantics(
+                        link: true,
+                        label: '근거, ${_evidence(p)}',
+                        excludeSemantics: true,
+                        onTap: () => _open(news.evidenceUrl(p)),
+                        child: RgPressable(
+                          onTap: () => _open(news.evidenceUrl(p)),
+                          child: EvidencePill(label: '근거 · ${_evidence(p)}'),
+                        ),
+                      ),
+                  ],
                 ),
-            ]),
+              ),
+            ],
           ),
-        ]),
-    ]);
+      ],
+    );
   }
 
   // OpenAI 글은 피드 소개문이 근거다
-  String _evidence(NewsPoint p) => news.source == 'openai' ? '원문 소개문' : '원문 ${p.para}번째 문단';
+  String _evidence(NewsPoint p) =>
+      news.source == 'openai' ? '원문 소개문' : '원문 ${p.para}번째 문단';
 
-  void _open(String url) => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+  void _open(String url) =>
+      launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
 }
 
 // 근거 알약(핵심 내용 아래): 인용 아이콘 + 「근거 · 초록 2번째 문장」. 보이는 높이 30, 누르는 높이 44.
@@ -427,12 +743,31 @@ class EvidencePill extends StatelessWidget {
     alignment: Alignment.centerLeft,
     child: Container(
       constraints: const BoxConstraints(minHeight: 30),
-      padding: const EdgeInsets.symmetric(horizontal: RgSpace.s10, vertical: RgSpace.s6),
-      decoration: BoxDecoration(color: RgColors.fillNeutral, borderRadius: BorderRadius.circular(RgRadius.pill)),
-      child: Row(mainAxisSize: MainAxisSize.min, spacing: RgSpace.s4, children: [
-        RgIcon('quote', size: 14, color: RgColors.textBody),
-        Flexible(child: Text(label, style: RgText.caption.copyWith(height: 1.25, fontWeight: FontWeight.w500, color: RgColors.textBody))),
-      ]),
+      padding: const EdgeInsets.symmetric(
+        horizontal: RgSpace.s10,
+        vertical: RgSpace.s6,
+      ),
+      decoration: BoxDecoration(
+        color: RgColors.fillNeutral,
+        borderRadius: BorderRadius.circular(RgRadius.pill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        spacing: RgSpace.s4,
+        children: [
+          RgIcon('quote', size: 14, color: RgColors.textBody),
+          Flexible(
+            child: Text(
+              label,
+              style: RgText.caption.copyWith(
+                height: 1.25,
+                fontWeight: FontWeight.w500,
+                color: RgColors.textBody,
+              ),
+            ),
+          ),
+        ],
+      ),
     ),
   );
 }
@@ -443,14 +778,32 @@ class _ReadLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final line = Expanded(child: Container(height: 1, color: RgColors.newText.withValues(alpha: 0.3)));
+    final line = Expanded(
+      child: Container(
+        height: 1,
+        color: RgColors.newText.withValues(alpha: 0.3),
+      ),
+    );
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s8),
-      child: Row(spacing: RgSpace.s8, children: [
-        line,
-        Text('지난번에 여기까지 봤어요', style: RgText.caption.copyWith(fontSize: 12, fontWeight: FontWeight.w600, color: RgColors.newText)),
-        line,
-      ]),
+      padding: const EdgeInsets.symmetric(
+        horizontal: RgSpace.s20,
+        vertical: RgSpace.s8,
+      ),
+      child: Row(
+        spacing: RgSpace.s8,
+        children: [
+          line,
+          Text(
+            '지난번에 여기까지 봤어요',
+            style: RgText.caption.copyWith(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: RgColors.newText,
+            ),
+          ),
+          line,
+        ],
+      ),
     );
   }
 }

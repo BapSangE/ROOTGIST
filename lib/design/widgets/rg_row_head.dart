@@ -13,15 +13,27 @@ class RgChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (bg, fg) = brandOf(source) ?? (RgColors.fillNeutral, RgColors.textBody);
+    final (bg, fg) =
+        brandOf(source) ?? (RgColors.fillNeutral, RgColors.textBody);
     return Container(
       constraints: const BoxConstraints(minHeight: 24), // 고정 높이면 큰 글자에서 잘린다
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(RgRadius.pill)),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(RgRadius.pill),
+      ),
       child: Text(
         label,
-        textHeightBehavior: const TextHeightBehavior(leadingDistribution: TextLeadingDistribution.even),
-        style: RgText.caption.copyWith(fontSize: 12.5, height: 18 / 12.5, fontWeight: FontWeight.w600, color: fg, leadingDistribution: TextLeadingDistribution.even),
+        textHeightBehavior: const TextHeightBehavior(
+          leadingDistribution: TextLeadingDistribution.even,
+        ),
+        style: RgText.caption.copyWith(
+          fontSize: 12.5,
+          height: 18 / 12.5,
+          fontWeight: FontWeight.w600,
+          color: fg,
+          leadingDistribution: TextLeadingDistribution.even,
+        ),
       ),
     );
   }
@@ -35,13 +47,40 @@ class RgChip extends StatelessWidget {
   return tone == null ? null : (tone.background, tone.foreground);
 }
 
+// 바뀐 도구·업데이트 목록의 도구 이름 색. Claude 계열은 시안의 밝은 살구(#c96e50), 나머지는 회사 글자색.
+// 어두운 모드는 회사 글자색(밝은 톤)을 그대로 쓴다.
+Color? updateTitleColor(String? source) {
+  final tone = brandToneOf(source);
+  if (tone == null) return null;
+  if (identical(tone, RgBrand.anthropic) && !isDark) {
+    return RgBrand.anthropicUpdate;
+  }
+  return tone.foreground;
+}
+
 RgBrandTone? brandToneOf(String? source) {
   return switch (source) {
-    'anthropic' || 'claude_code' || 'claude_api' || 'anthropic_sdk' ||
-    'Anthropic' || 'Claude Code' || 'Claude API' || 'Anthropic Python SDK' => RgBrand.anthropic,
-    'openai' || 'openai_community' || 'openai_sdk' || 'OpenAI' || 'OpenAI 커뮤니티' || 'OpenAI Python SDK' => RgBrand.openai,
+    'anthropic' ||
+    'claude_code' ||
+    'claude_api' ||
+    'anthropic_sdk' ||
+    'Anthropic' ||
+    'Claude Code' ||
+    'Claude API' ||
+    'Anthropic Python SDK' => RgBrand.anthropic,
+    'openai' ||
+    'openai_community' ||
+    'openai_sdk' ||
+    'OpenAI' ||
+    'OpenAI 커뮤니티' ||
+    'OpenAI Python SDK' => RgBrand.openai,
     // 모델 칩은 발표한 회사 이름(makerName). 칩 색이 있는 회사만 그 색, 나머지는 중립
-    'deepmind' || 'google_research' || 'google' || 'Google DeepMind' || 'Google Research' || 'Google' => RgBrand.google,
+    'deepmind' ||
+    'google_research' ||
+    'google' ||
+    'Google DeepMind' ||
+    'Google Research' ||
+    'Google' => RgBrand.google,
     'huggingface' || 'Hugging Face' => RgBrand.huggingface,
     'nvidia' || 'nvidia_dev' || 'NVIDIA' || 'NVIDIA 개발자' => RgBrand.nvidia,
     'meta' || 'Meta' => RgBrand.meta,
@@ -54,7 +93,13 @@ RgBrandTone? brandToneOf(String? source) {
 // 위계(피드백 4번): 칩만 또렷하게, 보조 글자는 한 단계 작게, 새 글은 글자 대신 점. 점은 읽으면 작아지며 사라진다(RgNewLabel).
 // 줄이 넘치면 칩 다음에서 줄을 바꾼다.
 class RgRowHead extends StatelessWidget {
-  const RgRowHead({super.key, this.chip, this.meta, this.isNew = false, this.newLabel = '새 글'});
+  const RgRowHead({
+    super.key,
+    this.chip,
+    this.meta,
+    this.isNew = false,
+    this.newLabel = '새 글',
+  });
   final Widget? chip;
   final String? meta;
   final bool isNew;
@@ -68,7 +113,14 @@ class RgRowHead extends StatelessWidget {
     children: [
       ?chip,
       if (meta != null && meta!.isNotEmpty)
-        KeepAllText(meta!, style: RgText.caption.copyWith(fontSize: 12.5, height: 18 / 12.5, color: RgColors.textSecondary)),
+        KeepAllText(
+          meta!,
+          style: RgText.caption.copyWith(
+            fontSize: 12.5,
+            height: 18 / 12.5,
+            color: RgColors.textSecondary,
+          ),
+        ),
       RgNewLabel(visible: isNew, label: newLabel),
     ],
   );
@@ -76,13 +128,33 @@ class RgRowHead extends StatelessWidget {
 
 // 칩으로 거른 목록이 바뀔 때: 새 목록이 위로 8pt 떠오르며 나타나고(160ms 페이드), 높이는 부드럽게 맞춘다.
 // switchKey가 바뀔 때만 움직인다(같은 거르기에서 다시 그리기는 그대로). 「동작 줄이기」면 바로 바뀐다.
-class RgFilterSwitch extends StatelessWidget {
-  const RgFilterSwitch({super.key, required this.switchKey, required this.child});
+class RgFilterSwitch extends StatefulWidget {
+  const RgFilterSwitch({
+    super.key,
+    required this.switchKey,
+    required this.child,
+  });
   final Object? switchKey;
   final Widget child;
 
   @override
+  State<RgFilterSwitch> createState() => _RgFilterSwitchState();
+}
+
+class _RgFilterSwitchState extends State<RgFilterSwitch> {
+  // 접근성 설정으로 전환 래퍼가 바뀌어도 펼침 등 콘텐츠 상태를 보존한다.
+  GlobalKey _contentKey = GlobalKey();
+
+  @override
+  void didUpdateWidget(RgFilterSwitch old) {
+    super.didUpdateWidget(old);
+    if (old.switchKey != widget.switchKey) _contentKey = GlobalKey();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final content = KeyedSubtree(key: _contentKey, child: widget.child);
+    if (MediaQuery.disableAnimationsOf(context)) return content;
     final d = RgMotion.of(context, const Duration(milliseconds: 160));
     return AnimatedSize(
       duration: RgMotion.of(context, RgMotion.base),
@@ -90,14 +162,26 @@ class RgFilterSwitch extends StatelessWidget {
       alignment: Alignment.topCenter,
       child: AnimatedSwitcher(
         duration: d,
-        reverseDuration: const Duration(milliseconds: 1), // 이전 목록은 바로 비켜 겹쳐 보이지 않게
+        reverseDuration: const Duration(
+          milliseconds: 1,
+        ), // 이전 목록은 바로 비켜 겹쳐 보이지 않게
         switchInCurve: RgMotion.curve,
-        layoutBuilder: (current, previous) => Stack(alignment: Alignment.topCenter, children: [...previous, ?current]),
+        layoutBuilder: (current, previous) => Stack(
+          alignment: Alignment.topCenter,
+          children: [...previous, ?current],
+        ),
         transitionBuilder: (child, a) => FadeTransition(
           opacity: a,
-          child: SlideTransition(position: Tween(begin: const Offset(0, 0.02), end: Offset.zero).animate(a), child: child),
+          child: AnimatedBuilder(
+            animation: a,
+            child: child,
+            builder: (_, child) => Transform.translate(
+              offset: Offset(0, 8 * (1 - a.value)),
+              child: child,
+            ),
+          ),
         ),
-        child: KeyedSubtree(key: ValueKey(switchKey), child: child),
+        child: KeyedSubtree(key: ValueKey(widget.switchKey), child: content),
       ),
     );
   }

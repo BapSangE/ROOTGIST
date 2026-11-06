@@ -41,7 +41,18 @@ class RgSkeleton extends StatefulWidget {
 }
 
 class _RgSkeletonState extends State<RgSkeleton> with SingleTickerProviderStateMixin {
-  late final _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 600))..repeat(reverse: true);
+  late final _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _c.stop();
+      _c.value = 0;
+    } else if (!_c.isAnimating) {
+      _c.repeat(reverse: true);
+    }
+  }
 
   @override
   void dispose() {

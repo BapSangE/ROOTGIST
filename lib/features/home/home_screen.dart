@@ -107,7 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ],
           );
-          // 홈만 회청 바탕(다른 화면은 아직 기존 바탕)
+          // 홈은 카드 경계가 드러나는 흰 바탕을 쓴다.
           return home ? ColoredBox(color: RgHome.bg, child: list) : list;
         },
       ),
@@ -118,7 +118,7 @@ class _HomeScreenState extends State<HomeScreen> {
     child: SizedBox(
       height: widget.date == null ? 44 : RgSpace.topBar,
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: widget.date == null ? 20 : RgSpace.gutterCard), // 홈 로고 자리는 시안 그대로
+        padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterCard),
         // 뒤로 화살표는 원 없이 16pt 왼쪽으로 당겨져 있어(RgBackButton), 워드마크도 그만큼 당긴다
         child: Row(
           children: [
@@ -229,7 +229,7 @@ class _HomeScreenState extends State<HomeScreen> {
     ]);
   }
 
-  // 논문 아래 칸들: 바뀐 도구(회사 색 카드 2장), 모델 트렌드 순위(카드 3장)
+  // 논문 아래 칸들: 바뀐 도구(경계 카드 2장), 모델 트렌드 순위(카드 3장)
   Widget _extrasSection(BuildContext context, (List<OfficialNews>, List<TrendingModel>)? data) {
     if (data == null) return const SizedBox.shrink();
     final (news, models) = data;

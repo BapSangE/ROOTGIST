@@ -6,10 +6,17 @@ import 'package:flutter/services.dart';
 import '../tokens.dart';
 import '../typography.dart';
 import 'rg_pressable.dart';
+import 'rg_bookmark_motion.dart';
 
 // RgPrimaryButton: 카드 안 48(15/600), 하단 버튼 줄 50(16/600). 그림자 없음. icon은 글자 앞(「번역과 함께 초록 읽기」).
 class RgPrimaryButton extends StatelessWidget {
-  const RgPrimaryButton({super.key, required this.label, required this.onTap, this.floating = false, this.icon});
+  const RgPrimaryButton({
+    super.key,
+    required this.label,
+    required this.onTap,
+    this.floating = false,
+    this.icon,
+  });
   final String label;
   final VoidCallback? onTap;
   final bool floating;
@@ -24,7 +31,10 @@ class RgPrimaryButton extends StatelessWidget {
         child: Container(
           // 고정 높이면 더 큰 텍스트에서 글자가 잘린다. 기본 크기에서는 48/56 그대로.
           constraints: BoxConstraints(minHeight: floating ? 50 : 48),
-          padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s12),
+          padding: const EdgeInsets.symmetric(
+            horizontal: RgSpace.s20,
+            vertical: RgSpace.s12,
+          ),
           decoration: BoxDecoration(
             color: RgColors.actionPrimary,
             borderRadius: BorderRadius.circular(RgRadius.pill),
@@ -33,21 +43,26 @@ class RgPrimaryButton extends StatelessWidget {
           // (Scaffold.bottomNavigationBar)에서 화면 높이를 다 차지했다.
           child: Center(
             heightFactor: 1,
-            child: Row(mainAxisSize: MainAxisSize.min, spacing: RgSpace.s8, children: [
-            if (icon != null) RgIcon(icon!, size: 20, color: RgColors.onAction),
-            Flexible(
-              child: Text(
-                label,
-                textAlign: TextAlign.center,
-                style: RgText.bodySmall.copyWith(
-                  fontSize: floating ? 16 : 15,
-                  height: 1.2,
-                  fontWeight: FontWeight.w600,
-                  color: RgColors.onAction,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              spacing: RgSpace.s8,
+              children: [
+                if (icon != null)
+                  RgIcon(icon!, size: 20, color: RgColors.onAction),
+                Flexible(
+                  child: Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style: RgText.bodySmall.copyWith(
+                      fontSize: floating ? 16 : 15,
+                      height: 1.2,
+                      fontWeight: FontWeight.w600,
+                      color: RgColors.onAction,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
-          ]),
           ),
         ),
       ),
@@ -69,13 +84,23 @@ class RgNeutralButton extends StatelessWidget {
         onTap: onTap,
         child: Container(
           constraints: const BoxConstraints(minHeight: 48),
-          padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s12),
+          padding: const EdgeInsets.symmetric(
+            horizontal: RgSpace.s20,
+            vertical: RgSpace.s12,
+          ),
           alignment: Alignment.center,
-          decoration: BoxDecoration(color: RgColors.fillNeutral, borderRadius: BorderRadius.circular(RgRadius.pill)),
+          decoration: BoxDecoration(
+            color: RgColors.fillNeutral,
+            borderRadius: BorderRadius.circular(RgRadius.pill),
+          ),
           child: Text(
             label,
             textAlign: TextAlign.center,
-            style: RgText.bodySmall.copyWith(fontSize: 15, height: 1.2, fontWeight: FontWeight.w600),
+            style: RgText.bodySmall.copyWith(
+              fontSize: 15,
+              height: 1.2,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ),
@@ -114,12 +139,16 @@ class RgCircleButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fg = iconColor ??
-        (variant == RgCircleVariant.filled ? RgColors.onAction : RgColors.textPrimary);
+    final fg =
+        iconColor ??
+        (variant == RgCircleVariant.filled
+            ? RgColors.onAction
+            : RgColors.textPrimary);
     return Semantics(
       container: true, // 행 탭 영역 안에 있어도 별도 노드로(행 이동과 북마크를 따로 조작)
       button: true,
       toggled: selected,
+      enabled: onTap != null,
       label: semanticLabel,
       excludeSemantics: true,
       onTap: onTap, // excludeSemantics가 하위의 탭 동작까지 지우므로 직접 넘긴다(TalkBack 두 번 탭)
@@ -137,19 +166,29 @@ class RgCircleButton extends StatelessWidget {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: variant != RgCircleVariant.filled && circleColor != null ? circleColor : switch (variant) {
-                RgCircleVariant.outline => RgColors.surfaceRaised,
-                RgCircleVariant.neutral => RgColors.fillNeutral,
-                RgCircleVariant.filled => RgColors.actionPrimary,
-                RgCircleVariant.plain => null,
-              },
-              border: variant == RgCircleVariant.outline ? Border.all(color: RgColors.borderDefault) : null,
+              color: variant != RgCircleVariant.filled && circleColor != null
+                  ? circleColor
+                  : switch (variant) {
+                      RgCircleVariant.outline => RgColors.surfaceRaised,
+                      RgCircleVariant.neutral => RgColors.fillNeutral,
+                      RgCircleVariant.filled => RgColors.actionPrimary,
+                      RgCircleVariant.plain => null,
+                    },
+              border: variant == RgCircleVariant.outline
+                  ? Border.all(color: RgColors.borderDefault)
+                  : null,
             ),
             child: icon != null
-                ? RgIcon(icon!, size: 20, color: fg)
+                // 작은 원(34pt 이하, 홈 행)은 아이콘도 17pt로 줄인다(시안 Home 33pt 원 · 17pt 책갈피)
+                ? RgIcon(icon!, size: (visualSize ?? size) <= 34 ? 17 : 20, color: fg)
                 : Text(
                     text!,
-                    style: RgText.bodySmall.copyWith(fontSize: 15, height: 1.2, fontWeight: FontWeight.w600, color: fg),
+                    style: RgText.bodySmall.copyWith(
+                      fontSize: 15,
+                      height: 1.2,
+                      fontWeight: FontWeight.w600,
+                      color: fg,
+                    ),
                   ),
           ),
         ),
@@ -167,14 +206,19 @@ class RgBackButton extends StatelessWidget {
   Widget build(BuildContext context) => Transform.translate(
     // 상단 바 좌우 16 − 16 → 44 영역 안 화살표 획이 제목 글자(좌우 20)와 같은 세로줄에 온다
     offset: const Offset(-16, 0),
-    child: RgCircleButton(semanticLabel: '뒤로', icon: 'chevron-left', variant: RgCircleVariant.plain, onTap: onTap),
+    child: RgCircleButton(
+      semanticLabel: '뒤로',
+      icon: 'chevron-left',
+      variant: RgCircleVariant.plain,
+      onTap: onTap,
+    ),
   );
 }
 
 // 북마크 버튼 공통: 저장 상태에 따라 아이콘·변형·라벨이 바뀐다.
 // 누르면 가벼운 진동 + 원이 0.85 → 1.12 → 1로 톡 튀었다 돌아온다(260ms). 상태가 바뀔 때만, 처음 그릴 때는 가만히.
 // 보관함에서 빼는 버튼은 진동을 조금 더 또렷하게(strongHaptic). 「동작 줄이기」면 튀지 않는다.
-class RgBookmarkButton extends StatefulWidget {
+class RgBookmarkButton extends StatelessWidget {
   const RgBookmarkButton({
     super.key,
     required this.saved,
@@ -188,58 +232,35 @@ class RgBookmarkButton extends StatefulWidget {
   });
   final bool saved;
   final VoidCallback? onTap;
-  final RgCircleVariant variant; // neutral(목록 행·카드, 보이는 원 36) 또는 outline(상단 바). plain은 예전 목록 행
+  final RgCircleVariant
+  variant; // neutral(목록 행·카드, 보이는 원 36) 또는 outline(상단 바). plain은 예전 목록 행
   final double size;
   final double? visualSize;
   final bool strongHaptic;
   final Color? circleColor, iconColor; // 저장 전 원 면·아이콘 색(홈 카드). 저장하면 검정 원으로 바뀐다
 
-  @override
-  State<RgBookmarkButton> createState() => _RgBookmarkButtonState();
-}
-
-class _RgBookmarkButtonState extends State<RgBookmarkButton> with SingleTickerProviderStateMixin {
-  late final _pop = AnimationController(vsync: this, duration: const Duration(milliseconds: 260), value: 1);
-  static final _scale = TweenSequence([
-    TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.85).chain(CurveTween(curve: Curves.easeOut)), weight: 30),
-    TweenSequenceItem(tween: Tween(begin: 0.85, end: 1.12).chain(CurveTween(curve: Curves.easeOut)), weight: 40),
-    TweenSequenceItem(tween: Tween(begin: 1.12, end: 1.0).chain(CurveTween(curve: Curves.easeIn)), weight: 30),
-  ]);
-
-  @override
-  void didUpdateWidget(RgBookmarkButton old) {
-    super.didUpdateWidget(old);
-    if (old.saved != widget.saved && !MediaQuery.disableAnimationsOf(context)) _pop.forward(from: 0);
-  }
-
-  @override
-  void dispose() {
-    _pop.dispose();
-    super.dispose();
-  }
-
   void _tap() {
-    widget.strongHaptic ? HapticFeedback.mediumImpact() : HapticFeedback.lightImpact();
-    widget.onTap?.call();
+    strongHaptic ? HapticFeedback.mediumImpact() : HapticFeedback.lightImpact();
+    onTap?.call();
   }
 
   @override
   Widget build(BuildContext context) {
-    final saved = widget.saved;
-    final variant = widget.variant;
     final plain = variant == RgCircleVariant.plain;
-    return ScaleTransition(
-      scale: _scale.animate(_pop),
+    return RgBookmarkMotion(
+      saved: saved,
       child: RgCircleButton(
         semanticLabel: saved ? '저장됨, 북마크 해제' : '북마크에 저장',
         selected: saved,
-        onTap: widget.onTap == null ? null : _tap,
+        onTap: onTap == null ? null : _tap,
         icon: saved ? 'bookmark-filled' : 'bookmark',
-        size: widget.size,
-        visualSize: widget.visualSize,
+        size: size,
+        visualSize: visualSize,
         variant: plain ? variant : (saved ? RgCircleVariant.filled : variant),
-        iconColor: plain ? (saved ? RgColors.textPrimary : RgColors.textTertiary) : (saved ? null : widget.iconColor),
-        circleColor: widget.circleColor,
+        iconColor: plain
+            ? (saved ? RgColors.textPrimary : RgColors.textTertiary)
+            : (saved ? null : iconColor),
+        circleColor: circleColor,
       ),
     );
   }
@@ -248,17 +269,25 @@ class _RgBookmarkButtonState extends State<RgBookmarkButton> with SingleTickerPr
 // RgFilterChip: 시각 36 / 터치 44, 좌우 16, 14pt.
 // 알약 칩·세그먼트 글자(bodySmall 14, 줄 높이 1.2)가 더 큰 텍스트에서 잘리지 않도록 높이를 글자에 맞춰 늘린다.
 // 배율은 2배에서 멈춘다: 세그먼트 칸 폭이 좁아(4등분) 그 이상은 칸 안에 들어가지 않는다(iOS QA Q02).
-TextScaler rgPillTextScaler(BuildContext context) => MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 2);
-double rgPillHeight(BuildContext context, double base) => math.max(base, rgPillTextScaler(context).scale(14) * 1.2 + RgSpace.s16);
+TextScaler rgPillTextScaler(BuildContext context) =>
+    MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 2);
+double rgPillHeight(BuildContext context, double base) =>
+    math.max(base, rgPillTextScaler(context).scale(14) * 1.2 + RgSpace.s16);
 
 class RgFilterChip extends StatelessWidget {
-  const RgFilterChip({super.key, required this.label, required this.selected, required this.onTap});
+  const RgFilterChip({
+    super.key,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
   final String label;
   final bool selected;
   final VoidCallback? onTap;
 
   // 칩 목록(S01)도 이 높이로 잡는다.
-  static double touchHeight(BuildContext context) => math.max(RgSpace.minTouch, rgPillHeight(context, 36));
+  static double touchHeight(BuildContext context) =>
+      math.max(RgSpace.minTouch, rgPillHeight(context, 36));
 
   @override
   Widget build(BuildContext context) {

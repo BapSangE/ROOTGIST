@@ -19,6 +19,7 @@ class RgCard extends StatelessWidget {
           color: RgColors.surfaceCard,
           borderRadius: BorderRadius.circular(RgRadius.card),
           boxShadow: RgShadow.card,
+          border: Border.all(color: RgColors.borderDefault),
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(RgRadius.card),

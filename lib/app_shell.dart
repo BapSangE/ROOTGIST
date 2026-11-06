@@ -91,10 +91,10 @@ final router = GoRouter(
       path: '/model/:id',
       pageBuilder: (_, state) => _detailPage(state, ModelDetailScreen(id: Uri.decodeComponent(state.pathParameters['id']!))),
     ),
-    // S02는 쉘 위로 푸시되지만 탭바는 남는다(리디자인). S03 리더는 글에 집중하도록 탭바 없이.
+    // 첨부 시안: S02는 읽기 dock만 두고 네 칸 탭바는 표시하지 않는다. S03도 탭바 없이.
     GoRoute(
       path: '/paper/:id',
-      pageBuilder: (_, state) => _detailPage(state, PaperScreen(paperId: state.pathParameters['id']!)),
+      pageBuilder: (_, state) => _page(state, PaperScreen(paperId: state.pathParameters['id']!)),
       routes: [
         // ?s=문장ID: C01에서 들어오면 그 문장 쌍으로 스크롤
         GoRoute(

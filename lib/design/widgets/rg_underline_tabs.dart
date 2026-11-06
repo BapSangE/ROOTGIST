@@ -6,14 +6,34 @@ import '../typography.dart';
 import 'rg_new_dot.dart';
 import 'rg_pressable.dart';
 
-// 밑줄 탭: 글자 + 고른 칸 아래 2pt 검정 선, 전체 아래 가는 선. 위의 알약 세그먼트(탐색 칸)와 위계를 나눈다.
-// 공식 소식 안 「발표 | 업데이트」. 칸을 바꾸면 밑줄이 옆으로 미끄러진다(세그먼트 알약처럼 220ms).
+// 선택한 탭의 실제 폭을 재어 한 개의 밑줄을 이동한다. 기본/탐색 표현이
+// 같은 모션을 공유하므로 빠른 재선택도 현재 위치에서 새 선택으로 이어진다.
 class RgUnderlineTabs extends StatefulWidget {
-  const RgUnderlineTabs({super.key, required this.labels, required this.selected, required this.onTap, this.dots = const {}});
+  const RgUnderlineTabs({
+    super.key,
+    required this.labels,
+    required this.selected,
+    required this.onTap,
+    this.dots = const {},
+  }) : information = const {},
+       _explore = false;
+
+  // 탐색 시안: 화면 전체 경계, 16/25 글자, 탭 안쪽 여백과 가로 스크롤.
+  const RgUnderlineTabs.explore({
+    super.key,
+    required this.labels,
+    required this.selected,
+    required this.onTap,
+    this.information = const {},
+  }) : dots = const {},
+       _explore = true;
+
   final List<String> labels;
   final int selected;
-  final Set<int> dots; // 새 글 점
+  final Set<int> dots;
+  final Set<int> information;
   final ValueChanged<int> onTap;
+  final bool _explore;
 
   @override
   State<RgUnderlineTabs> createState() => _RgUnderlineTabsState();
@@ -22,33 +42,40 @@ class RgUnderlineTabs extends StatefulWidget {
 class _RgUnderlineTabsState extends State<RgUnderlineTabs> {
   final _row = GlobalKey();
   late var _keys = [for (final _ in widget.labels) GlobalKey()];
-  (double, double)? _bar; // 고른 칸의 (왼쪽, 폭). 그린 뒤에 잰다(글자 폭은 굵기·배율에 따라 다르다)
+  (double, double)? _bar;
 
   @override
   void didUpdateWidget(RgUnderlineTabs old) {
     super.didUpdateWidget(old);
-    if (old.labels.length != widget.labels.length) _keys = [for (final _ in widget.labels) GlobalKey()];
+    if (old.labels.length != widget.labels.length) {
+      _keys = [for (final _ in widget.labels) GlobalKey()];
+    }
   }
 
   void _measure() {
     final row = _row.currentContext?.findRenderObject() as RenderBox?;
-    final box = _keys[widget.selected].currentContext?.findRenderObject() as RenderBox?;
+    final box =
+        _keys[widget.selected].currentContext?.findRenderObject() as RenderBox?;
     if (row == null || box == null || !row.hasSize || !box.hasSize) return;
-    final bar = (box.localToGlobal(Offset.zero, ancestor: row).dx, box.size.width);
+    final bar = (
+      box.localToGlobal(Offset.zero, ancestor: row).dx,
+      box.size.width,
+    );
     if (bar != _bar && mounted) setState(() => _bar = bar);
   }
 
-  // 하단 탭바처럼 화면 틀이라 글자 배율은 1.35배에서 멈춘다(ChromeTextScale)
   @override
   Widget build(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((_) => _measure());
     final still = MediaQuery.disableAnimationsOf(context) || _bar == null;
-    return ChromeTextScale(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
-        decoration: BoxDecoration(border: Border(bottom: BorderSide(color: RgColors.borderDefault))),
-        child: Stack(children: [
-          Row(key: _row, spacing: RgSpace.s20, children: [
+    final explore = widget._explore;
+    final tabs = Stack(
+      children: [
+        Row(
+          key: _row,
+          mainAxisSize: explore ? MainAxisSize.min : MainAxisSize.max,
+          spacing: explore ? 0 : RgSpace.s20,
+          children: [
             for (final (i, label) in widget.labels.indexed)
               Semantics(
                 button: true,
@@ -60,34 +87,85 @@ class _RgUnderlineTabsState extends State<RgUnderlineTabs> {
                   },
                   child: Container(
                     key: _keys[i],
-                    constraints: const BoxConstraints(minHeight: RgSpace.minTouch),
+                    constraints: BoxConstraints(
+                      minHeight: RgSpace.minTouch,
+                      minWidth: explore ? RgSpace.minTouch : 0,
+                    ),
+                    padding: explore
+                        ? const EdgeInsets.fromLTRB(10, 5, 10, 8)
+                        : EdgeInsets.zero,
                     alignment: Alignment.center,
-                    child: Row(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, spacing: 3, children: [
-                      Text(
-                        label,
-                        style: RgText.titleList.copyWith(
-                          fontSize: 16,
-                          fontWeight: i == widget.selected ? FontWeight.w700 : FontWeight.w500,
-                          color: i == widget.selected ? RgColors.textPrimary : RgColors.textSecondary,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: explore
+                          ? CrossAxisAlignment.center
+                          : CrossAxisAlignment.start,
+                      spacing: explore ? RgSpace.s4 : 3,
+                      children: [
+                        Text(
+                          label,
+                          style: RgText.titleList.copyWith(
+                            fontSize: 16,
+                            height: explore ? 25 / 16 : null,
+                            letterSpacing: explore ? -0.32 : null,
+                            fontWeight: explore || i != widget.selected
+                                ? FontWeight.w500
+                                : FontWeight.w700,
+                            color: i == widget.selected
+                                ? RgColors.textPrimary
+                                : RgColors.textSecondary,
+                          ),
                         ),
-                      ),
-                      if (widget.dots.contains(i)) const RgNewDot(),
-                    ]),
+                        if (widget.dots.contains(i)) const RgNewDot(),
+                        if (widget.information.contains(i))
+                          ExcludeSemantics(
+                            child: RgIcon(
+                              'info',
+                              size: 12,
+                              color: RgColors.textSecondary,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-          ]),
-          if (_bar case (final left, final width))
-            AnimatedPositioned(
-              duration: still ? Duration.zero : RgMotion.base,
-              curve: RgMotion.curve,
-              left: left,
-              width: width,
-              bottom: 0,
-              height: 2,
-              child: ColoredBox(color: RgColors.textPrimary),
-            ),
-        ]),
+          ],
+        ),
+        if (_bar case (final left, final width))
+          AnimatedPositioned(
+            duration: still ? Duration.zero : RgMotion.base,
+            curve: RgMotion.curve,
+            left: left,
+            width: width,
+            bottom: 0,
+            height: 2,
+            child: ColoredBox(color: RgColors.textPrimary),
+          ),
+      ],
+    );
+    return ChromeTextScale(
+      child: Container(
+        margin: explore
+            ? null
+            : const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
+        padding: explore
+            ? const EdgeInsets.fromLTRB(
+                RgSpace.gutterText,
+                RgSpace.s6,
+                RgSpace.gutterText,
+                0,
+              )
+            : null,
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: RgColors.borderDefault)),
+        ),
+        child: explore
+            ? SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: tabs,
+              )
+            : tabs,
       ),
     );
   }

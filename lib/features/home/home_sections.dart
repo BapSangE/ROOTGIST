@@ -17,8 +17,8 @@ import '../explore/official_news.dart' show newsKey, newsActions;
 import '../explore/trending_models.dart' show VariantsLine, modelActions;
 import 'briefing.dart';
 
-// 홈 칸들(디자이너 시안 home_re 2026-10-31, design-preview는 ~/Downloads/home_re 원본).
-// 회청 바탕(RgHome.bg) 위에 칸마다 [제목 28 · 더보기 ›] + 부제, 그 아래 흰 카드(둥글기 28). 좌우 여백 24.
+// 홈 칸들(사용자 제공 home 참고 화면, 2026-11-04).
+// 흰 바탕 위에 [제목 28 · 더보기 ›] + 부제, 그 아래 옅은 경계의 카드. 좌우 여백 24.
 // 누르면 카드·행이 살짝 눌리고(RgPressable), 더보기·북마크는 가벼운 진동.
 
 const homeGutter = 24.0;
@@ -37,7 +37,7 @@ class HomeSection extends StatelessWidget {
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Padding(
         padding: const EdgeInsets.fromLTRB(homeGutter, RgSpace.s12, homeGutter - 8, RgSpace.s12),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: RgSpace.s4, children: [
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: RgSpace.s10, children: [
           Row(children: [
             Expanded(child: Semantics(header: true, child: HeadingTextScale(child: KeepAllText(title, style: RgText.homeSection.copyWith(color: RgColors.textPrimary))))),
             if (onMore != null) _More(onTap: onMore!),
@@ -75,7 +75,7 @@ class _More extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Text('더보기', style: RgText.homeMore.copyWith(color: RgColors.textSecondary)),
-            RgIcon('chevron-right', size: 14, color: RgColors.textSecondary),
+            RgIcon('chevron-right', size: 12, color: RgColors.textSecondary),
           ]),
         ),
       ),
@@ -83,19 +83,25 @@ class _More extends StatelessWidget {
   );
 }
 
-// 흰 카드(둥글기 28, 옅은 그림자). color로 면을 바꾼다(주요 논문 회색·바뀐 도구 회사 색)
+// 기본 카드는 둥글기 28과 가는 경계. 논문·도구·모델은 참고 화면의 둥글기 20을 쓴다.
 class HomeCard extends StatelessWidget {
-  const HomeCard({super.key, required this.child, this.padding = const EdgeInsets.fromLTRB(20, 28, 20, 16), this.color, this.onTap});
+  const HomeCard({super.key, required this.child, this.padding = const EdgeInsets.fromLTRB(20, 28, 20, 16), this.color, this.radius = 28, this.onTap});
   final Widget child;
   final EdgeInsetsGeometry padding;
   final Color? color;
+  final double radius;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final card = Container(
       padding: padding,
-      decoration: BoxDecoration(color: color ?? RgHome.card, borderRadius: BorderRadius.circular(28), boxShadow: RgHome.cardShadow),
+      decoration: BoxDecoration(
+        color: color ?? RgHome.card,
+        borderRadius: BorderRadius.circular(radius),
+        border: color == null ? Border.all(color: RgColors.borderDefault) : null,
+        boxShadow: RgHome.cardShadow,
+      ),
       child: child,
     );
     return onTap == null ? card : Semantics(button: true, child: RgPressable(onTap: onTap, child: card));
@@ -151,18 +157,25 @@ class HomeStat extends StatelessWidget {
   );
 }
 
-// 「6시간 전」 + 새 글 점(읽으면 사라진다)
+// 소식은 KST 날짜, 도구 업데이트는 「6시간 전」 + 읽으면 사라지는 새 글 점.
 class _NewsTime extends StatelessWidget {
-  const _NewsTime(this.news, this.now, {this.style});
+  const _NewsTime(this.news, this.now, {this.style, this.relative = false});
   final OfficialNews news;
   final DateTime now;
   final TextStyle? style;
+  final bool relative;
+
+  String get label {
+    if (relative) return relativeKo(news.publishedAt, now);
+    final date = news.publishedAt.toUtc().add(const Duration(hours: 9));
+    return '${date.month}월 ${date.day}일';
+  }
 
   @override
   Widget build(BuildContext context) => ValueListenableBuilder(
     valueListenable: readItems,
-    builder: (context, _, _) => Row(spacing: RgSpace.s4, children: [
-      Text(relativeKo(news.publishedAt, now), style: style ?? RgText.homeDate.copyWith(color: RgColors.textBody)),
+    builder: (context, _, _) => Wrap(spacing: RgSpace.s4, runSpacing: RgSpace.s4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+      Text(label, style: style ?? RgText.homeDate.copyWith(color: RgColors.textBody)),
       RgNewLabel(visible: isNew(newsKey(news), news.publishedAt)),
     ]),
   );
@@ -239,7 +252,7 @@ class HomeStoryRow extends StatelessWidget {
               KeepAllText(n.titleKo ?? n.titleEn, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.homeTitle.copyWith(color: RgColors.textPrimary)),
             ]),
             if (one != null) ...[
-              const SizedBox(height: RgSpace.s8),
+              const SizedBox(height: RgSpace.s6),
               Text(one, maxLines: explore ? 2 : 1, overflow: TextOverflow.ellipsis, style: RgText.homeSummary.copyWith(color: RgColors.textSecondary)),
             ],
             const SizedBox(height: RgSpace.s20),
@@ -283,8 +296,8 @@ class HomeTalkCard extends StatelessWidget {
           Text(n.sourceLabel, maxLines: 1, overflow: TextOverflow.ellipsis, style: RgText.homeMeta.copyWith(color: RgColors.textSecondary)),
           Wrap(spacing: RgSpace.s6, runSpacing: RgSpace.s6, children: [
             if (n.isGithub && n.points != null) HomeStat(countKo(n.points!), icon: 'star-filled', label: '별 ${countKo(n.points!)}')
-            else if (n.points != null) HomeStat(countKo(n.points!), icon: 'like-filled', label: '추천 ${countKo(n.points!)}'),
-            if (!n.isGithub && n.comments != null) HomeStat(countKo(n.comments!), icon: 'comment-filled', label: '댓글 ${countKo(n.comments!)}'),
+            else if (n.points != null) HomeStat(countKo(n.points!), icon: 'thumbs-up', label: '추천 ${countKo(n.points!)}'),
+            if (!n.isGithub && n.comments != null) HomeStat(countKo(n.comments!), icon: 'message-circle', label: '댓글 ${countKo(n.comments!)}'),
           ]),
         ]),
       ]),
@@ -299,11 +312,12 @@ String _paperDay(PaperItem p) {
 
 String _paperAuthors(PaperItem p) => p.authorCount > 1 ? '${p.firstAuthor} 외 ${p.authorCount - 1}명' : p.firstAuthor;
 
-// 오늘의 주요 논문: 회색 카드, 흰 글자. 머리말 → 제목 24 → 요약 두 줄, 오른쪽 위 북마크, 아래 주제 칩
+// 오늘의 주요 논문: 짙은 회색 카드와 흰 글자, 오른쪽 위 북마크, 아래 주제 칩.
 class HomeFeaturedPaper extends StatelessWidget {
-  const HomeFeaturedPaper({super.key, required this.paper, required this.label});
+  const HomeFeaturedPaper({super.key, required this.paper, required this.label, this.titleStyle});
   final PaperItem paper;
   final String label;
+  final TextStyle? titleStyle;
 
   @override
   Widget build(BuildContext context) {
@@ -311,6 +325,7 @@ class HomeFeaturedPaper extends StatelessWidget {
     final white = Colors.white;
     return HomeCard(
       color: RgHome.paperCard,
+      radius: 20,
       onTap: () => context.push('/paper/${p.id}'),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s8, children: [
@@ -318,21 +333,21 @@ class HomeFeaturedPaper extends StatelessWidget {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(label, style: RgText.homeLabel.copyWith(color: white.withValues(alpha: 0.8))),
               const SizedBox(height: RgSpace.s12),
-              HeadingTextScale(child: KeepAllText(p.title, style: RgText.homeFeatured.copyWith(color: white))),
-              if (p.keyPoints.isNotEmpty) ...[
-                const SizedBox(height: RgSpace.s8),
-                KeepAllText(p.keyPoints.first, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.homeSummary.copyWith(color: white.withValues(alpha: 0.7))),
-              ],
+              HeadingTextScale(child: KeepAllText(p.title, style: (titleStyle ?? RgText.homeFeatured).copyWith(color: white))),
             ]),
           ),
           Transform.translate(
             offset: const Offset(4, -6),
-            child: ItemActions(id: p.id, title: p.title, url: paperUrl(p.id), visualSize: 44, circleColor: RgHome.paperRing, iconColor: white),
+            child: ItemActions(id: p.id, title: p.title, url: paperUrl(p.id), visualSize: 48, circleColor: RgHome.paperRing, iconColor: white),
           ),
         ]),
+        if (p.keyPoints.isNotEmpty) ...[
+          const SizedBox(height: RgSpace.s8),
+          KeepAllText(p.keyPoints.first, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.homeSummary.copyWith(color: white.withValues(alpha: 0.7))),
+        ],
         if (p.topicLabel != null) ...[
           const SizedBox(height: RgSpace.s20),
-          HomeChip(p.topicLabel!, background: const Color(0x29000000), foreground: white.withValues(alpha: 0.8)),
+          HomeChip(p.topicLabel!, background: const Color(0x3D000000), foreground: white.withValues(alpha: 0.8)),
         ],
       ]),
     );
@@ -383,7 +398,7 @@ class HomePaperRow extends StatelessWidget {
   }
 }
 
-// 바뀐 도구 카드: 회사 색 면. 시각 → 도구 이름 20 → 「업데이트 4건 (v…~v…)」, 오른쪽 위 북마크(같은 색 계열 원)
+// 바뀐 도구 카드: 흰 면에 시각 → 회사 색 도구 이름 → 업데이트 설명, 오른쪽 위 북마크.
 class HomeUpdateCard extends StatelessWidget {
   const HomeUpdateCard({super.key, required this.news, required this.now});
   final OfficialNews news;
@@ -392,27 +407,28 @@ class HomeUpdateCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final n = news;
-    final tone = brandToneOf(n.source);
     return HomeCard(
-      color: tone?.card ?? RgHome.card,
+      radius: 20,
       onTap: () => _openNews(context, n),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s8, children: [
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            _NewsTime(n, now, style: RgText.homeLabel.copyWith(color: RgColors.textBody)),
-            const SizedBox(height: RgSpace.s12),
-            KeepAllText(n.sourceLabel, style: RgText.homeUpdate.copyWith(color: RgColors.textPrimary)),
-            const SizedBox(height: RgSpace.s12),
-            KeepAllText(n.titleKo ?? n.titleEn, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.homeSummary.copyWith(color: RgColors.textBody)),
-          ]),
-        ),
-        Transform.translate(
-          offset: const Offset(4, -6),
-          child: ItemActions(
-            id: n.id, title: n.titleKo ?? n.titleEn, url: n.url, source: n.sourceLabel, kind: 'news',
-            visualSize: 40, circleColor: tone?.ring ?? RgHome.ring,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s8, children: [
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              _NewsTime(n, now, style: RgText.homeLabel.copyWith(color: RgColors.textBody), relative: true),
+              const SizedBox(height: RgSpace.s12),
+              KeepAllText(n.sourceLabel, style: RgText.homeUpdate.copyWith(color: updateTitleColor(n.source) ?? RgColors.textPrimary)),
+            ]),
           ),
-        ),
+          Transform.translate(
+            offset: const Offset(4, -6),
+            child: ItemActions(
+              id: n.id, title: n.titleKo ?? n.titleEn, url: n.url, source: n.sourceLabel, kind: 'news',
+              visualSize: 34, circleColor: RgHome.ring,
+            ),
+          ),
+        ]),
+        const SizedBox(height: RgSpace.s12),
+        KeepAllText(n.titleKo ?? n.titleEn, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.homeSummary.copyWith(color: RgColors.textBody)),
       ]),
     );
   }
@@ -430,10 +446,15 @@ class HomeModelCard extends StatelessWidget {
     final m = model;
     return HomeCard(
       padding: const EdgeInsets.all(RgSpace.s20),
+      radius: 20,
       onTap: () => context.push('/model/${Uri.encodeComponent(m.id)}'),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s16, children: [
         if (ago == null)
-          Semantics(label: '${m.rank}위', excludeSemantics: true, child: Text('${m.rank}', style: RgText.homeRank.copyWith(color: RgColors.textBody))),
+          // 순위 칸 폭 고정(시안: 한 자리 30, 두 자리 46) → 이름 시작점이 숫자 모양에 따라 흔들리지 않는다
+          SizedBox(
+            width: m.rank < 10 ? 30 : 46,
+            child: Semantics(label: '${m.rank}위', excludeSemantics: true, child: Text('${m.rank}', maxLines: 1, softWrap: false, overflow: TextOverflow.visible, style: RgText.homeRank.copyWith(color: RgColors.textBody))),
+          ),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             // 탐색: 위에 만든 곳 칩(회사 색) · 공개일(새로 나옴) · 「새로 진입」 점
@@ -450,15 +471,15 @@ class HomeModelCard extends StatelessWidget {
             ],
             // 북마크(누르는 자리 44)가 이름 한 줄보다 높아 설명까지 한 머리로 묶는다(이름과 설명 사이가 벌어지지 않게)
             _withActions(explore ? modelActions(m, visualSize: 34) : null, [
-              Text(m.name, style: RgText.homeTitle.copyWith(color: RgColors.textPrimary)),
+              Text(m.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.homeTitle.copyWith(color: RgColors.textPrimary)),
               const SizedBox(height: RgSpace.s6),
               Text(modelSpec(m), maxLines: 1, overflow: TextOverflow.ellipsis, style: RgText.homeSummary.copyWith(color: RgColors.textSecondary)),
             ]),
             const SizedBox(height: 25),
             Wrap(alignment: WrapAlignment.end, spacing: RgSpace.s6, runSpacing: RgSpace.s6, children: [
               if (m.licenseKo != null) HomeStat(m.licenseKo!, label: '라이선스 ${m.licenseKo}'),
-              HomeStat(countKo(m.likes ?? 0), icon: 'like-filled', label: '좋아요 ${countKo(m.likes ?? 0)}'),
-              HomeStat(countKo(m.downloads ?? 0), icon: 'download-filled', label: '다운로드 ${countKo(m.downloads ?? 0)}'),
+              HomeStat(countKo(m.likes ?? 0), icon: 'thumbs-up', label: '좋아요 ${countKo(m.likes ?? 0)}'),
+              HomeStat(countKo(m.downloads ?? 0), icon: 'download', label: '다운로드 ${countKo(m.downloads ?? 0)}'),
             ]),
             if (explore && m.variants.isNotEmpty) ...[
               const SizedBox(height: RgSpace.s8),
