@@ -127,7 +127,12 @@ CLAUDE_API_NOTES = "https://docs.claude.com/en/release-notes/overview"
 HN_SEARCH = "https://hn.algolia.com/api/v1/search_by_date"  # Hacker News 공식 검색 API(Algolia)
 HN_HOURS, HN_MIN_POINTS, HN_TOP = 36, 60, 15  # 최근 36시간, 60점 이상, AI 관련 상위 15개
 GH_SEARCH = "https://api.github.com/search/repositories"  # GitHub 공식 검색 API
-GH_TOPICS, GH_DAYS, GH_MIN_STARS, GH_TOP = ("llm", "ai-agents", "generative-ai"), 7, 150, 5
+GH_TOPICS, GH_DAYS, GH_MIN_STARS, GH_TOP = ("llm", "ai-agents", "generative-ai"), 7, 100, 5
+# 순위는 별 총합이 아니라 「뜨는 속도」(HN 순위식): 별 ÷ (생긴 뒤 시간 + 12)^1.5. 별 총합 순이면 별을 모을 시간이 길었던
+# 며칠 전 저장소가 늘 위에 남아 어제오늘 뜬 도구가 보이지 않았다(2026-11-06). +12시간은 갓 생긴 저장소가 별 백여 개로 튀지 않게.
+GH_AGE_PAD_H, GH_GRAVITY, GH_HN_BOOST = 12, 1.5, 2.0
+GH_MIN_KB = 20  # 거의 빈 저장소(README만)는 뺀다
+GH_LIST = re.compile(r"\bawesome\b|\b(curated|collection of|list of)\b", re.I)  # 링크 모음은 「새 도구」가 아니다
 # 제목으로 AI 관련 글만 고른다(HN 첫 화면은 AI 외 글이 대부분)
 AI_WORDS = re.compile(
     r"\b(AI|LLMs?|GPT[- ]?\d*|ChatGPT|Claude|Gemini|Anthropic|OpenAI|Llama|Mistral|DeepSeek|Qwen|Grok|Copilot|Codex|Cursor|"
@@ -340,23 +345,47 @@ def from_hn(now: datetime) -> list[dict]:
 _CJK = re.compile(r"[\u3040-\u30ff\u4e00-\u9fff]")  # 일본어 가나·한자(한글은 뺀다)
 
 
-def from_github(now: datetime) -> list[dict]:
-    """GitHub: 최근 7일 안에 생긴 AI 저장소 중 별 150개 이상, 별 순 5개. 설명이 없거나 대부분 중국어·일본어인 저장소는 뺀다
-    (실데이터: 상위가 안드로이드용 중국어 저장소로 채워졌다). 설명은 「원문 소개문」처럼 번역만 한다."""
+def gh_score(stars: int, created: datetime, now: datetime, on_hn: bool = False) -> float:
+    """뜨는 속도: 별 ÷ (생긴 뒤 시간 + 12)^1.5. Hacker News에도 올라온 저장소는 두 배."""
+    hours = max((now - created).total_seconds() / 3600, 0)
+    return stars / (hours + GH_AGE_PAD_H) ** GH_GRAVITY * (GH_HN_BOOST if on_hn else 1)
+
+
+def gh_quality(r: dict) -> bool:
+    """「새 도구」로 보기 어려운 저장소를 거른다: 설명 없음·대부분 중국어·일본어(실데이터: 상위가 안드로이드용 중국어 저장소),
+    링크 모음(awesome-·curated list), 거의 빈 저장소, 별은 모였는데 포크가 하나도 없는 저장소(별을 부풀린 경우가 많다)."""
+    desc = (r.get("description") or "").strip()
+    if not desc or len(_CJK.findall(desc)) > len(desc) * 0.2:
+        return False
+    if GH_LIST.search(r.get("name", "")) or GH_LIST.search(desc):
+        return False
+    if r.get("size") is not None and r["size"] < GH_MIN_KB:
+        return False
+    return not (r.get("forks_count") == 0 and (r.get("stargazers_count") or 0) >= GH_MIN_STARS)
+
+
+def from_github(now: datetime, hn_urls: set[str] = frozenset()) -> list[dict]:
+    """GitHub: 최근 7일 안에 생긴 AI 저장소(별 100개 이상) 중 품질 거르기를 지난 것을 뜨는 속도 순 5개.
+    hn_urls(Hacker News 화제 주소)에 있는 저장소는 점수를 더 준다. 설명은 「원문 소개문」처럼 번역만 한다."""
     since = (now - timedelta(days=GH_DAYS)).date().isoformat()
+    hn = {_norm_url(u) for u in hn_urls}
     found: dict[str, dict] = {}
     for topic in GH_TOPICS:
+        # 별 순 상위만 받으면 막 뜨는 저장소가 빠지므로 넉넉히(30개) 받아 아래에서 속도로 다시 세운다
         q = urllib.parse.urlencode({"q": f"topic:{topic} created:>={since} stars:>={GH_MIN_STARS}", "sort": "stars",
-                                    "order": "desc", "per_page": 20})
+                                    "order": "desc", "per_page": 30})
         for r in json.loads(fetch(f"{GH_SEARCH}?{q}"))["items"]:
-            desc = (r.get("description") or "").strip()
-            if not desc or len(_CJK.findall(desc)) > len(desc) * 0.2:
+            if r["html_url"] in found or not gh_quality(r):
                 continue
-            found.setdefault(r["html_url"], {
+            desc = r["description"].strip()
+            created = _date(r["created_at"])
+            stars = r.get("stargazers_count") or 0
+            found[r["html_url"]] = {
                 "source": "github", "source_label": "GitHub", "kind": "hot", "category": "GitHub",
-                "title_en": f"{r['name']}: {desc}"[:160], "url": r["html_url"], "published_at": _date(r["created_at"]),
-                "points": r.get("stargazers_count") or 0, "comments": None, "discussion_url": None, "_desc": desc})
-    return sorted(found.values(), key=lambda i: -i["points"])[:GH_TOP]
+                "title_en": f"{r['name']}: {desc}"[:160], "url": r["html_url"], "published_at": created,
+                "points": stars, "comments": None, "discussion_url": None, "_desc": desc,
+                "_score": gh_score(stars, created, now, _norm_url(r["html_url"]) in hn)}
+    return sorted(found.values(), key=lambda i: -i["_score"])[:GH_TOP]
 
 
 # 번호가 붙은 모델 이름(앱 briefing.dart의 출시 규칙과 같다): 「Mistral Large 4」「Gemini 4 Carbon」「GPT-6.1」 → mistral-large-4 …
@@ -872,7 +901,9 @@ def main(argv=None):
         report.append(f"Claude API 릴리스 노트: 실패 {e!r}")
 
     hot = []
-    for label, collect in (("Hacker News", from_hn), ("GitHub 새 AI 도구", from_github)):
+    for label, collect in (("Hacker News", from_hn),
+                           # HN에 같이 오른 저장소는 GitHub 순위에서 점수를 더 준다(그래서 HN을 먼저 모은다)
+                           ("GitHub 새 AI 도구", lambda now: from_github(now, {h["url"] for h in hot}))):
         try:
             got = collect(now)
             report.append(f"{label}: {len(got)}개")
@@ -996,6 +1027,7 @@ def main(argv=None):
     link_related(items)
     for item in items:
         item.pop("_desc", None)
+        item.pop("_score", None)
         item.pop("_paras", None)
         item.pop("notes", None)
         item["thin"] = bool(item.get("thin"))

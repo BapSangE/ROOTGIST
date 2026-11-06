@@ -642,7 +642,7 @@ class OfficialNewsTest(unittest.TestCase):
 
     def test_github_drops_cjk_and_empty_descriptions(self):
         repos = {"items": [
-            {"name": "grim-prompter", "html_url": "https://github.com/a/grim-prompter", "description": "Threat modeling for AI coding agents", "stargazers_count": 179, "created_at": "2026-10-25T00:00:00Z"},
+            {"name": "grim-prompter", "html_url": "https://github.com/a/grim-prompter", "description": "Threat modeling for AI coding agents", "stargazers_count": 179, "forks_count": 12, "size": 300, "created_at": "2026-10-25T00:00:00Z"},
             {"name": "dsh-go", "html_url": "https://github.com/b/dsh-go", "description": "DeepSeek Harness 装进口袋：手机本机运行，也能遥控你的电脑。", "stargazers_count": 729, "created_at": "2026-10-26T00:00:00Z"},
             {"name": "empty", "html_url": "https://github.com/c/empty", "description": None, "stargazers_count": 500, "created_at": "2026-10-26T00:00:00Z"},
         ]}
@@ -650,6 +650,30 @@ class OfficialNewsTest(unittest.TestCase):
             got = official_news.from_github(datetime(2026, 10, 30, tzinfo=timezone.utc))
         self.assertEqual([g["url"] for g in got], ["https://github.com/a/grim-prompter"])
         self.assertEqual((got[0]["points"], got[0]["category"]), (179, "GitHub"))
+
+    def test_github_ranks_by_rising_speed_not_total_stars(self):
+        now = datetime(2026, 11, 6, 0, 0, tzinfo=timezone.utc)
+        def repo(name, stars, created, **kw):
+            return {"name": name, "html_url": f"https://github.com/x/{name}", "description": f"{name} AI agent tool",
+                    "stargazers_count": stars, "forks_count": 10, "size": 500, "created_at": created, **kw}
+        repos = {"items": [
+            repo("old-big", 3000, "2026-10-30T00:00:00Z"),   # 7일 전, 별 3천 → 하루 400개꼴
+            repo("fresh", 400, "2026-11-05T12:00:00Z"),      # 12시간 전, 별 400 → 지금 가장 빨리 뜬다
+            repo("on-hn", 300, "2026-11-04T00:00:00Z"),      # 이틀 전, HN에도 올랐다
+            repo("awesome-agents", 5000, "2026-11-04T00:00:00Z"),          # 링크 모음
+            repo("hollow", 900, "2026-11-05T00:00:00Z", forks_count=0),    # 포크 0: 별을 부풀린 경우가 많다
+            repo("readme-only", 800, "2026-11-05T00:00:00Z", size=4),      # 거의 빈 저장소
+        ]}
+        with mock.patch.object(official_news, "fetch", return_value=json.dumps(repos).encode()):
+            got = official_news.from_github(now, {"https://www.github.com/x/on-hn/"})
+        self.assertEqual([g["url"].rsplit("/", 1)[1] for g in got], ["fresh", "on-hn", "old-big"])
+        self.assertEqual(got[0]["points"], 400)  # 앱에 보이는 숫자는 그대로 별 수
+
+    def test_github_score_tempers_brand_new_repos(self):
+        now = datetime(2026, 11, 6, tzinfo=timezone.utc)
+        # 막 생긴 저장소 별 100개가 하루 된 저장소 별 600개를 이기지 않는다(+12시간 완충)
+        self.assertLess(official_news.gh_score(100, now - official_news.timedelta(minutes=10), now),
+                        official_news.gh_score(600, now - official_news.timedelta(days=1), now))
 
     def test_hn_reaction_attaches_to_same_official_story(self):
         official = [{"id": "g", "url": "https://deepmind.google/blog/gemini-4-carbon/", "title_en": "Gemini 4 Carbon: our next frontier model"}]
