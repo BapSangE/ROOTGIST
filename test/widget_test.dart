@@ -30,6 +30,7 @@ import 'package:flutter/semantics.dart';
 import 'package:rootgist/features/explore/explore_screen.dart';
 import 'package:rootgist/features/explore/official_news.dart';
 import 'package:rootgist/features/explore/date_groups.dart';
+import 'package:rootgist/features/common/collect_schedule.dart';
 import 'package:rootgist/features/common/term_text.dart';
 import 'package:rootgist/features/home/home_screen.dart';
 import 'package:rootgist/features/home/home_sections.dart';
@@ -1024,6 +1025,33 @@ void main() {
     }
   });
 
+  test('다음 수집 시각: KST 6시 전·15시 전·그 뒤', () {
+    expect(nextCollectLabel(DateTime.utc(2026, 11, 8, 20)), '오늘 아침 6시쯤'); // KST 05시
+    expect(nextCollectLabel(DateTime.utc(2026, 11, 8, 21)), '오후 3시쯤'); // KST 06시
+    expect(nextCollectLabel(DateTime.utc(2026, 11, 9, 5, 59)), '오후 3시쯤'); // KST 14:59
+    expect(nextCollectLabel(DateTime.utc(2026, 11, 9, 6)), '내일 아침 6시쯤'); // KST 15시
+    expect(nextCollectLabel(DateTime.utc(2026, 11, 9, 14, 59)), '내일 아침 6시쯤'); // KST 23:59
+  });
+
+  testWidgets('홈 「다음 수집」 알약: 누르면 하루 두 번 일정과 주말 이유 시트', (tester) async {
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+    expect(find.byType(NextCollectPill), findsOneWidget); // 홈 맨 위 오른쪽
+    // 시각에 따른 글자는 따로 띄워 본다(앱의 1분 타이머는 실제 시간 영역에서 시작돼 가짜 시계로 당길 수 없다)
+    clock = () => DateTime.utc(2026, 10, 19, 1); // KST 10시
+    addTearDown(() => clock = DateTime.now);
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: Center(child: NextCollectPill()))));
+    expect(find.text('다음 수집 오후 3시쯤'), findsOneWidget);
+    await tester.tap(find.bySemanticsLabel('다음 수집 오후 3시쯤, 수집 일정 보기'));
+    await tester.pumpAndSettle();
+    expect(find.text('언제 새로 올라와요?'), findsOneWidget);
+    expect(find.text('아침 6시쯤'), findsOneWidget);
+    expect(find.text('오후 3시쯤'), findsOneWidget);
+    expect(find.textContaining(keepAll('arXiv와 Hugging Face')), findsOneWidget);
+  });
+
   testWidgets('P4: 오늘이 0편이면 가장 최근 다이제스트를 안내와 함께 보여 준다', (tester) async {
     tester.view.physicalSize = const Size(390, 2400);
     tester.view.devicePixelRatio = 1;
@@ -1037,7 +1065,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(keepAll('최근 논문')), findsOneWidget); // 홈 논문 칸 머리(브리핑 아래)
-    expect(find.text(keepAll(byLine('주말에는 새 논문이 발표되지 않아요. 가장 최근인 10월 18일 일요일 논문을 보여 드려요.'))), findsOneWidget);
+    expect(find.text(keepAll(byLine('주말에는 arXiv와 Hugging Face에 새 논문이 거의 올라오지 않아요. 가장 최근인 10월 18일 일요일 논문을 보여 드려요.'))), findsOneWidget);
     expect(find.text('10월 18일 주요 논문'), findsOneWidget);
     expect(find.descendant(of: find.widgetWithText(HomeSection, keepAll('최근 논문')), matching: find.bySemanticsLabel('더보기')), findsOneWidget);
 
@@ -1436,7 +1464,7 @@ void main() {
     expect(find.text('종이'), findsNothing);
   });
 
-  testWidgets('사용 방법: 설정에서 열고, 자주 묻는 질문 펼치기, 도움말 다시 보기, 처음 안내 4장 넘기고 돌아오기', (tester) async {
+  testWidgets('사용 방법: 설정에서 열고, 자주 묻는 질문 펼치기, 도움말 다시 보기, 처음 안내 5장 넘기고 돌아오기', (tester) async {
     tester.view.physicalSize = const Size(390, 2400);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -1467,7 +1495,7 @@ void main() {
     await tester.tap(find.text('처음 안내 다시 보기'));
     await settle(tester);
     expect(find.text('건너뛰기'), findsOneWidget);
-    for (var i = 0; i < 3; i++) {
+    for (var i = 0; i < 4; i++) {
       await tester.tap(find.text('다음'));
       await tester.pumpAndSettle();
     }

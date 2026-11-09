@@ -570,6 +570,8 @@ class _DayRow extends StatelessWidget {
             ? null
             : '마지막 정상 수집 ${kstTime(day.lastSuccessAt!)}',
       ),
+      // 일·월요일 다이제스트는 HF 토·일요일분이라 늘 비어 있다: 이유를 붙인다
+      _ when day.date.weekday == DateTime.sunday || day.date.weekday == DateTime.monday => ('올라온 논문이 없어요', '주말이라 새 논문이 거의 없었어요'),
       _ => ('올라온 논문이 없어요', null),
     };
     final ink = empty ? RgColors.textSecondary : RgColors.textPrimary;

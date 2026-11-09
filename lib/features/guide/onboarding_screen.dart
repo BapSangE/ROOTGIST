@@ -8,8 +8,9 @@ import '../../design/tokens.dart';
 import '../../design/typography.dart';
 import '../../design/widgets/rg_buttons.dart';
 import '../../design/widgets/rg_pressable.dart';
+import '../common/collect_schedule.dart';
 
-// 첫 실행 온보딩 4장(시안 design-preview/src/onboarding_guide.html). 회원가입·권한 요청이 없어 마지막 장에서 바로 시작한다.
+// 첫 실행 온보딩 5장(시안 design-preview/src/onboarding_guide.html 4장 + 수집 일정 1장). 회원가입·권한 요청이 없어 마지막 장에서 바로 시작한다.
 // 좌우로 밀거나 「이전」·「다음」으로 넘긴다. 장이 넘어갈 때마다 가벼운 진동, 점 표시가 늘어난다(220ms).
 // 설정 › 사용 방법에서 다시 열면(쌓인 화면이 있으면) 끝낼 때 닫히고, 첫 실행이면 홈으로 간다.
 class OnboardingScreen extends StatefulWidget {
@@ -30,6 +31,8 @@ const _slides = [
   _Slide('연구소 발표부터\n개발자 화제까지', 'OpenAI·Anthropic·Google 같은 곳의 소식을 요약과 함께 모아 드려요.', _ExploreArt()),
   _Slide('주목받은 논문도\n3줄로', '많이 본 AI 논문을 매일 아침 골라 3줄 요약으로 보여 드려요.', _HomeArt()),
   _Slide('어려운 용어는\n형광펜으로', '형광펜을 누르면 뜻과 예시가 나와요. 논문은 원문과 번역을 문장마다 나란히 봐요.', _ReaderArt()),
+  // 새 소식이 언제 오는지 몰라 자꾸 열어 보지 않게 하루 두 번의 시각과 주말에 논문이 비는 이유를 알린다(사용자 요청 2026-11-09)
+  _Slide('하루 두 번,\n새로 모아요', '아침 6시쯤과 오후 3시쯤 새 소식을 모아요. 주말엔 arXiv·Hugging Face에 새 논문이 거의 올라오지 않아, 일·월요일엔 가장 최근 논문을 보여 드려요.', _ScheduleArt()),
 ];
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
@@ -198,7 +201,13 @@ class _SlideView extends StatelessWidget {
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Expanded(child: Center(child: FittedBox(fit: BoxFit.scaleDown, child: slide.art))),
+            // appear: 이 장이 화면 한가운데 올수록 1(그림 안 줄이 넘기는 손을 따라 떠오른다). 동작 줄이기면 늘 1
+            Expanded(
+              child: _Appear(
+                value: still ? 1 : (1 - (index - page).abs()).clamp(0.0, 1.0),
+                child: Center(child: FittedBox(fit: BoxFit.scaleDown, child: slide.art)),
+              ),
+            ),
             Transform.translate(
               offset: Offset(shift, 0),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -389,6 +398,48 @@ class _ExploreArt extends StatelessWidget {
           row('OA', 'GPT 새 모델 공개', 'OpenAI · 제품 · 3시간 전'),
           row('NV', 'AI 팩토리 관제 도구 공개', 'NVIDIA · 인프라 · 어제'),
           row('HN', '개발자들이 많이 본 AI 글', 'Hacker News · 화제 · 어제', last: true),
+        ]),
+      ),
+    );
+  }
+}
+
+// 그림이 지금 장이 얼마나 들어왔는지(0~1) 알 수 있게 내려 준다
+class _Appear extends InheritedWidget {
+  const _Appear({required this.value, required super.child});
+  final double value;
+
+  static double of(BuildContext context) => context.dependOnInheritedWidgetOfExactType<_Appear>()?.value ?? 1;
+
+  @override
+  bool updateShouldNotify(_Appear old) => old.value != value;
+}
+
+// 수집 일정: 시각 두 줄(넘기는 동안 차례로 떠오른다) + 주말 줄
+class _ScheduleArt extends StatelessWidget {
+  const _ScheduleArt();
+
+  @override
+  Widget build(BuildContext context) {
+    final appear = _Appear.of(context);
+    final weekend = ((appear - 0.5) / 0.5).clamp(0.0, 1.0);
+    return ExcludeSemantics(
+      child: _MiniCard(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Text('매일 두 번', style: RgText.eyebrow.copyWith(color: RgColors.textSecondary)),
+          const SizedBox(height: RgSpace.s12),
+          CollectTimes(appear: appear),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: RgSpace.s12),
+            child: Divider(height: 1, thickness: 1, color: RgColors.dividerCard),
+          ),
+          Opacity(
+            opacity: weekend,
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s12, children: [
+              SizedBox(width: 78, child: Text('토 · 일요일', style: RgText.bodySmall.copyWith(fontWeight: FontWeight.w700, color: RgColors.textSecondary))),
+              Expanded(child: Text('새 논문이 거의 없어요', style: RgText.bodySmall.copyWith(color: RgColors.textSecondary))),
+            ]),
+          ),
         ]),
       ),
     );

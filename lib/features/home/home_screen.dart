@@ -12,6 +12,7 @@ import '../../design/widgets/rg_pressable.dart';
 import '../../design/widgets/rg_row_head.dart';
 import '../../design/widgets/rg_states.dart';
 import '../../data/unread.dart';
+import '../common/collect_schedule.dart';
 import 'briefing_section.dart';
 import 'home_sections.dart';
 
@@ -127,6 +128,8 @@ class _HomeScreenState extends State<HomeScreen> {
               offset: Offset(widget.date != null ? -12 : 0, 0),
               child: Text('ROOTGIST', style: RgText.wordmark),
             ),
+            // 홈에만: 다음 수집 시각. 누르면 하루 두 번 일정과 주말 안내
+            if (widget.date == null) const Expanded(child: Align(alignment: Alignment.centerRight, child: NextCollectPill())),
           ],
         ),
       ),
@@ -149,7 +152,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final view = HomeView((fallback ?? digest)?.papers ?? const [], null);
     final rows = view.list.take(view.featured == null ? 3 : 2).toList();
     final note = switch (status) {
-      _ when fallback != null => [if (weekend) '주말에는 새 논문이 발표되지 않아요.', '가장 최근인 ${koreanDate(fallback.date)} 논문을 보여 드려요.'].join(' '),
+      _ when fallback != null => [if (weekend) weekendPaperReason, '가장 최근인 ${koreanDate(fallback.date)} 논문을 보여 드려요.'].join(' '),
       'delayed' => [if (digest?.lastSuccessAt case final t?) '마지막 정상 수집 ${kstDateTime(t)}.', '모이는 대로 이 화면에 올라와요.'].join(' '),
       _ => null,
     };
@@ -210,7 +213,7 @@ class _HomeScreenState extends State<HomeScreen> {
         RgCard(
           padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s18),
           child: KeepAllText(
-            [if (weekend) '주말에는 새 논문이 발표되지 않아요.', '가장 최근인 ${koreanDate(fallback.date)} 논문을 보여 드려요.'].join(' '),
+            [if (weekend) weekendPaperReason, '가장 최근인 ${koreanDate(fallback.date)} 논문을 보여 드려요.'].join(' '),
             perSentence: true, style: RgText.bodySmall.copyWith(color: RgColors.textSecondary),
           ),
         ),
