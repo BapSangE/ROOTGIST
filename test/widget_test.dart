@@ -31,6 +31,7 @@ import 'package:rootgist/features/explore/explore_screen.dart';
 import 'package:rootgist/features/explore/official_news.dart';
 import 'package:rootgist/features/explore/date_groups.dart';
 import 'package:rootgist/features/explore/github_rankings.dart';
+import 'package:rootgist/features/explore/trending_models.dart';
 import 'package:rootgist/features/explore/x_posts.dart';
 import 'package:rootgist/features/common/collect_schedule.dart';
 import 'package:rootgist/features/common/term_text.dart';
@@ -52,7 +53,7 @@ Future<void> pumpApp(WidgetTester tester) async {
   readerScale.value = 1.0;
   exploreTab.value = 0;
   newsTab.value = 0;
-  modelsFresh.value = false;
+  toolsTab.value = 0;
   githubPeriod.value = 0;
   fixtureMode.value = FixtureMode.normal;
   exploreJump.value = null;
@@ -66,11 +67,12 @@ Future<void> pumpApp(WidgetTester tester) async {
   // 홈 키워드 칩이 바로 사전을 부른다: 지난 테스트의 끝나지 않은 요청을 물려받지 않게 새로, 실제 비동기에서 미리 받아 둔다
   resetDictionary();
   await tester.runAsync(dictionary);
-  // GitHub 순위는 소식 HOT 칸 카드 줄이 탭을 누른 뒤(fake async) 처음 읽는다: 실제 비동기에서 미리 읽어 캐시를 채워 둔다
+  // GitHub 순위는 도구 › GitHub 칸을 누른 뒤(fake async) 처음 읽는다: 실제 비동기에서 미리 읽어 캐시를 채워 둔다
   await tester.runAsync(() => rootBundle.loadString('fixtures/github_rankings.json'));
   await tester.runAsync(() => rootBundle.loadString('fixtures/x_posts.json')); // X 글도 같은 이유로
   resetXPerks();
-  resetGithubStrip();
+  resetGithubRankings();
+  resetTrendingModels();
   await tester.runAsync(() async {
     await tester.pumpWidget(const RootgistApp());
     await Future<void>.delayed(const Duration(milliseconds: 200));
@@ -441,15 +443,17 @@ void main() {
     await slide(tester); // 칸 넘김 애니메이션
     await settle(tester);
     await openDates(tester);
-    // 발표 목록은 제목과 출처·한국 날짜만 보인다(UTC 17시는 KST 다음 날).
-    expect(find.text('OpenAI · 10월 18일'), findsOneWidget);
+    // 발표 목록은 출처 칩 → 제목 → 한국 날짜(UTC 17시는 KST 다음 날).
+    expect(find.byWidgetPredicate((w) => w is RgChip && w.label == 'OpenAI'), findsWidgets);
+    expect(find.text('10월 18일'), findsWidgets);
     expect(find.text(keepAll('가상의 예시 API를 소개합니다')), findsOneWidget);
     expect(find.text('Introducing a fictional example API'), findsNothing);
     expect(find.text('가상의 예시 API를 소개하는 가상 글이에요. 실제 내용이 아니에요.'), findsNothing); // 요약은 상세에서
     expect(find.textContaining('10월', findRichText: true), findsWidgets); // 지난달 글은 한 달로 묶는다
-    expect(find.text('Google DeepMind · 10월 16일'), findsOneWidget);
+    expect(find.byWidgetPredicate((w) => w is RgChip && w.label == 'Google DeepMind'), findsOneWidget);
+    expect(find.text('10월 16일'), findsWidgets);
     expect(find.text(keepAll('Fictional screening research for tests')), findsOneWidget); // 번역 없으면 원문만
-    expect(find.text('Claude Code'), findsNothing); // 릴리스는 「업데이트」에
+    expect(find.byWidgetPredicate((w) => w is RgChip && w.label == 'Claude Code'), findsNothing); // 릴리스는 「업데이트」에
 
     // 누르면 상세: 원제·AI 요약·핵심 내용과 근거
     await tester.tap(find.text(keepAll('가상의 예시 API를 소개합니다')));
@@ -472,7 +476,7 @@ void main() {
     await openDates(tester);
     // 업데이트는 도구 이름·변경 제목·버전·한국 날짜. 근거·변경 목록은 상세에서
     expect(find.text('(v0.0.1~v0.0.3) · 10월 18일'), findsOneWidget);
-    expect(find.text(keepAll('Claude Code')), findsOneWidget);
+    expect(find.byWidgetPredicate((w) => w is RgChip && w.label == 'Claude Code'), findsOneWidget); // 도구 이름은 출처 칩
     expect(find.text(keepAll('가상의 예시 기능을 이제 쓸 수 있어요')), findsOneWidget);
     expect(find.text('근거 · 원문 1번째 문단'), findsNothing);
     // 출처 칩 색: SDK 릴리스도 회사 색(보관함 저장 이름도 같은 색)
@@ -501,7 +505,7 @@ void main() {
     await pumpApp(tester);
     router.go('/explore');
     await settle(tester);
-    await tester.tap(find.text('모델'));
+    await tester.tap(find.text('도구'));
     for (var i = 0; i < 5; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     } // 칸 넘김이 끝나야 모델 칸이 그려지고 불러오기를 시작한다
@@ -587,7 +591,7 @@ void main() {
     expect(find.widgetWithText(ExploreSectionTabs, '업데이트'), findsOneWidget);
     expect(newsTab.value, 1);
     await openDates(tester);
-    expect(find.text(keepAll('Claude Code')), findsOneWidget);
+    expect(find.byWidgetPredicate((w) => w is RgChip && w.label == 'Claude Code'), findsOneWidget); // 도구 이름은 출처 칩
     // 업데이트 행의 제목을 눌러도 소식 상세로(릴리스는 AI 요약이 없어 공지를 연다).
     final notice = find.text(keepAll('가상의 예시 기능을 이제 쓸 수 있어요'));
     await Scrollable.ensureVisible(tester.element(notice), alignment: 0.3); // 아래 탭 바에 가리지 않게
@@ -1226,7 +1230,7 @@ void main() {
       'url': 'u', 'published_at': '2026-10-29T00:00:00Z', 'points': 331}).reaction, 'HN 추천 331'); // 공식 소식에 붙은 반응
   });
 
-  testWidgets('소식 · HOT: 맨 위 오늘 뜨는 저장소 줄 → GitHub 칸, 아래는 「전체 | Hacker News | X」 반응 순, 상세는 원문·HN 토론 링크', (tester) async {
+  testWidgets('소식 · 커뮤니티: 「전체 | Hacker News | X」 반응 순, 카드마다 출처 칩, 저장소 줄은 없다, 상세는 원문·HN 토론 링크', (tester) async {
     tester.view.physicalSize = const Size(390, 2400);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -1237,9 +1241,10 @@ void main() {
     await tester.tap(find.text('소식'));
     await slide(tester);
     await settle(tester);
-    await tester.tap(find.descendant(of: find.byType(ExploreSectionTabs), matching: find.text('HOT')));
-    await settle(tester); // 카드 줄이 GitHub 순위 fixture를 읽는다
-    // GitHub는 칩이 아니라 맨 위 카드 줄. 칩은 Hacker News와 X
+    await tester.tap(find.descendant(of: find.byType(ExploreSectionTabs), matching: find.text('커뮤니티')));
+    await settle(tester);
+    expect(find.text(keepAll('개발자들이 Hacker News·X에서 많이 본 글이에요. 공식 발표가 아니에요')), findsOneWidget);
+    // 칩은 Hacker News와 X. 저장소는 도구 › GitHub에만
     Finder filter(String label) => find.descendant(of: find.byType(ExploreTextFilters), matching: find.text(label));
     expect(filter('GitHub'), findsNothing);
     expect(filter('Hacker News'), findsOneWidget);
@@ -1261,9 +1266,12 @@ void main() {
     expect(yx('9002'), lessThan(yx('9003'))); // 좋아요 순(2,400 > 650)
     await tester.tap(filter('전체'));
     await tester.pumpAndSettle();
-    expect(find.text('오늘 뜨는 저장소'), findsOneWidget);
-    expect(find.text(keepAll('10월 18일 15:17 ~ 10월 19일 15:17 사이에 생긴 저장소')), findsOneWidget); // 기간을 그대로 적는다
-    expect(find.text('day-tool-1'), findsOneWidget);
+    expect(find.text('오늘 뜨는 저장소'), findsNothing);
+    expect(find.text('day-tool-1'), findsNothing);
+    // 어디 글인지: Hacker News 카드도 X 카드도 맨 앞에 출처 칩
+    Finder chip(String l) => find.byWidgetPredicate((w) => w is RgChip && w.label == l);
+    expect(chip('Hacker News'), findsWidgets);
+    expect(chip('X'), findsWidgets);
     for (final title in ['Example-4 가중치 공개', 'LLM 글쓰기 문체에 관한 가상 글']) {
       expect(find.text(keepAll(title)), findsOneWidget);
     }
@@ -1280,11 +1288,6 @@ void main() {
     expect(find.text('댓글 213'), findsOneWidget);
     router.pop();
     await settle(tester);
-    // 「전체 순위」 → GitHub 칸 일간
-    await tester.tap(find.text('전체 순위'));
-    await slide(tester);
-    await settle(tester);
-    expect((exploreTab.value, githubPeriod.value), (3, 0));
     clock = DateTime.now;
   });
 
@@ -1312,7 +1315,7 @@ void main() {
     clock = DateTime.now;
   });
 
-  testWidgets('GitHub 칸: 「일간 | 주간 | 월간」, 기간 시작·끝과 모은 시각, 별 많은 순 순위', (tester) async {
+  testWidgets('도구 › GitHub: 「24시간 · 7일 · 30일」 칩, 기간 시작·끝과 모은 시각, 별 많은 순 순위', (tester) async {
     tester.view.physicalSize = const Size(390, 2400);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -1320,15 +1323,18 @@ void main() {
     clock = () => DateTime.utc(2026, 10, 18, 20);
     router.go('/explore');
     await settle(tester);
-    await tester.tap(find.text('GitHub'));
+    await tester.tap(find.text('도구'));
     await slide(tester);
     await settle(tester);
-    Finder tab(String l) => find.descendant(of: find.byType(ExploreSectionTabs), matching: find.text(l));
-    expect(tab('일간'), findsOneWidget);
+    await tester.tap(find.descendant(of: find.byType(ExploreSectionTabs), matching: find.text('GitHub')));
+    await settle(tester);
+    expect(toolsTab.value, 2);
+    Finder tab(String l) => find.descendant(of: find.byType(ExploreTextFilters), matching: find.text(l));
+    expect(tab('24시간'), findsOneWidget);
     expect(find.text(keepAll('10월 18일 15:17 ~ 10월 19일 15:17')), findsOneWidget);
     expect(find.textContaining(keepAll('별 수는 10월 19일 15:17에 모은 값이에요.')), findsOneWidget);
     expect(find.text('day-tool-1'), findsOneWidget);
-    await tester.tap(tab('주간'));
+    await tester.tap(tab('7일'));
     await tester.pumpAndSettle();
     expect(githubPeriod.value, 1);
     expect(find.text(keepAll('10월 12일 15:17 ~ 10월 19일 15:17')), findsOneWidget);
@@ -1337,7 +1343,7 @@ void main() {
     expect(find.text('day-tool-1'), findsNothing);
     // 설명이 아직 옮겨지지 않은 저장소는 원문 설명
     expect(find.text(keepAll('An open-source agent toolkit #4 for running LLM workflows locally')), findsOneWidget);
-    await tester.tap(tab('월간'));
+    await tester.tap(tab('30일'));
     await tester.pumpAndSettle();
     expect(find.text(keepAll('9월 19일 15:17 ~ 10월 19일 15:17')), findsOneWidget);
     // 생성 시각은 알약이 아니라 메타 줄 글씨(별 수만 숫자 알약)
@@ -1641,7 +1647,7 @@ void main() {
     expect(scaffoldBg(), RgPalette.white.bgApp);
   });
 
-  testWidgets('옆으로 밀기: 홈 → 탐색 칸들 → 공식 소식 발표·업데이트 → 모델 트렌딩·새로 나옴 → GitHub 일간·주간·월간 → 보관함 → 설정, 반대로 밀면 거꾸로', (tester) async {
+  testWidgets('옆으로 밀기: 홈 → 논문 → 소식 발표·업데이트·커뮤니티 → 도구 트렌딩 모델·새 모델·GitHub → 보관함 → 설정, 반대로 밀면 거꾸로', (tester) async {
     tester.view.physicalSize = const Size(390, 2400);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -1649,9 +1655,8 @@ void main() {
     String where() {
       final path = router.routerDelegate.currentConfiguration.uri.path;
       final sub = switch (exploreTab.value) {
-        1 => const [' 발표', ' 업데이트', ' 화제'][newsTab.value],
-        2 => modelsFresh.value ? ' 새로 나옴' : ' 트렌딩',
-        3 => const [' 일간', ' 주간', ' 월간'][githubPeriod.value],
+        1 => const [' 발표', ' 업데이트', ' 커뮤니티'][newsTab.value],
+        2 => const [' 트렌딩 모델', ' 새 모델', ' GitHub'][toolsTab.value],
         _ => '',
       };
       return path == '/explore' ? 'explore ${exploreTab.value}$sub' : path;
@@ -1664,8 +1669,8 @@ void main() {
       await settle(tester);
     }
 
-    const forward = ['explore 0', 'explore 1 발표', 'explore 1 업데이트', 'explore 1 화제', 'explore 2 트렌딩', 'explore 2 새로 나옴',
-      'explore 3 일간', 'explore 3 주간', 'explore 3 월간', '/library', '/settings'];
+    const forward = ['explore 0', 'explore 1 발표', 'explore 1 업데이트', 'explore 1 커뮤니티', 'explore 2 트렌딩 모델', 'explore 2 새 모델',
+      'explore 2 GitHub', '/library', '/settings'];
     for (final w in forward) {
       await swipe(-300);
       expect(where(), w);
@@ -1833,7 +1838,7 @@ void main() {
     modelsSeen.value = {'example-lab/example-coder': 'base', 'example-lab/example-video': 'base'};
     router.go('/explore');
     await settle(tester);
-    await tester.tap(find.text('모델'));
+    await tester.tap(find.text('도구'));
     await slide(tester);
     await settle(tester);
     // 트렌딩: 10위 안만(example-tiny는 11위라 없다). 1위 변형은 한 줄로 묶인다
@@ -1846,9 +1851,9 @@ void main() {
     expect(find.text(keepAll('example-coder-GGUF · example-quant · 양자화판')), findsOneWidget);
 
     // 새로 나옴: 최근 14일 안에 공개된 모델만, 공개일이 머리 줄에. 처음 보는 모델은 「새로 진입」
-    await tester.tap(find.descendant(of: find.byType(ExploreSectionTabs), matching: find.text('New')));
+    await tester.tap(find.descendant(of: find.byType(ExploreSectionTabs), matching: find.text('새 모델')));
     await tester.pumpAndSettle();
-    expect(modelsFresh.value, isTrue);
+    expect(toolsTab.value, 1);
     expect(find.text('example-tiny'), findsOneWidget);
     expect(find.text('example-video'), findsNothing);
     expect(find.text('example-coder'), findsNothing); // 10월 15일 공개 → 14일 지남

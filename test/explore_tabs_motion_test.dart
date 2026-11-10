@@ -47,7 +47,7 @@ class _TabsState extends State<_Tabs> {
   int selected = 0;
   @override
   Widget build(BuildContext context) => ExploreSectionTabs(
-    labels: const ['발표', '업데이트', 'HOT'],
+    labels: const ['발표', '업데이트', '커뮤니티'],
     selected: selected,
     onTap: (i) => setState(() => selected = i),
   );
@@ -117,7 +117,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
     final before = _center((await _strokes(tester)).single);
-    await tester.tap(find.text('HOT'));
+    await tester.tap(find.text('커뮤니티'));
     await tester.pump();
     await tester.pump();
     expect(_center((await _strokes(tester)).single), closeTo(before, 1));
@@ -146,12 +146,12 @@ void main() {
 
   testWidgets('동작 줄이기는 이동 없이 최종 밑줄을 표시하고 큰 글자·가로 스크롤에도 맞는다', (tester) async {
     await _mount(tester, reduceMotion: true, scale: 2, width: 240);
-    await tester.ensureVisible(find.text('HOT'));
-    await tester.tap(find.text('HOT'));
+    await tester.ensureVisible(find.text('커뮤니티'));
+    await tester.tap(find.text('커뮤니티'));
     await tester.pump();
     await tester.pump();
     final stroke = (await _strokes(tester)).single;
-    expect(_center(stroke), closeTo(_labelCenter(tester, 'HOT'), 1));
+    expect(_center(stroke), closeTo(_labelCenter(tester, '커뮤니티'), 1));
     expect(stroke.$1, greaterThanOrEqualTo(0));
     expect(stroke.$2, lessThanOrEqualTo(240));
     expect(tester.takeException(), isNull);

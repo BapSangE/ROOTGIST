@@ -175,11 +175,11 @@ class _WithTabBar extends StatelessWidget {
 }
 
 // 옆으로 밀어 탭 넘기기(실기기 QA 요청). 한 줄로 이어진 자리를 차례로 넘는다:
-// 홈 → 탐색·논문 → 탐색·소식(발표) → 소식(업데이트) → 소식(화제) → 탐색·모델(트렌딩) → 모델(새로 나옴)
-// → 탐색·GitHub(일간) → GitHub(주간) → GitHub(월간) → 보관함 → 설정.
+// 홈 → 탐색·논문 → 탐색·소식(발표) → 소식(업데이트) → 소식(커뮤니티) → 탐색·도구(트렌딩 모델) → 도구(새 모델)
+// → 도구(GitHub) → 보관함 → 설정. GitHub 기간(24시간·7일·30일)은 칩이라 밀기 자리가 아니다.
 // 왼쪽으로 밀면 다음, 오른쪽으로 밀면 이전. 하단 탭바 선택도 같이 옮겨 간다.
 // 탭의 첫 화면에서만: 지난 날짜·설정 하위 화면에서는 가장자리 밀기(뒤로)가 먼저다. 가로로 넘기는 칩 목록은 칩이 먼저 넘어간다.
-typedef TabStop = (int branch, int exploreTab, int sub); // sub: 소식은 발표·업데이트·화제, 모델은 트렌딩·새로 나옴, GitHub는 일간·주간·월간
+typedef TabStop = (int branch, int exploreTab, int sub); // sub: 소식은 발표·업데이트·커뮤니티, 도구는 트렌딩 모델·새 모델·GitHub
 
 const tabStops = <TabStop>[
   (0, 0, 0),
@@ -189,9 +189,7 @@ const tabStops = <TabStop>[
   (1, 1, 2),
   (1, 2, 0),
   (1, 2, 1),
-  (1, 3, 0),
-  (1, 3, 1),
-  (1, 3, 2),
+  (1, 2, 2),
   (2, 0, 0),
   (3, 0, 0),
 ];
@@ -244,12 +242,11 @@ class _TabSwipeState extends State<_TabSwipe> with SingleTickerProviderStateMixi
     final v = d.primaryVelocity ?? 0;
     final dx = _dx;
     _dx = 0;
-    // 살짝 밀거나(60pt) 빠르게 튕기면(초당 300pt) 넘긴다
-    if (dx.abs() < 60 && v.abs() < 300) return;
+    // 살짝 밀거나(40pt) 가볍게 튕기면(초당 200pt) 넘긴다. 60pt·300pt는 짧게 밀면 안 넘어가 답답했다(2026-11-10)
+    if (dx.abs() < 40 && v.abs() < 200) return;
     final shell = widget.shell;
     final at = currentStop(shell.currentIndex, exploreTab.value, switch (exploreTab.value) {
-      2 => modelsFresh.value ? 1 : 0,
-      3 => githubPeriod.value,
+      2 => toolsTab.value,
       _ => newsTab.value,
     });
     final next = at + ((dx != 0 ? dx : v) < 0 ? 1 : -1);
@@ -259,7 +256,7 @@ class _TabSwipeState extends State<_TabSwipe> with SingleTickerProviderStateMixi
     if (branch == 1) {
       exploreJump.value = ExploreJump(tab,
           updates: tab == 1 && sub == 1, hot: tab == 1 && sub == 2, fresh: tab == 2 && sub == 1,
-          period: tab == 3 ? sub : 0, animate: shell.currentIndex == 1);
+          github: tab == 2 && sub == 2, animate: shell.currentIndex == 1);
     }
     if (branch != shell.currentIndex) {
       shell.goBranch(branch);

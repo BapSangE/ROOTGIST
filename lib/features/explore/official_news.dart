@@ -18,7 +18,6 @@ import '../../design/widgets/rg_row_head.dart';
 import '../common/item_actions.dart';
 import '../home/home_sections.dart';
 import 'date_groups.dart';
-import 'github_rankings.dart';
 import 'x_posts.dart';
 import '../guide/coach_marks.dart';
 import '../../data/guide.dart';
@@ -131,11 +130,12 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
         builder: (context, snap) => FutureBuilder(
         future: _x.future,
         initialData: const <XPost>[],
-        builder: (context, xsnap) => ListView(
-          padding: const EdgeInsets.only(bottom: RgSpace.bottomScrollInset),
+        // 칸 이름 줄은 목록과 함께 올라가지 않는다: 아래로 내려가 있어도 바로 다른 칸으로(2026-11-10)
+        builder: (context, xsnap) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             ExploreSectionTabs(
-              labels: const ['발표', '업데이트', 'HOT'],
+              labels: const ['발표', '업데이트', '커뮤니티'],
               selected: _tab,
               onTap: (i) => setState(() {
                 _tab = newsTab.value = i;
@@ -143,6 +143,16 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
                 _hot = null;
               }),
             ),
+            Expanded(
+              child: ListView(
+          key: PageStorageKey(_tab), // 칸마다 스크롤 자리를 따로
+          padding: const EdgeInsets.only(bottom: RgSpace.bottomScrollInset),
+          children: [
+            ExploreSectionNote(switch (_tab) {
+              0 => '회사가 직접 올린 공식 발표예요',
+              1 => 'SDK·개발 도구의 새 버전 소식이에요',
+              _ => '개발자들이 Hacker News·X에서 많이 본 글이에요. 공식 발표가 아니에요',
+            }),
             ...switch (snap) {
               AsyncSnapshot(hasError: true) => [
                 const SizedBox(height: RgSpace.s20),
@@ -162,6 +172,9 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
                 ),
               ],
             },
+          ],
+              ),
+            ),
           ],
         ),
         ),
@@ -298,15 +311,13 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
       ],
     };
     return [
-      const GithubRepoStrip(),
-      DateHeader(label: '많이 본 글', count: '${shown.length}개', open: true),
       if (keys.length > 2)
         ExploreTextFilters(
           labels: ['전체', if (hn.isNotEmpty) 'Hacker News', if (x.isNotEmpty) 'X'],
           selected: keys.indexOf(_hot).clamp(0, keys.length - 1),
           onTap: (i) => setState(() => _hot = keys[i]),
         ),
-      if (keys.length > 2) const SizedBox(height: RgSpace.s16),
+      const SizedBox(height: RgSpace.s16), // 칩 줄이 없어도 칸 설명과 첫 카드 사이를 띄운다
       RgFilterSwitch(
         switchKey: (_tab, _hot),
         child: shown.isEmpty
@@ -318,7 +329,7 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
                   0,
                 ),
                 child: KeepAllText(
-                  '아직 모은 개발자 화제가 없어요',
+                  '아직 모은 커뮤니티 글이 없어요',
                   style: RgText.bodySmall.copyWith(
                     color: RgColors.textSecondary,
                   ),
@@ -363,7 +374,7 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
             ),
             Expanded(
               child: KeepAllText(
-                '개발자들이 많이 본 글과 새 도구예요. 공식 발표가 아니라 각 사이트·계정의 글이고, 숫자는 Hacker News 추천(upvote)·댓글 수, X 좋아요 수, GitHub 별 수예요. 저장소 전체 순위는 GitHub 칸에 있어요. X 글은 30분마다 모으고, 원문과 함께 AI 번역(하루 두 번)을 보여 줘요. 누르면 X에서 열려요.',
+                '각 사이트·계정에 올라온 글이에요. 숫자는 Hacker News 추천(upvote)·댓글 수와 X 좋아요 수예요. 새 저장소 순위는 도구 › GitHub에 있어요. X 글은 30분마다 모으고, 원문과 함께 AI 번역(하루 두 번)을 보여 줘요. 누르면 X에서 열려요.',
                 perSentence: true,
                 style: RgText.caption.copyWith(color: RgColors.textSecondary),
               ),
@@ -389,9 +400,6 @@ class _ExploreNewsRow extends StatelessWidget {
     final version = RegExp(r'v[\d.]+(?:~v[\d.]+)?')
         .firstMatch(n.titleEn)
         ?.group(0);
-    final titleColor = update && newsGroup(n.source) == 'Anthropic'
-        ? updateTitleColor(n.source)
-        : null;
     // 시안: 둘째 줄은 「Claude Code 업데이트 4건」까지만, 버전은 셋째 줄에만
     final title = n.titleKo ?? n.titleEn;
     final line2 = update
@@ -418,31 +426,20 @@ class _ExploreNewsRow extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // 어디 소식인지 맨 앞 칩으로(모든 소식 카드가 같은 자리·같은 모양, 2026-11-10)
+                        RgChip(n.sourceLabel, source: n.source),
+                        const SizedBox(height: RgSpace.s8),
                         KeepAllText(
-                          update ? n.sourceLabel : n.titleKo ?? n.titleEn,
-                          style: update
-                              ? RgText.homeUpdate.copyWith(
-                                  fontWeight: FontWeight.w500,
-                                  color: titleColor ?? RgColors.textPrimary,
-                                )
-                              : RgText.titleList.copyWith(
-                                  fontSize: 16,
-                                  height: 25 / 16,
-                                  fontWeight: FontWeight.w500,
-                                  letterSpacing: -0.32,
-                                ),
-                        ),
-                        if (update) ...[
-                          const SizedBox(height: RgSpace.s4),
-                          KeepAllText(
-                            line2.isEmpty ? title : line2,
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
-                            style: RgText.homeSummary.copyWith(
-                              color: RgColors.textBody,
-                            ),
+                          update ? (line2.isEmpty ? title : line2) : title,
+                          maxLines: update ? 3 : null,
+                          overflow: update ? TextOverflow.ellipsis : null,
+                          style: RgText.titleList.copyWith(
+                            fontSize: 16,
+                            height: 25 / 16,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: -0.32,
                           ),
-                        ],
+                        ),
                       ],
                     ),
                   ),
@@ -459,7 +456,6 @@ class _ExploreNewsRow extends StatelessWidget {
                   children: [
                     Text(
                       [
-                        if (!update) n.sourceLabel,
                         if (update && version != null) '($version)',
                         newsDate(n),
                       ].join(' · '),
@@ -499,7 +495,13 @@ class _ExploreHotCard extends StatelessWidget {
             spacing: RgSpace.s12,
             children: [
               Expanded(
-                child: KeepAllText(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: RgSpace.s8,
+                  children: [
+                    // 칩은 글이 화제가 된 곳(Hacker News), 글이 실린 사이트는 날짜 옆에
+                    const RgChip('Hacker News'),
+                    KeepAllText(
                   n.titleKo ?? n.titleEn,
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
@@ -508,6 +510,8 @@ class _ExploreHotCard extends StatelessWidget {
                     height: 25 / 16,
                     fontWeight: FontWeight.w500,
                   ),
+                ),
+                  ],
                 ),
               ),
               newsActions(n, visualSize: 40),
@@ -521,7 +525,7 @@ class _ExploreHotCard extends StatelessWidget {
             runSpacing: RgSpace.s8,
             children: [
               Text(
-                newsDate(n),
+                '${n.sourceLabel} · ${newsDate(n)}',
                 style: RgText.homeMeta.copyWith(color: RgColors.textSecondary),
               ),
               Wrap(

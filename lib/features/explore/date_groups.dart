@@ -595,6 +595,18 @@ class ExploreSectionTabs extends StatelessWidget {
   );
 }
 
+// 칸 바로 아래 한 줄: 이 칸이 어디서 온 무엇인지(2026-11-10 정보 구조 정리). 긴 안내는 목록 끝에 둔다.
+class ExploreSectionNote extends StatelessWidget {
+  const ExploreSectionNote(this.text, {super.key});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s12, RgSpace.gutterText, RgSpace.s4),
+    child: KeepAllText(text, style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
+  );
+}
+
 // 출처·논문 주제는 알약 없이 글자로 고른다. 작은 글자도 44pt 영역에서 누를 수 있다.
 class ExploreTextFilters extends StatelessWidget {
   const ExploreTextFilters({

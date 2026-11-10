@@ -30,7 +30,7 @@ Future<PageController> _explore(
   exploreJump.value = null;
   exploreTab.value = 0;
   newsTab.value = 0;
-  modelsFresh.value = false;
+  toolsTab.value = 0;
   tipsSeen.value = {tipNews, tipReader};
   await tester.pumpWidget(
     MaterialApp(
@@ -93,7 +93,7 @@ void main() {
     'reduced-motion primary tab taps jump without a zero-duration scroll',
     (tester) async {
       final pages = await _explore(tester, reduced: true);
-      await tester.tap(find.text('모델'));
+      await tester.tap(find.text('도구'));
       await tester.pump();
       expect(tester.takeException(), isNull);
       expect(pages.page, 2);

@@ -21,36 +21,21 @@ import 'news_detail.dart' show modelSpec;
 // 트렌딩: HF 트렌딩 순 10개(홈 모델 카드, 큰 순위 숫자). 새로 나옴: 트렌딩 100위 안에서 최근 14일 안에 공개된 모델, 최신순 10개.
 // 같은 모델의 양자화판·형제 모델은 수집기가 원래 모델 아래로 묶는다(「변형 N개」).
 class TrendingModelsSection extends StatefulWidget {
-  const TrendingModelsSection({super.key});
+  const TrendingModelsSection({super.key, required this.fresh});
+  final bool fresh; // 도구 칸의 「새 모델」(ToolsSection이 정한다)
 
   @override
   State<TrendingModelsSection> createState() => _TrendingModelsSectionState();
 }
 
 class _TrendingModelsSectionState extends State<TrendingModelsSection> {
-  final _req = Reloadable(repository.listTrendingModels);
-  late var _fresh = modelsFresh.value =
-      exploreJump.value?.fresh ?? false; // 「새로 나옴」 칸
-
-  // 옆으로 밀기로 트렌딩 ↔ 새로 나옴(쉘의 밀기 순서가 정한다)
-  void _jump() {
-    final j = exploreJump.value;
-    if (j != null && j.tab == 2 && mounted) {
-      setState(() => _fresh = modelsFresh.value = j.fresh);
-    }
-  }
-
-  void _pick(bool fresh) => setState(() => _fresh = modelsFresh.value = fresh);
-
-  @override
-  void initState() {
-    super.initState();
-    exploreJump.addListener(_jump);
-  }
+  // 받은 값을 들고 있어 도구 칸 안에서 모델 ↔ GitHub를 오가도 빈 틀이 다시 보이지 않는다(새로 받는 동안 지난 값)
+  static List<TrendingModel>? _last;
+  final _req = Reloadable(() => repository.listTrendingModels().then((v) => _last = v));
+  bool get _fresh => widget.fresh;
 
   @override
   void dispose() {
-    exploreJump.removeListener(_jump);
     _req.dispose();
     super.dispose();
   }
@@ -61,6 +46,7 @@ class _TrendingModelsSectionState extends State<TrendingModelsSection> {
       listenable: Listenable.merge([_req, readItems, modelsSeen]),
       builder: (context, _) => FutureBuilder(
         future: _req.future,
+        initialData: _last,
         builder: (context, snap) {
           final all = snap.data ?? const <TrendingModel>[];
           if (all.isNotEmpty) {
@@ -79,12 +65,7 @@ class _TrendingModelsSectionState extends State<TrendingModelsSection> {
           return ListView(
             padding: const EdgeInsets.only(bottom: RgSpace.bottomScrollInset),
             children: [
-              ExploreSectionTabs(
-                labels: const ['트렌딩', 'New'],
-                information: const {0},
-                selected: _fresh ? 1 : 0,
-                onTap: (i) => _pick(i == 1),
-              ),
+              ExploreSectionNote(_fresh ? 'Hugging Face에 최근 2주 안에 공개된 모델이에요' : 'Hugging Face에서 요즘 주목받는 모델이에요'),
               RgFilterSwitch(
                 switchKey: _fresh,
                 child: Column(
@@ -93,7 +74,7 @@ class _TrendingModelsSectionState extends State<TrendingModelsSection> {
                     if (snap.hasError) ...[
                       const SizedBox(height: RgSpace.s20),
                       RgErrorCard(error: snap.error, onRetry: _req.reload),
-                    ] else if (snap.connectionState != ConnectionState.done)
+                    ] else if (!snap.hasData)
                       const RgSkeleton(
                         child: Padding(
                           padding: EdgeInsets.only(top: RgSpace.s20),
@@ -468,3 +449,6 @@ class _VariantsLineState extends State<VariantsLine> {
     return i >= 3 && tail.isNotEmpty ? tail : name;
   }
 }
+
+@visibleForTesting
+void resetTrendingModels() => _TrendingModelsSectionState._last = null;

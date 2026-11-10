@@ -7,6 +7,7 @@ import '../../data/repository.dart';
 import '../../design/tokens.dart';
 import '../../design/typography.dart';
 import '../../design/widgets/rg_pressable.dart';
+import '../../design/widgets/rg_row_head.dart';
 import '../../data/unread.dart';
 import '../home/home_sections.dart';
 
@@ -64,13 +65,7 @@ class XPostCard extends StatelessWidget {
             Row(
               spacing: RgSpace.s8,
               children: [
-                Container(
-                  width: 22,
-                  height: 22,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(color: RgColors.textPrimary, borderRadius: BorderRadius.circular(6)),
-                  child: Text('X', style: RgText.caption.copyWith(color: RgColors.bgApp, fontWeight: FontWeight.w700, height: 1)),
-                ),
+                const RgChip('X'), // 다른 소식 카드와 같은 출처 칩
                 Flexible(
                   child: Text(p.author, maxLines: 1, overflow: TextOverflow.ellipsis,
                       style: RgText.homeMeta.copyWith(fontWeight: FontWeight.w600, color: RgColors.textPrimary)),

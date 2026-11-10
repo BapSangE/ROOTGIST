@@ -17,11 +17,10 @@ import '../common/item_actions.dart';
 import '../home/home_sections.dart';
 import '../home/home_screen.dart';
 import 'date_groups.dart';
-import 'github_rankings.dart';
 import 'official_news.dart';
-import 'trending_models.dart';
+import 'tools_section.dart';
 
-// S04 탐색 (HANDOFF 7.6). 위쪽 「논문 | 공식 소식 | 모델 | GitHub」 칸(PROPOSALS P9 A안, GitHub 칸 2026-11-10). 옆으로 밀어 넘긴다.
+// S04 탐색 (HANDOFF 7.6). 위쪽 「논문 | 소식 | 도구」 칸. 읽을 것(논문·소식)과 써 볼 것(도구: 모델·GitHub)으로 나눴다(2026-11-10). 옆으로 밀어 넘긴다.
 // 논문 칸: 오늘의 논문 전체(홈은 3편만 미리 보여 준다) → 아래로 지난 논문을 달마다. 이번 달은 펼치고 지난달부터는 접는다.
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
@@ -50,7 +49,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     (_) => <OfficialNews>[],
   );
   late var _tab = exploreTab.value =
-      exploreJump.value?.tab ?? 0; // 0 논문, 1 공식 소식, 2 모델, 3 GitHub
+      exploreJump.value?.tab ?? 0; // 0 논문, 1 소식, 2 도구
   late final _pages = PageController(initialPage: _tab);
   final _open = <String>{}; // 펼친 지난달
   String? _paperTopic;
@@ -129,7 +128,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   child: Row(
                     spacing: RgSpace.s16,
                     children: [
-                      for (final (i, label) in ['논문', '소식', '모델', 'GitHub'].indexed)
+                      for (final (i, label) in ['논문', '소식', '도구'].indexed)
                         Semantics(
                           button: true,
                           selected: _tab == i,
@@ -188,8 +187,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
               children: [
                 _papers(),
                 const OfficialNewsSection(),
-                const TrendingModelsSection(),
-                const GithubRankingsSection(),
+                const ToolsSection(),
               ],
             ),
           ),
