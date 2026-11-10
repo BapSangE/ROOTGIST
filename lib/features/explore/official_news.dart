@@ -363,7 +363,7 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
             ),
             Expanded(
               child: KeepAllText(
-                '개발자들이 많이 본 글과 새 도구예요. 공식 발표가 아니라 각 사이트·계정의 글이고, 숫자는 Hacker News 추천(upvote)·댓글 수, X 좋아요 수, GitHub 별 수예요. 저장소 전체 순위는 GitHub 칸에 있어요. X 글은 원문과 함께 AI 번역을 보여 주고, 누르면 X에서 열려요.',
+                '개발자들이 많이 본 글과 새 도구예요. 공식 발표가 아니라 각 사이트·계정의 글이고, 숫자는 Hacker News 추천(upvote)·댓글 수, X 좋아요 수, GitHub 별 수예요. 저장소 전체 순위는 GitHub 칸에 있어요. X 글은 30분마다 모으고, 원문과 함께 AI 번역(하루 두 번)을 보여 줘요. 누르면 X에서 열려요.',
                 perSentence: true,
                 style: RgText.caption.copyWith(color: RgColors.textSecondary),
               ),

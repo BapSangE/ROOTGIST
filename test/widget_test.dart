@@ -30,6 +30,7 @@ import 'package:flutter/semantics.dart';
 import 'package:rootgist/features/explore/explore_screen.dart';
 import 'package:rootgist/features/explore/official_news.dart';
 import 'package:rootgist/features/explore/date_groups.dart';
+import 'package:rootgist/features/explore/github_rankings.dart';
 import 'package:rootgist/features/explore/x_posts.dart';
 import 'package:rootgist/features/common/collect_schedule.dart';
 import 'package:rootgist/features/common/term_text.dart';
@@ -69,6 +70,7 @@ Future<void> pumpApp(WidgetTester tester) async {
   await tester.runAsync(() => rootBundle.loadString('fixtures/github_rankings.json'));
   await tester.runAsync(() => rootBundle.loadString('fixtures/x_posts.json')); // X 글도 같은 이유로
   resetXPerks();
+  resetGithubStrip();
   await tester.runAsync(() async {
     await tester.pumpWidget(const RootgistApp());
     await Future<void>.delayed(const Duration(milliseconds: 200));
@@ -1055,6 +1057,7 @@ void main() {
     expect(find.text('언제 새로 올라와요?'), findsOneWidget);
     expect(find.text('아침 6시쯤'), findsOneWidget);
     expect(find.text('오후 3시쯤'), findsOneWidget);
+    expect(find.text('30분마다'), findsOneWidget); // X 글
     expect(find.textContaining(keepAll('arXiv와 Hugging Face')), findsOneWidget);
   });
 
@@ -1337,6 +1340,18 @@ void main() {
     await tester.tap(tab('월간'));
     await tester.pumpAndSettle();
     expect(find.text(keepAll('9월 19일 15:17 ~ 10월 19일 15:17')), findsOneWidget);
+    // 생성 시각은 알약이 아니라 메타 줄 글씨(별 수만 숫자 알약)
+    expect(find.byWidgetPredicate((w) => w is HomeStat && w.label.endsWith('생성')), findsNothing);
+    // 저장 → 보관함에 「저장소」로, id는 GitHub 주소
+    final card = find.byType(GithubRepoCard).first;
+    final repo = tester.widget<GithubRepoCard>(card).repo;
+    await tester.tap(find.descendant(of: card, matching: find.byType(RgBookmarkButton)));
+    await tester.pumpAndSettle();
+    expect(bookmarks.value[repo.url]?.kind, 'repo');
+    expect(bookmarks.value[repo.url]?.title, repo.fullName);
+    router.go('/library');
+    await settle(tester);
+    expect(find.text('저장소'), findsOneWidget);
     expect(tester.takeException(), isNull);
     clock = DateTime.now;
   });

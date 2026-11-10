@@ -11,7 +11,8 @@ import '../../design/widgets/rg_pressable.dart';
 
 // 수집 일정 안내: 온보딩 마지막 장, 홈 위 「다음 수집」 알약, 그 알약이 여는 시트가 같은 문구를 쓴다.
 // 실제 일정(.github/workflows, supabase/migrations/20261103090000_cron_dispatch.sql):
-//   KST 05:00 daily-batch(논문 → 공식 소식·화제·모델), KST 14:17 official-news(공식 소식·화제·모델).
+//   KST 05:00 daily-batch(논문 → 공식 소식·화제·모델), KST 14:17 official-news(공식 소식·화제·모델),
+//   매시 7분·37분 x-posts(X 계정 새 글, .github/workflows/x-posts.yml). X 글 번역은 하루 두 번 소식 배치 때 붙는다.
 // 요약까지 끝나 화면에 보이는 건 그보다 30분~1시간 뒤라 「아침 6시쯤·오후 3시쯤」으로 안내한다(설정 › 사용 방법 문답과 같게).
 // 일·월요일 다이제스트는 HF 토·일요일분이라 늘 비어 있다(실데이터 2026-10-25~11-09 일·월 0편, 화~토 10편).
 
@@ -110,7 +111,7 @@ Future<void> showCollectScheduleSheet(BuildContext context) => showRgBottomSheet
       const SizedBox(height: RgSpace.s4),
       Semantics(header: true, child: Text('언제 새로 올라와요?', style: RgText.titleSection)),
       const SizedBox(height: RgSpace.s10),
-      KeepAllText('하루 두 번 새 소식을 모아요. 몇십 분 늦어질 수 있어요.', perSentence: true, style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
+      KeepAllText('하루 두 번 새 소식을 모으고, X 글은 30분마다 받아요. 몇십 분 늦어질 수 있어요.', perSentence: true, style: RgText.bodySummary.copyWith(color: RgColors.textBody)),
       const SizedBox(height: RgSpace.s16),
       const CollectTimes(),
       const SizedBox(height: RgSpace.s20),
@@ -124,18 +125,22 @@ Future<void> showCollectScheduleSheet(BuildContext context) => showRgBottomSheet
   ),
 );
 
-/// 시각 두 줄(시트·온보딩 그림이 함께 쓴다). appear(0~1)를 주면 줄마다 조금씩 늦게 떠오른다.
+/// 시각 세 줄(시트·온보딩 그림이 함께 쓴다). appear(0~1)를 주면 줄마다 조금씩 늦게 떠오른다.
 class CollectTimes extends StatelessWidget {
   const CollectTimes({super.key, this.appear = 1});
   final double appear;
 
-  static const rows = [('아침 6시쯤', '논문 · 공식 소식 · 개발자 화제 · 모델'), ('오후 3시쯤', '공식 소식 · 개발자 화제 · 모델')];
+  static const rows = [
+    ('아침 6시쯤', '논문 · 공식 소식 · 개발자 화제 · 모델'),
+    ('오후 3시쯤', '공식 소식 · 개발자 화제 · 모델'),
+    ('30분마다', 'X 글 · 혜택·한도 소식(번역은 하루 두 번 붙어요)'),
+  ];
 
   @override
   Widget build(BuildContext context) {
     Widget row(int i, String time, String what) {
-      // 둘째 줄은 첫 줄보다 0.25만큼 늦게 시작한다
-      final t = ((appear - i * 0.25) / 0.75).clamp(0.0, 1.0);
+      // 줄마다 0.2만큼 늦게 시작해 셋째 줄도 appear=1에서 다 떠오른다
+      final t = ((appear - i * 0.2) / 0.6).clamp(0.0, 1.0);
       return Opacity(
         opacity: t,
         child: Transform.translate(

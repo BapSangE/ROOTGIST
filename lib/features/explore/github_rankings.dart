@@ -11,6 +11,7 @@ import '../../design/widgets/rg_pressable.dart';
 import '../../design/widgets/rg_row_head.dart';
 import '../../design/widgets/rg_states.dart';
 import '../home/home_sections.dart';
+import '../common/item_actions.dart';
 import 'date_groups.dart';
 
 // 탐색 「GitHub」 칸(2026-11-10): 「일간 | 주간 | 월간」. 그 기간 안에 생긴 AI 저장소를 별 많은 순으로(worker gh_rankings).
@@ -109,7 +110,7 @@ class _GithubRankingsSectionState extends State<GithubRankingsSection> {
                             ),
                             Expanded(
                               child: KeepAllText(
-                                'GitHub 주제 llm·ai-agents·generative-ai에 속한 저장소만 모았어요. 링크 모음, 거의 빈 저장소, 포크 없이 별만 많은 저장소는 뺐어요. '
+                                '이름·설명·주제에 llm·agent·ai·claude·mcp가 들어간 저장소를 모았어요. 링크 모음, 거의 빈 저장소, 포크 없이 별만 많은 저장소, 광고·치트 저장소는 뺐어요. '
                                 '설명은 AI가 옮긴 것이고, 도구를 검증한 결과가 아니에요.',
                                 perSentence: true,
                                 style: RgText.caption.copyWith(color: RgColors.textSecondary),
@@ -184,6 +185,10 @@ String createdAgo(DateTime created, DateTime now) {
   return '${d.inDays}일 전 생성';
 }
 
+// 저장소 카드 오른쪽 저장 버튼(모델 카드와 같은 원 40). 보관함에서 누르면 GitHub에서 연다(kind repo, id = 주소).
+ItemActions repoActions(GithubRepo r) =>
+    ItemActions(id: r.url, title: r.fullName, url: r.url, source: 'GitHub', kind: 'repo', visualSize: 40);
+
 Future<void> openRepo(GithubRepo r) async {
   HapticFeedback.selectionClick();
   await launchUrl(Uri.parse(r.url), mode: LaunchMode.externalApplication);
@@ -234,15 +239,12 @@ class GithubRepoCard extends StatelessWidget {
                       Expanded(
                         child: Text(r.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.homeTitle),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: RgIcon('arrow-up-right', size: 16, color: RgColors.textTertiary),
-                      ),
+                      repoActions(r),
                     ],
                   ),
                   const SizedBox(height: RgSpace.s4),
                   Text(
-                    [r.owner, ?r.language].join(' · '),
+                    [r.owner, ?r.language, if (r.createdAt != null) createdAgo(r.createdAt!, now)].join(' · '),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: RgText.homeMeta.copyWith(color: RgColors.textSecondary),
@@ -263,7 +265,6 @@ class GithubRepoCard extends StatelessWidget {
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       HomeStat(countKo(r.stars), icon: 'star-filled', label: '별 ${countKo(r.stars)}'),
-                      if (r.createdAt != null) HomeStat(createdAgo(r.createdAt!, now), label: createdAgo(r.createdAt!, now)),
                     ],
                   ),
                 ],
@@ -286,7 +287,10 @@ class GithubRepoStrip extends StatefulWidget {
 }
 
 class _GithubRepoStripState extends State<GithubRepoStrip> {
-  final _req = Reloadable(repository.listGithubRankings);
+  // 받은 순위를 들고 있어 HOT 칸에 다시 들어와도 띠가 바로 보인다(늦게 끼어들며 아래 목록을 밀지 않게).
+  // 처음 받을 때만 220ms 펼침(「동작 줄이기」면 바로).
+  static GithubRankings? _last;
+  final _req = Reloadable(() => repository.listGithubRankings().then((v) => _last = v));
 
   @override
   void dispose() {
@@ -300,11 +304,25 @@ class _GithubRepoStripState extends State<GithubRepoStrip> {
       listenable: _req,
       builder: (context, _) => FutureBuilder(
         future: _req.future,
+        initialData: _last,
         builder: (context, snap) {
-          final periods = snap.data?.periods ?? const {};
+          final d = RgMotion.of(context, RgMotion.base);
+          return AnimatedSize(
+            duration: d,
+            curve: RgMotion.curve,
+            alignment: Alignment.topCenter,
+            child: _strip(snap.data ?? _last),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _strip(GithubRankings? data) {
+          final periods = data?.periods ?? const {};
           final day = periods['day'];
           final (index, p) = day != null && day.repos.isNotEmpty ? (0, day) : (1, periods['week']);
-          if (p == null || p.repos.isEmpty) return const SizedBox.shrink();
+          if (p == null || p.repos.isEmpty) return const SizedBox(width: double.infinity);
           final repos = p.repos.take(5).toList();
           final now = clock();
           return Column(
@@ -346,11 +364,11 @@ class _GithubRepoStripState extends State<GithubRepoStrip> {
               const SizedBox(height: RgSpace.s12),
             ],
           );
-        },
-      ),
-    );
   }
 }
+
+@visibleForTesting
+void resetGithubStrip() => _GithubRepoStripState._last = null;
 
 class _StripCard extends StatelessWidget {
   const _StripCard({required this.repo, required this.now});
@@ -387,12 +405,15 @@ class _StripCard extends StatelessWidget {
                 style: RgText.homeSummary.copyWith(color: RgColors.textBody),
               ),
             ),
-            Wrap(
-              spacing: RgSpace.s6,
-              runSpacing: RgSpace.s6,
+            Row(
+              spacing: RgSpace.s8,
               children: [
                 HomeStat(countKo(r.stars), icon: 'star-filled', label: '별 ${countKo(r.stars)}'),
-                if (r.createdAt != null) HomeStat(createdAgo(r.createdAt!, now), label: createdAgo(r.createdAt!, now)),
+                if (r.createdAt != null)
+                  Flexible(
+                    child: Text(createdAgo(r.createdAt!, now), maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: RgText.homeMeta.copyWith(color: RgColors.textSecondary)),
+                  ),
               ],
             ),
           ],

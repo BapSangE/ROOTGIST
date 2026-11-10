@@ -193,7 +193,7 @@ class _XPerkSectionState extends State<XPerkSection> {
             : HomeSection(
                 key: const ValueKey('perks'),
                 title: '혜택·한도 소식',
-                subtitle: '사용량 초기화·무료 개방 같은 소식을 X에서 먼저 모았어요',
+                subtitle: '사용량 초기화·무료 개방 같은 소식이에요. X에서 30분마다 모아요',
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   spacing: RgSpace.s16,

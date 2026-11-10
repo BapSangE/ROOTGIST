@@ -124,7 +124,7 @@ final Repository repository =
     _supabaseUrl.isEmpty || _supabaseKey.isEmpty ? FixtureRepository() : SupabaseRepository(_supabaseUrl, _supabaseKey);
 
 // 9.4 저장 단위. 보관함은 이 값만으로 그린다(7.7).
-// kind: paper(논문) | news(공식 소식: 발표·업데이트) | model(트렌딩 모델). 예전 저장값은 kind가 없어 paper로 읽는다.
+// kind: paper(논문) | news(공식 소식: 발표·업데이트) | model(트렌딩 모델) | repo(GitHub 저장소, id는 주소라 보관함에서 바깥으로 연다). 예전 저장값은 kind가 없어 paper로 읽는다.
 class Bookmark {
   const Bookmark(this.id, this.title, this.savedAt, {this.source = 'arXiv', this.kind = 'paper'});
   Bookmark.fromJson(Map<String, dynamic> j)

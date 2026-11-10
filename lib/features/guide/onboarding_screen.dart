@@ -32,7 +32,7 @@ const _slides = [
   _Slide('주목받은 논문도\n3줄로', '많이 본 AI 논문을 매일 아침 골라 3줄 요약으로 보여 드려요.', _HomeArt()),
   _Slide('어려운 용어는\n형광펜으로', '형광펜을 누르면 뜻과 예시가 나와요. 논문은 원문과 번역을 문장마다 나란히 봐요.', _ReaderArt()),
   // 새 소식이 언제 오는지 몰라 자꾸 열어 보지 않게 하루 두 번의 시각과 주말에 논문이 비는 이유를 알린다(사용자 요청 2026-11-09)
-  _Slide('하루 두 번,\n새로 모아요', '아침 6시쯤과 오후 3시쯤 새 소식을 모아요. 주말엔 arXiv·Hugging Face에 새 논문이 거의 올라오지 않아, 일·월요일엔 가장 최근 논문을 보여 드려요.', _ScheduleArt()),
+  _Slide('하루 두 번,\n새로 모아요', '아침 6시쯤과 오후 3시쯤 새 소식을 모으고, X 글은 30분마다 받아요. 주말엔 arXiv·Hugging Face에 새 논문이 거의 올라오지 않아, 일·월요일엔 가장 최근 논문을 보여 드려요.', _ScheduleArt()),
 ];
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
@@ -415,7 +415,7 @@ class _Appear extends InheritedWidget {
   bool updateShouldNotify(_Appear old) => old.value != value;
 }
 
-// 수집 일정: 시각 두 줄(넘기는 동안 차례로 떠오른다) + 주말 줄
+// 수집 일정: 시각 세 줄(넘기는 동안 차례로 떠오른다) + 주말 줄
 class _ScheduleArt extends StatelessWidget {
   const _ScheduleArt();
 
@@ -426,7 +426,7 @@ class _ScheduleArt extends StatelessWidget {
     return ExcludeSemantics(
       child: _MiniCard(
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text('매일 두 번', style: RgText.eyebrow.copyWith(color: RgColors.textSecondary)),
+          Text('모으는 시각', style: RgText.eyebrow.copyWith(color: RgColors.textSecondary)),
           const SizedBox(height: RgSpace.s12),
           CollectTimes(appear: appear),
           Padding(

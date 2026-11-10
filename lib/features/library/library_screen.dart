@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/repository.dart';
 import '../../design/tokens.dart';
@@ -93,7 +94,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       onShown: () => _arriving.remove(b.id),
                       child: RgListRow(
                       showDivider: i < list.length - 1,
-                      onTap: () => context.push(b.path),
+                      onTap: () => b.kind == 'repo' // 저장소는 앱 안 화면이 없어 GitHub에서 연다
+                          ? launchUrl(Uri.parse(b.id), mode: LaunchMode.externalApplication)
+                          : context.push(b.path),
                       // 다른 목록과 같은 옅은 원 북마크(저장됨 = 검정 원)
                       trailing: RgBookmarkButton(
                         saved: true,
@@ -185,6 +188,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
 String _kindKo(String kind) => switch (kind) {
   'news' => '공식 소식',
   'model' => '모델',
+  'repo' => '저장소',
   _ => '논문',
 };
 
