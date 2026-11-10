@@ -321,6 +321,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
               setState(() => _paperTopic = topic);
             },
           ),
+        // 어디서 온 글인지(소식·도구 칸과 같은 한 줄)
+        const ExploreSectionNote('Hugging Face 데일리 페이퍼에서 가져온 논문이에요'),
         Padding(
           padding: const EdgeInsets.fromLTRB(
             RgSpace.gutterText,

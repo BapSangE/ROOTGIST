@@ -65,7 +65,7 @@ class _TrendingModelsSectionState extends State<TrendingModelsSection> {
           return ListView(
             padding: const EdgeInsets.only(bottom: RgSpace.bottomScrollInset),
             children: [
-              ExploreSectionNote(_fresh ? 'Hugging Face에 최근 2주 안에 공개된 모델이에요' : 'Hugging Face에서 요즘 주목받는 모델이에요'),
+              ExploreSectionNote(_fresh ? 'Hugging Face에서 가져온, 최근 2주 안에 공개된 모델이에요' : 'Hugging Face 트렌딩에서 가져온 모델이에요'),
               RgFilterSwitch(
                 switchKey: _fresh,
                 child: Column(

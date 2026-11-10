@@ -905,3 +905,36 @@ class XPostsTest(unittest.TestCase):
         self.assertEqual(state["usage"]["2026-11-06"]["posts"], 1)
         self.assertIn("1개", line)
 
+    def test_translate_recent_fills_only_untranslated(self):
+        class FakeDb:
+            patched = {}
+
+            def select(self, table, query):
+                self.query = query
+                return [{"id": "1", "text": "Limits reset"}, {"id": "2", "text": "New model"}]
+
+            def _req(self, method, path, body=None, prefer=None):
+                self.patched[path.split("eq.")[1]] = body
+
+        db = FakeDb()
+        with mock.patch.object(x_posts, "translate_texts", return_value=["한도 초기화", "새 모델"]):
+            line = x_posts.translate_recent(db, "k", self.NOW)
+        self.assertIn("text_ko=is.null", db.query)
+        self.assertEqual(db.patched, {"1": {"text_ko": "한도 초기화"}, "2": {"text_ko": "새 모델"}})
+        self.assertIn("2/2", line)
+
+    def test_collect_run_translates_new_posts(self):
+        # 30분 수집이 끝나면 같은 실행에서 번역도 한다(하루 한 번 배치를 기다리지 않게)
+        env = {"X_BEARER_TOKEN": "t", "SUPABASE_URL": "https://example.test", "SUPABASE_SERVICE_ROLE_KEY": "s"}
+        with mock.patch.object(x_posts, "setting", side_effect=env.get), \
+                mock.patch.object(x_posts, "Db"), \
+                mock.patch.object(x_posts, "load_state", return_value={}), \
+                mock.patch.object(x_posts, "collect", return_value=([], None)), \
+                mock.patch.object(x_posts, "save"), \
+                mock.patch.object(x_posts, "refresh_metrics", return_value="없음"), \
+                mock.patch.object(x_posts, "x_get"), \
+                mock.patch.object(x_posts.llm, "api_key", return_value="k"), \
+                mock.patch.object(x_posts, "translate_recent", return_value="X 글 번역: 새 0/0개") as tr:
+            self.assertEqual(x_posts.main([]), 0)
+        tr.assert_called_once()
+

@@ -52,7 +52,7 @@ class _GithubRankingsSectionState extends State<GithubRankingsSection> {
           return ListView(
             padding: const EdgeInsets.only(bottom: RgSpace.bottomScrollInset),
             children: [
-              const ExploreSectionNote('GitHub에 새로 생긴 AI 저장소를 별 많은 순으로 보여 줘요'),
+              const ExploreSectionNote('GitHub에서 가져온, 새로 생긴 AI 저장소예요. 별 많은 순이에요'),
               ExploreTextFilters(
                 labels: githubPeriodLabels,
                 selected: _period,

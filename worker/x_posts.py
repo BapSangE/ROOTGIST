@@ -310,6 +310,14 @@ def main(argv=None):
             db.upsert("worker_state", [{"key": STATE_KEY, "value": state, "updated_at": _iso(now)}], "key")
         except (XError, RuntimeError) as e:  # 마이그레이션 전(refreshed_at 열 없음)이거나 X 오류
             print(f"반응 다시 받기 실패: {e}")
+    # 새 글 번역(2026-11-10): 하루 한 번(공식 소식 배치)만 옮기면 그사이 들어온 글이 앱에 영어로 하루 가까이 남았다.
+    # 번역 없는 글만 옮기므로 30분마다 몇 개뿐이다. LLM 키가 없거나 실패해도 수집은 성공으로 남기고, 공식 소식 배치가 다시 채운다.
+    key = llm.api_key()
+    if db and key:
+        try:
+            print(translate_recent(db, key, now))
+        except Exception as e:
+            print(f"X 글 번역 실패: {e!r}")
     perks = [r for r in rows if r["perk"]]
     print(f"새 글 {len(rows)}개, 혜택·한도 낱말 {len(perks)}개")
     for r in perks:

@@ -437,12 +437,15 @@ void main() {
     router.go('/explore');
     await settle(tester);
     expect(find.text('지난 논문'), findsOneWidget);
+    expect(find.text(keepAll('Hugging Face 데일리 페이퍼에서 가져온 논문이에요')), findsOneWidget);
 
     // 왼쪽으로 밀면 공식 소식
     await tester.fling(find.byType(PageView), const Offset(-300, 0), 1000);
     await slide(tester); // 칸 넘김 애니메이션
     await settle(tester);
     await openDates(tester);
+    // 칸마다 어디서 가져온 글인지 한 줄
+    expect(find.text(keepAll('각 회사 공식 블로그에서 가져온 발표예요')), findsOneWidget);
     // 발표 목록은 출처 칩 → 제목 → 한국 날짜(UTC 17시는 KST 다음 날).
     expect(find.byWidgetPredicate((w) => w is RgChip && w.label == 'OpenAI'), findsWidgets);
     expect(find.text('10월 18일'), findsWidgets);
@@ -1243,7 +1246,7 @@ void main() {
     await settle(tester);
     await tester.tap(find.descendant(of: find.byType(ExploreSectionTabs), matching: find.text('커뮤니티')));
     await settle(tester);
-    expect(find.text(keepAll('개발자들이 Hacker News·X에서 많이 본 글이에요. 공식 발표가 아니에요')), findsOneWidget);
+    expect(find.text(keepAll('Hacker News·X에서 가져온 개발자들의 글이에요. 공식 발표가 아니에요')), findsOneWidget);
     // 칩은 Hacker News와 X. 저장소는 도구 › GitHub에만
     Finder filter(String label) => find.descendant(of: find.byType(ExploreTextFilters), matching: find.text(label));
     expect(filter('GitHub'), findsNothing);

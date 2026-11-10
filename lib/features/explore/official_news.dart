@@ -149,9 +149,9 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
           padding: const EdgeInsets.only(bottom: RgSpace.bottomScrollInset),
           children: [
             ExploreSectionNote(switch (_tab) {
-              0 => '회사가 직접 올린 공식 발표예요',
-              1 => 'SDK·개발 도구의 새 버전 소식이에요',
-              _ => '개발자들이 Hacker News·X에서 많이 본 글이에요. 공식 발표가 아니에요',
+              0 => '각 회사 공식 블로그에서 가져온 발표예요',
+              1 => 'GitHub 릴리스·공식 변경 기록에서 가져온 새 버전 소식이에요',
+              _ => 'Hacker News·X에서 가져온 개발자들의 글이에요. 공식 발표가 아니에요',
             }),
             ...switch (snap) {
               AsyncSnapshot(hasError: true) => [
