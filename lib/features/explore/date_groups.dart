@@ -111,7 +111,7 @@ class DateGroups<T> extends StatefulWidget {
   final Widget Function(BuildContext context, List<T> rows)
   builder; // 한 묶음의 보이는 행들 → 카드(들)
   final int fold; // 펼친 하루에서 처음 보이는 개수. 1개만 남으면 접지 않는다
-  final bool showDayHeaders; // 간결한 카드 목록에서도 지난 주·달 펼침 동작은 유지한다
+  final bool showDayHeaders; // 탐색 칸은 모두 켠다(2026-11-10: 머리를 숨기면 「N건 더 보기」 아래 전날 글이 같은 날처럼 이어져 보였다)
 
   @override
   State<DateGroups<T>> createState() => _DateGroupsState<T>();

@@ -130,3 +130,20 @@ it("keeps multi-part identifiers scoped to models and rejects unknown or malform
       readResource(fixtureSnapshot(), path, new URLSearchParams()),
     ).toThrow("항목이 없거나 목록이 변경되었습니다.");
 });
+it("candidate tab hides one-off candidates by default, counts them, and orders by how often they appear", () => {
+  const snapshot = fixtureSnapshot();
+  const base = snapshot.candidates[0];
+  snapshot.candidates.push(
+    { ...base, normalized_form: "one off phrase", surface_form: "one off phrase", seen_count: 1, sense_id: null },
+  );
+  const repeat = listTerms(snapshot, new URLSearchParams("type=candidate&filter=all"));
+  expect(repeat.rows.some((r) => r.term === "one off phrase")).toBe(false);
+  expect(repeat.once_hidden).toBe(1);
+  const counts = repeat.rows.map((r) => r.seen_count ?? 0);
+  expect(counts).toEqual([...counts].sort((a, b) => b - a));
+  const all = listTerms(snapshot, new URLSearchParams("type=candidate&filter=all&seen=all"));
+  expect(all.rows.some((r) => r.term === "one off phrase")).toBe(true);
+  expect(all.once_hidden).toBe(0);
+  // 다른 칸에는 영향 없음
+  expect(listTerms(snapshot, new URLSearchParams("type=sense")).once_hidden).toBe(0);
+});

@@ -63,6 +63,7 @@ MODEL_TASKS = {"text-generation", "image-text-to-text", "text-to-image", "image-
                "text-to-speech", "automatic-speech-recognition", "any-to-any", "feature-extraction", "sentence-similarity"}
 MODEL_BLOCK = re.compile(r"uncensor|nsfw|abliterat|erotic|porn|lewd|hentai|nude|18\+", re.I)
 CARD_CHARS = 20000
+CARD_VERSION = 2  # 2: 평가 항목마다 무엇을 재는지(about)·높을수록 좋은지(higher_better)(2026-11-10)
 
 # OpenAI 피드에는 회사 소식·사례·정책 글이 섞여 있다. 개발 소식에 가까운 분류만.
 OPENAI_CATEGORIES = {"Research", "Product", "Safety", "Safety & Alignment", "Publication"}
@@ -501,6 +502,24 @@ def from_anthropic(seen: dict) -> list[dict]:
 
 # 실행 사이에 남기는 상태(anthropic_seen·digest_cache). DB가 있으면 worker_state 테이블, 없으면 worker/out 파일.
 # GitHub Actions는 매번 빈 머신이라 파일만으로는 첫 실행(40분대)을 매일 되풀이한다.
+X_TERM_DAYS = 3  # 용어 후보를 뽑을 X 글: 최근 며칠 안에 올라와 번역된 것
+
+
+def extra_term_texts(db, rank_rows: list[dict], now: datetime) -> list[dict]:
+    """소식·모델 글 말고도 용어 후보를 뽑을 한국어 글: 번역된 X 글, GitHub 순위 저장소의 한국어 설명.
+    id 앞에 출처(x:, gh:)를 붙여 소식 id와 섞이지 않게 한다(이미 물어본 글은 news_terms_seen에 남는다)."""
+    out = []
+    since = (now - timedelta(days=X_TERM_DAYS)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    try:
+        posts = db.select_all("x_posts", f"text_ko=not.is.null&posted_at=gte.{since}&select=id,text_ko&order=posted_at.desc")
+    except Exception:  # x_posts 테이블이 없는 환경
+        posts = []
+    out += [{"id": f"x:{p['id']}", "summary_ko": p["text_ko"]} for p in posts if (p.get("text_ko") or "").strip()]
+    repos = {r["full_name"]: r.get("description_ko") for r in rank_rows if (r.get("description_ko") or "").strip()}
+    out += [{"id": f"gh:{name}", "summary_ko": ko} for name, ko in repos.items()]
+    return out
+
+
 def load_state(db, key: str, path: Path) -> dict:
     if db:
         rows = db.select("worker_state", f"key=eq.{key}&select=value")
@@ -908,10 +927,15 @@ def from_hf_trending(now: datetime | None = None) -> list[dict]:
 
 
 CARD_SYSTEM = (
-    "You read a Hugging Face model card and report, in Korean, only what the model's makers claim in it. Do not guess or use outside knowledge. "
-    "Return only a JSON object: {\"strengths\": [\"...\"], \"benchmarks\": [{\"name\": \"...\", \"score\": \"...\"}], \"limitation\": \"...\" or null}. "
+    "You read a Hugging Face model card and report, in Korean, only what the model's makers claim in it. Do not guess or use outside knowledge (the only exception is a benchmark's \"about\", below). "
+    "Return only a JSON object: {\"strengths\": [\"...\"], \"benchmarks\": [{\"name\": \"...\", \"score\": \"...\", \"about\": \"...\" or null, \"higher_better\": true, false or null}], \"limitation\": \"...\" or null}. "
     "strengths: up to 3 short Korean sentences on what the makers say the model is for or good at. "
     "benchmarks: up to 4 benchmark results the makers report for this model, name exactly as written and score as written (e.g. \"74.2%\"). "
+    "Each benchmark also has \"about\": one short Korean noun phrase saying what it measures (e.g. \"실제 GitHub 이슈를 고치는 코딩 능력\", "
+    "\"여러 단계 지시를 정확히 따르는 능력\", \"음성을 글로 옮길 때 틀린 낱말 비율\"). Write it only when the card explains the benchmark "
+    "or it is a well-known public benchmark you are sure about; otherwise null. Never guess from the name alone. "
+    "And \"higher_better\": true if a higher score is better (accuracy, pass rate), false if lower is better (error rate, latency, loss), "
+    "null if unclear. "
     "limitation: one Korean sentence on a limitation the makers state, or null. Use empty lists when the card says nothing."
 ) + HAEYO
 
@@ -925,7 +949,9 @@ def summarize_card(card: str, api_key: str, log) -> dict | None:
         st, bm, lim = out.get("strengths"), out.get("benchmarks"), out.get("limitation")
         ok = (isinstance(st, list) and len(st) <= 3 and all(isinstance(x, str) for x in st)
               and isinstance(bm, list) and len(bm) <= 4
-              and all(isinstance(b, dict) and isinstance(b.get("name"), str) and isinstance(b.get("score"), str) for b in bm)
+              and all(isinstance(b, dict) and isinstance(b.get("name"), str) and isinstance(b.get("score"), str)
+                      and (b.get("about") is None or (isinstance(b["about"], str) and len(b["about"]) <= 60))
+                      and b.get("higher_better") in (None, True, False) for b in bm)
               and (lim is None or isinstance(lim, str)))
         if not ok:
             return ["card_shape"]
@@ -935,8 +961,17 @@ def summarize_card(card: str, api_key: str, log) -> dict | None:
     if not out:
         return None
     # 점수는 카드 원문에 그대로 있어야 한다(지어낸 숫자를 막는다)
-    out["benchmarks"] = [b for b in out["benchmarks"] if b["score"].strip() and b["score"].strip() in card]
+    out["benchmarks"] = [{"name": b["name"], "score": b["score"], "about": clean_about(b.get("about")),
+                          "higher_better": b.get("higher_better")}
+                         for b in out["benchmarks"] if b["score"].strip() and b["score"].strip() in card]
     return out
+
+
+def clean_about(about) -> str | None:
+    """평가 항목 풀이: 빈 값·영어만인 풀이는 버리고, 끝 마침표를 뗀다(앱은 이름 아래 작은 줄로 보인다)."""
+    if not isinstance(about, str) or not re.search(r"[가-힣]", about):
+        return None
+    return about.strip().rstrip(".") or None
 
 
 def main(argv=None):
@@ -1080,7 +1115,8 @@ def main(argv=None):
 
     def digest_model(m):
         hit = cache.get(m["url"])
-        if hit and hit["card"] and not_haeyo(hit["card"]["strengths"] + [hit["card"].get("limitation")]):
+        if hit and hit["card"] and (not_haeyo(hit["card"]["strengths"] + [hit["card"].get("limitation")])
+                                    or hit.get("cv") != CARD_VERSION):  # 평가 항목 풀이가 없던 카드는 다시 정리
             hit = None
         if hit:
             m["card"] = hit["card"]
@@ -1108,7 +1144,7 @@ def main(argv=None):
             cache[r["title_en"]] = {"key_points": r["key_points"], "v": STYLE_VERSION}
     for m in models:
         if m["card"] is not None:
-            cache[m["url"]] = {"card": m["card"]}
+            cache[m["url"]] = {"card": m["card"], "cv": CARD_VERSION}
     # 순위 저장소 설명: 한 번 옮긴 설명은 캐시에서(설명이 바뀌면 다시). 여러 기간에 같은 저장소가 나와도 한 번만
     repos = {x["url"]: x for v in ranks.values() for x in v["repos"]}
     for x in repos.values():
@@ -1167,7 +1203,7 @@ def main(argv=None):
         if key:
             seen = load_state(db, "news_terms_seen", NEWS_TERMS_SEEN)
             try:
-                added = glossary.news_candidates(db, items + models, key, seen, report.append)
+                added = glossary.news_candidates(db, items + models + extra_term_texts(db, rank_rows, now), key, seen, report.append)
                 report.append(f"용어 후보: 새 글 기준 {added}개 추가(검토 대기)")
             except Exception as e:
                 report.append(f"용어 후보: 실패 {e!r}")

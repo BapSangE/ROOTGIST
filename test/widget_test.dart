@@ -29,6 +29,7 @@ import 'package:rootgist/design/widgets/rg_segmented.dart';
 import 'package:flutter/semantics.dart';
 import 'package:rootgist/features/explore/explore_screen.dart';
 import 'package:rootgist/features/explore/official_news.dart';
+import 'package:rootgist/features/explore/benchmark_sheet.dart';
 import 'package:rootgist/features/explore/date_groups.dart';
 import 'package:rootgist/features/explore/github_rankings.dart';
 import 'package:rootgist/features/explore/trending_models.dart';
@@ -536,8 +537,14 @@ void main() {
         tester.getTopLeft(find.text(keepAll(v))).dy,
     ];
     expect(tops.toSet().length, 1, reason: '$tops');
-    expect(find.text('SWE-bench Verified'), findsOneWidget);
+    expect(find.textContaining('SWE-bench Verified', findRichText: true), findsOneWidget); // 풀이가 있어 누를 수 있는 줄(이름 + 정보 표시)
     expect(find.text(keepAll('12.3%')), findsOneWidget);
+    await tester.tap(find.textContaining('SWE-bench Verified', findRichText: true));
+    await settle(tester);
+    expect(find.text('무엇을 재나요'), findsOneWidget);
+    expect(find.text(keepAll('높을수록 좋아요.')), findsOneWidget);
+    await tester.tapAt(const Offset(20, 40)); // 시트 바깥을 눌러 닫기
+    await settle(tester);
     router.pop();
     await settle(tester);
 
@@ -1459,6 +1466,23 @@ void main() {
     expect((await repo.listOfficialNews()).single.id, 'abc');
   });
 
+  testWidgets('모델 평가 항목: 앱 풀이 먼저, 없으면 수집기 풀이, 시트에 무엇을 재는지·점수 읽는 법', (tester) async {
+    final swe = Benchmark.fromJson({'name': 'SWE-bench Verified', 'score': '74.2%', 'about': '다른 풀이', 'higher_better': null});
+    expect(swe.about, '실제 GitHub 이슈를 고치는 코딩 능력'); // 검수한 앱 풀이가 이긴다
+    expect(swe.higherBetter, true);
+    final wer = Benchmark.fromJson({'name': 'WER', 'score': '4.2%', 'about': '음성을 글로 옮길 때 틀린 낱말 비율', 'higher_better': false});
+    final bare = Benchmark.fromJson({'name': 'flow loss', 'score': '0.12'}); // 예전 카드: 풀이 없음
+    expect((bare.about, bare.higherBetter), (null, null));
+    await tester.pumpWidget(MaterialApp(
+      home: Builder(builder: (context) => TextButton(onPressed: () => showBenchmarkSheet(context, wer, model: 'Mira'), child: const Text('열기'))),
+    ));
+    await tester.tap(find.text('열기'));
+    await tester.pumpAndSettle();
+    expect(find.text('WER'), findsOneWidget);
+    expect(find.text(keepAll('음성을 글로 옮길 때 틀린 낱말 비율')), findsOneWidget);
+    expect(find.text(keepAll('낮을수록 좋아요.')), findsOneWidget);
+  });
+
   testWidgets('C02: 약어는 정식 명칭 한 줄, 원어와 같은 대응어는 숨김', (tester) async {
     final slam = GlossaryTerm.fromJson({
       'term': 'SLAM', 'definition_ko': '가상 정의.', 'sentence_ids': ['A01'], 'highlight': true,
@@ -1861,7 +1885,7 @@ void main() {
     expect(find.text('example-video'), findsNothing);
     expect(find.text('example-coder'), findsNothing); // 10월 15일 공개 → 14일 지남
     expect(find.text('example-lab · 17억 파라미터 텍스트 생성 모델'), findsOneWidget);
-    expect(find.text('10월 27일'), findsOneWidget); // 공개일은 한국 날짜로 표시한다.
+    expect(find.text('10월 27일'), findsNWidgets(2)); // 공개일은 한국 날짜로: 날짜 머리 + 카드
     final entered = find.byWidgetPredicate((w) => w is RgNewLabel && w.visible && w.label == '새로 진입');
     expect(entered, findsOneWidget); // 글자 대신 점, 화면 읽기에는 「새로 진입」
     await tester.tap(find.text('example-tiny'));

@@ -492,6 +492,28 @@ def plan_news_terms(out: dict, texts: dict[str, str], skip: set[str], skip_ko: s
     return found
 
 
+def plan_news_repeats(out: dict, texts: dict[str, str], pending: dict[str, dict]) -> dict[str, int]:
+    """이미 있는 소식 후보(검토 대기)가 새 글에 또 나왔는지 → {정규화 표기: 새로 나온 글 수}.
+    관리자 웹은 두 번 이상 나온 후보만 먼저 보여 주므로, 다시 나올 때마다 세지 않으면 소식 후보는 영영 1에 머문다.
+    영문 표기가 같거나, 한국어 표기가 같고 그 표기가 글에 실제로 있으면 같은 후보다. 한 글에서는 한 번만 센다."""
+    forms = {v: n for n in pending for v in variants(n)}
+    by_ko = {_strip_paren(k): n for n, c in pending.items() for k in (c.get("canonical_ko"), c.get("canonical_ko_draft")) if k}
+    counts: dict[str, int] = defaultdict(int)
+    for item in out.get("items") or []:
+        text = texts.get(item.get("id"), "")
+        hit = set()
+        for t in (item.get("terms") or [])[:NEWS_TERMS_PER_ITEM]:
+            ko = _strip_paren(t["ko"].strip())
+            n = next((forms[v] for v in variants(t["term"]) if v in forms), None)
+            if n is None and ko in by_ko and find_term(text, ko) >= 0:
+                n = by_ko[ko]
+            if n:
+                hit.add(n)
+        for n in hit:
+            counts[n] += 1
+    return dict(counts)
+
+
 def news_candidates(db: Db, contents: list[dict], api_key: str, seen: dict, log=print) -> int:
     """새 소식·모델 글에서 용어 후보를 뽑아 term_candidates에 넣는다(검토 대기). seen = 이미 본 글 id(다시 묻지 않는다).
     이미 앱에 보이는 사전 의미의 표기나 있는 후보(승인·반려 포함)는 건너뛴다. 검수한 후보는 건드리지 않는다."""
@@ -506,8 +528,13 @@ def news_candidates(db: Db, contents: list[dict], api_key: str, seen: dict, log=
     shown = {s["sense_id"] for s in senses if _shown(s, flag)}
     skip = {v for a in db.select_all("term_aliases", "select=sense_id,surface_form&order=alias_id")
             if a["sense_id"] in shown for v in variants(a["surface_form"])}
-    cands = db.select_all("term_candidates", "select=normalized_form,canonical_ko,canonical_ko_draft&order=normalized_form")
+    cands = db.select_all("term_candidates", "select=normalized_form,canonical_ko,canonical_ko_draft,review_status,source,sense_id,seen_count"
+                                             "&order=normalized_form")
     skip |= {c["normalized_form"] for c in cands}
+    # 다시 나오면 횟수를 올릴 후보: 소식에서 온 검토 대기 후보만(논문 후보의 횟수는 sync가 논문 용어로 다시 센다)
+    pending = {c["normalized_form"]: c for c in cands
+               if c.get("review_status") == "pending" and c.get("source") == "news" and not c.get("sense_id")}
+    repeats: dict[str, int] = defaultdict(int)
     skip_ko = {_strip_paren(k) for c in cands for k in (c.get("canonical_ko"), c.get("canonical_ko_draft")) if k}
     skip_ko |= {_strip_paren(s["canonical_ko"]) for s in senses if s["sense_id"] in shown and s.get("canonical_ko")}
     ids, added = list(texts), {}
@@ -522,12 +549,18 @@ def news_candidates(db: Db, contents: list[dict], api_key: str, seen: dict, log=
             continue
         for n, row in plan_news_terms(out, texts, skip | set(added), skip_ko | {r["canonical_ko_draft"] for r in added.values()}).items():
             added[n] = {**row, "draft_model": model}
+        for n, k in plan_news_repeats(out, texts, pending).items():
+            repeats[n] += k
         for k, _ in batch:
             seen[k] = True
     now = datetime.now(timezone.utc).isoformat()
     # 새 표기만 넣는다(있는 후보는 위에서 건너뛰었다). 같은 밤에 논문 쪽이 먼저 같은 후보를 만들었으면 그대로 둔다.
     if added:
         db.insert_ignore("term_candidates", [{**r, "last_seen_at": now} for r in added.values()], "normalized_form")
+    for n, k in repeats.items():
+        db.update("term_candidates", {"seen_count": (pending[n].get("seen_count") or 1) + k, "last_seen_at": now}, normalized_form=n)
+    if repeats:
+        log(f"  소식 후보 다시 나옴: {len(repeats)}개 횟수 올림")
     return len(added)
 
 

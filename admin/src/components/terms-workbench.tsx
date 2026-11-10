@@ -26,7 +26,7 @@ import {
   ScrollList,
 } from "./shared";
 
-type TermList = PageResult<TermRow> & Envelope;
+type TermList = PageResult<TermRow> & Envelope & { once_hidden?: number };
 type Changes = Record<string, string | null>;
 export function TermsWorkbench() {
   const fixture = useAdminFixture();
@@ -996,6 +996,15 @@ function Queue({
             <option value="all">전체</option>
           </select>
         </label>
+        {type === "candidate" && (
+          <SeenNote
+            all={params.get("seen") === "all"}
+            hidden={list.data?.once_hidden ?? 0}
+            onToggle={(all) =>
+              onNavigate({ seen: all ? "all" : null, id: null, paper: null, sentence: null })
+            }
+          />
+        )}
       </div>
       <ScrollList ready={!!list.data}>
         {list.loading || list.error ? (
@@ -1010,7 +1019,9 @@ function Queue({
               params.get("query")
                 ? "검색 결과가 없어요"
                 : (params.get("filter") ?? "pending") === "pending"
-                  ? "모두 검수했어요"
+                  ? type === "candidate" && params.get("seen") !== "all"
+                    ? "여러 번 나온 후보는 모두 검수했어요"
+                    : "모두 검수했어요"
                   : "해당하는 항목이 없어요"
             }
           />
@@ -1032,7 +1043,7 @@ function Queue({
                 {row.risk_count > 0 && <span className="risk-dot" />}
                 {row.risk_labels[0] ??
                   (row.type === "candidate"
-                    ? "후보 · AI 제안"
+                    ? `후보 · ${row.seen_count ?? 1}번 나옴 · AI 제안`
                     : "의미 검토 대상")}
                 {row.risk_count > 1 ? ` 외 ${row.risk_count - 1}건` : ""}
               </span>
@@ -1322,5 +1333,30 @@ function AliasEditor({
             : "승인돼 사전에 들어간 의미에서 별칭을 더할 수 있어요.")}
       </span>
     </section>
+  );
+}
+
+// 후보 칸: 기본은 두 번 이상 나온 후보만. 한 번만 나온 후보는 접어 두고 수만 알려 준다.
+function SeenNote({
+  all,
+  hidden,
+  onToggle,
+}: {
+  all: boolean;
+  hidden: number;
+  onToggle: (all: boolean) => void;
+}) {
+  if (!all && hidden === 0) return null;
+  return (
+    <p className="seen-note" role="status">
+      <span>
+        {all
+          ? "한 번만 나온 후보도 함께 보고 있어요"
+          : `한 번만 나온 후보 ${hidden.toLocaleString("ko-KR")}개는 접어 뒀어요`}
+      </span>
+      <button className="text-button" onClick={() => onToggle(!all)}>
+        {all ? "여러 번 나온 것만" : "모두 보기"}
+      </button>
+    </p>
   );
 }

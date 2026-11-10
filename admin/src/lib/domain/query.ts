@@ -12,7 +12,7 @@ export function patchReviewQuery(
   const next = new URLSearchParams(current);
   if (
     Object.keys(changes).some((k) =>
-      ["query", "type", "filter", "tab", "source", "kind"].includes(k),
+      ["query", "type", "filter", "tab", "source", "kind", "seen"].includes(k),
     )
   )
     next.delete("cursor");

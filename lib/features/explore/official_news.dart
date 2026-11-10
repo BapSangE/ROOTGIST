@@ -235,7 +235,6 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
           at: (n) => n.publishedAt,
           tag: (n) => n.sourceLabel,
           now: now,
-          showDayHeaders: !_updates,
           builder: (context, rows) => Padding(
             padding: const EdgeInsets.symmetric(horizontal: RgSpace.gutterText),
             child: Column(
@@ -341,7 +340,6 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
                 at: (o) => o is XPost ? o.postedAt : (o as OfficialNews).publishedAt,
                 tag: (o) => o is XPost ? 'X' : (o as OfficialNews).sourceLabel,
                 now: now,
-                showDayHeaders: false,
                 builder: (context, rows) => Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: RgSpace.gutterText,
@@ -374,7 +372,7 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
             ),
             Expanded(
               child: KeepAllText(
-                '각 사이트·계정에 올라온 글이에요. 숫자는 Hacker News 추천(upvote)·댓글 수와 X 좋아요 수예요. 새 저장소 순위는 도구 › GitHub에 있어요. X 글은 30분마다 모으고, 원문과 함께 AI 번역(하루 두 번)을 보여 줘요. 누르면 X에서 열려요.',
+                '각 사이트·계정에 올라온 글이에요. 숫자는 Hacker News 추천(upvote)·댓글 수와 X 좋아요 수예요. 새 저장소 순위는 도구 › GitHub에 있어요. X 글은 30분마다 모으고, 받을 때 바로 옮긴 AI 번역을 원문과 함께 보여 줘요. 누르면 X에서 열려요.',
                 perSentence: true,
                 style: RgText.caption.copyWith(color: RgColors.textSecondary),
               ),

@@ -253,6 +253,38 @@ class NewsTermsTest(unittest.TestCase):
         got = plan_news_terms(out, texts, set(), {"화자 분리"})  # 화자 분리는 이미 있는 후보의 표기
         self.assertEqual({n: r["seen_count"] for n, r in got.items()}, {"tool call": 2, "context window": 1})
 
+    def test_news_candidate_seen_again_counts_up(self):
+        from . import glossary
+        updated = []
+
+        class FakeDb:
+            def select(self, table, q):
+                return [{"value": "true"}] if table == "app_config" else []
+
+            def select_all(self, table, q):
+                if table == "term_candidates":
+                    return [{"normalized_form": "speaker diarization", "canonical_ko_draft": "화자 분리", "review_status": "pending",
+                             "source": "news", "sense_id": None, "seen_count": 1},
+                            {"normalized_form": "rubric", "canonical_ko_draft": "루브릭", "review_status": "pending",
+                             "source": "paper", "sense_id": None, "seen_count": 1}]
+                return []
+
+            def insert_ignore(self, *a): pass
+
+            def update(self, table, row, **k):
+                updated.append((k["normalized_form"], row["seen_count"]))
+
+        texts = [{"id": "x:1", "summary_ko": "화자 분리가 빨라졌어요. 루브릭으로 평가해요."},
+                 {"id": "gh:a/b", "summary_ko": "화자 분리 도구"}]
+        t = lambda term, ko: {"term": term, "ko": ko, "definition_ko": "d"}
+        reply = {"items": [{"id": "x:1", "terms": [t("diarization", "화자 분리"), t("rubric", "루브릭")]},
+                           {"id": "gh:a/b", "terms": [t("speaker diarization", "화자 분리")]}]}
+        with mock.patch.object(llm, "stream_chat", return_value={"content": json.dumps(reply, ensure_ascii=False), "finish_reason": "stop"}):
+            n = glossary.news_candidates(FakeDb(), texts, "k", {}, lambda m: None)
+        self.assertEqual(n, 0)
+        # 한국어 표기로도, 영문 표기로도 같은 후보 → 글 2곳. 논문 후보(rubric)는 sync가 세니 건드리지 않는다
+        self.assertEqual(updated, [("speaker diarization", 3)])
+
     def test_sync_keeps_news_candidates(self):
         from . import glossary
         deleted = []
@@ -776,6 +808,27 @@ class OfficialNewsTest(unittest.TestCase):
             out = official_news.summarize_card(card, "k", lambda e: None)
         self.assertEqual([b["score"] for b in out["benchmarks"]], ["74.2%"])  # 카드에 없는 점수는 버린다
 
+    def test_card_benchmarks_carry_about_and_direction(self):
+        card = "IFEval 88.1. WER 4.2% on our test set."
+        reply = {"strengths": ["지시를 잘 따라요."], "benchmarks": [
+            {"name": "IFEval", "score": "88.1", "about": "여러 단계 지시를 정확히 따르는 능력.", "higher_better": True},
+            {"name": "WER", "score": "4.2%", "about": "word error rate", "higher_better": False},
+            {"name": "Internal", "score": "4.2%"}], "limitation": None}
+        with mock.patch.object(llm, "stream_chat", return_value={"content": json.dumps(reply, ensure_ascii=False), "finish_reason": "stop"}):
+            out = official_news.summarize_card(card, "k", lambda e: None)
+        self.assertEqual([(b["about"], b["higher_better"]) for b in out["benchmarks"]],
+                         [("여러 단계 지시를 정확히 따르는 능력", True), (None, False), (None, None)])  # 영어만인 풀이·없는 풀이는 null
+
+    def test_extra_term_texts_from_x_and_github(self):
+        class FakeDb:
+            def select_all(self, table, q):
+                assert table == "x_posts" and "text_ko=not.is.null" in q
+                return [{"id": "1", "text_ko": "투기적 디코딩을 켰어요."}, {"id": "2", "text_ko": "  "}]
+        rows = [{"full_name": "a/b", "description_ko": "에이전트용 MCP 서버"}, {"full_name": "a/b", "description_ko": "에이전트용 MCP 서버"},
+                {"full_name": "c/d", "description_ko": None}]
+        got = official_news.extra_term_texts(FakeDb(), rows, official_news.datetime(2026, 11, 10, tzinfo=official_news.timezone.utc))
+        self.assertEqual([g["id"] for g in got], ["x:1", "gh:a/b"])  # 빈 번역·설명 없는 저장소는 빼고, 여러 기간의 같은 저장소는 한 번
+
     def test_date_without_timezone_is_utc(self):
         self.assertEqual(official_news._date("2026-10-22").tzinfo, official_news.timezone.utc)
 
@@ -872,6 +925,12 @@ class XPostsTest(unittest.TestCase):
                                    {"expanded_url": "https://toy.example/blog/post"}]}}
         row = x_posts.to_row(t, {"username": "ToyDev", "name": "Toy Dev"}, 3, self.NOW)
         self.assertEqual(row["links"], ["https://toy.example/blog/post"])
+
+    def test_html_entities_in_x_text_are_unescaped(self):
+        # X API는 <·>·&를 엔티티로 보낸다(@simonw 「&lt;details&gt;」, 인용 「&gt; …」)
+        t = {"id": "8", "text": "Hide it in &lt;details&gt;\n\n&gt; quote &amp; more", "created_at": "2026-11-06T10:00:00.000Z"}
+        row = x_posts.to_row(t, {"username": "ToyDev", "name": "Toy Dev"}, 3, self.NOW)
+        self.assertEqual(row["text"], "Hide it in <details>\n\n> quote & more")
 
     def test_refresh_metrics_once_and_drops_deleted(self):
         class FakeDb:

@@ -12,7 +12,7 @@ import '../../design/widgets/rg_pressable.dart';
 // 수집 일정 안내: 온보딩 마지막 장, 홈 위 「다음 수집」 알약, 그 알약이 여는 시트가 같은 문구를 쓴다.
 // 실제 일정(.github/workflows, supabase/migrations/20261103090000_cron_dispatch.sql):
 //   KST 05:00 daily-batch(논문 → 공식 소식·화제·모델), KST 14:17 official-news(공식 소식·화제·모델),
-//   매시 7분·37분 x-posts(X 계정 새 글, .github/workflows/x-posts.yml). X 글 번역은 하루 두 번 소식 배치 때 붙는다.
+//   매시 7분·37분 x-posts(X 계정 새 글, .github/workflows/x-posts.yml). X 글 번역도 그 실행에서 바로 붙는다(2026-11-10, 소식 배치는 빠진 것만 다시 채운다).
 // 요약까지 끝나 화면에 보이는 건 그보다 30분~1시간 뒤라 「아침 6시쯤·오후 3시쯤」으로 안내한다(설정 › 사용 방법 문답과 같게).
 // 일·월요일 다이제스트는 HF 토·일요일분이라 늘 비어 있다(실데이터 2026-10-25~11-09 일·월 0편, 화~토 10편).
 
@@ -133,7 +133,7 @@ class CollectTimes extends StatelessWidget {
   static const rows = [
     ('아침 6시쯤', '논문 · 공식 소식 · 개발자 화제 · 모델'),
     ('오후 3시쯤', '공식 소식 · 개발자 화제 · 모델'),
-    ('30분마다', 'X 글 · 혜택·한도 소식(번역은 하루 두 번 붙어요)'),
+    ('30분마다', 'X 글 · 혜택·한도 소식(바로 번역해요)'),
   ];
 
   @override

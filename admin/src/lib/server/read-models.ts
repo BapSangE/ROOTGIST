@@ -185,18 +185,15 @@ export function termRows(s: Snapshot): TermRow[] {
   return rows.sort(
     (a, b) =>
       (b.risk_count > 0 ? 1 : 0) - (a.risk_count > 0 ? 1 : 0) ||
-      ({ deferred: 0, pending: 1, unreviewed: 1, approved: 2, checked: 2, rejected: 3 }[
-        a.status
-      ] ?? 4) -
-        ({ deferred: 0, pending: 1, unreviewed: 1, approved: 2, checked: 2, rejected: 3 }[
-          b.status
-        ] ?? 4) ||
+      statusRank(a.status) - statusRank(b.status) ||
       // 같은 상태 안에서는 앱에 많이 나오는 용어 먼저(논문 수 → 등장 횟수)
       b.paper_count - a.paper_count ||
       (b.seen_count ?? 0) - (a.seen_count ?? 0) ||
       a.id.localeCompare(b.id),
   );
 }
+const statusRank = (status: string) =>
+  ({ deferred: 0, pending: 1, unreviewed: 1, approved: 2, checked: 2, rejected: 3 })[status] ?? 4;
 export function listTerms(s: Snapshot, params: URLSearchParams) {
   const query = params.get("query")?.trim().toLowerCase() ?? "";
   if (query.length > 120) invalid("검색어는 120자 이하로 입력해 주세요.");
@@ -211,7 +208,13 @@ export function listTerms(s: Snapshot, params: URLSearchParams) {
     )
   )
     invalid("올바른 필터를 선택해 주세요.");
-  const rows = termRows(s).filter(
+  // 후보는 기본으로 두 번 이상 나온 것만: 한 번만 나온 후보는 대부분 그 논문만의 표현이고,
+  // 승인 없이도 그 논문 안에서는 형광펜·뜻 풀이가 나온다. seen=all이면 모두.
+  const seen = params.get("seen");
+  if (seen && !["repeat", "all"].includes(seen))
+    invalid("올바른 등장 횟수 범위를 선택해 주세요.");
+  const repeatOnly = type === "candidate" && seen !== "all";
+  const matched = termRows(s).filter(
     (r) =>
       (!type || type === "all" || r.type === type) &&
       (!query ||
@@ -226,7 +229,22 @@ export function listTerms(s: Snapshot, params: URLSearchParams) {
               ? ["approved", "checked"].includes(r.status)
               : r.status === status)),
   );
-  return { ...envelope(s), ...paginate(rows, params) };
+  const rows = repeatOnly ? matched.filter((r) => (r.seen_count ?? 0) >= 2) : matched;
+  // 후보 칸은 많이 나온 순(상태 순서는 그대로 두고 그 안에서)
+  if (type === "candidate")
+    rows.sort(
+      (a, b) =>
+        statusRank(a.status) - statusRank(b.status) ||
+        (b.seen_count ?? 0) - (a.seen_count ?? 0) ||
+        b.paper_count - a.paper_count ||
+        a.id.localeCompare(b.id),
+    );
+  return {
+    ...envelope(s),
+    ...paginate(rows, params),
+    // 접어 둔 「한 번만 나온 후보」 수(같은 검색·상태 조건에서)
+    once_hidden: repeatOnly ? matched.length - rows.length : 0,
+  };
 }
 export function termDetail(s: Snapshot, type: string, id: string): TermDetail {
   const row =

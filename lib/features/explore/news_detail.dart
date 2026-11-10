@@ -14,6 +14,7 @@ import '../../design/widgets/rg_states.dart';
 import '../../data/unread.dart';
 import '../home/home_screen.dart';
 import '../common/term_text.dart';
+import 'benchmark_sheet.dart';
 import 'official_news.dart';
 import 'trending_models.dart';
 
@@ -301,8 +302,16 @@ class _ModelDetailScreenState extends State<ModelDetailScreen> {
             const SizedBox(height: RgSpace.s16),
             Text('제작사 측정 점수', style: RgText.meta.copyWith(fontWeight: FontWeight.w600)),
             const SizedBox(height: RgSpace.s4),
-            for (final (i, (name, score)) in m.benchmarks.indexed)
-              _Fact(name, score, sub: benchmarkKo(name), strong: true, last: i == m.benchmarks.length - 1),
+            // 풀이가 있는 항목은 줄을 눌러 「무엇을 재는지 · 점수 읽는 법」 시트를 연다(용어 시트와 같은 모양)
+            for (final (i, b) in m.benchmarks.indexed)
+              _Fact(
+                b.name,
+                b.score,
+                sub: b.about,
+                strong: true,
+                last: i == m.benchmarks.length - 1,
+                onTap: b.about == null ? null : () => showBenchmarkSheet(context, b, model: m.name),
+              ),
           ],
           if (m.limitation case final l?) ...[
             const SizedBox(height: RgSpace.s16),
@@ -393,19 +402,30 @@ class _TopBar extends StatelessWidget {
 }
 
 class _Fact extends StatelessWidget {
-  const _Fact(this.label, this.value, {this.sub, this.strong = false, this.last = false, this.url});
+  const _Fact(this.label, this.value, {this.sub, this.strong = false, this.last = false, this.url, this.onTap});
   final String label, value;
   final String? sub; // 벤치마크 한국어 풀이
   final bool strong, last;
   final String? url; // 있으면 줄 전체를 눌러 연다(변형 모델 카드)
+  final VoidCallback? onTap; // 평가 항목 풀이 시트
 
   @override
-  Widget build(BuildContext context) => url == null
-      ? _row()
-      : Semantics(
-          link: true,
-          child: RgPressable(row: true, onTap: () => launchUrl(Uri.parse(url!), mode: LaunchMode.externalApplication), child: _row()),
-        );
+  Widget build(BuildContext context) {
+    if (url != null) {
+      return Semantics(
+        link: true,
+        child: RgPressable(row: true, onTap: () => launchUrl(Uri.parse(url!), mode: LaunchMode.externalApplication), child: _row()),
+      );
+    }
+    if (onTap != null) {
+      return Semantics(
+        button: true,
+        hint: '무엇을 재는지 보기',
+        child: RgPressable(row: true, onTap: onTap!, child: _row()),
+      );
+    }
+    return _row();
+  }
 
   Widget _row() => Container(
     padding: EdgeInsets.only(top: RgSpace.s12, bottom: last ? 0 : RgSpace.s12),
@@ -413,7 +433,17 @@ class _Fact extends StatelessWidget {
     child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s16, children: [
       Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label, style: strong ? RgText.titleList : RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
+          if (onTap == null)
+            Text(label, style: strong ? RgText.titleList : RgText.bodySmall.copyWith(color: RgColors.textSecondary))
+          else
+            // 누를 수 있는 평가 항목: 이름 옆 작은 정보 표시
+            Text.rich(TextSpan(children: [
+              TextSpan(text: '$label '),
+              WidgetSpan(
+                alignment: PlaceholderAlignment.middle,
+                child: RgIcon('info', size: 14, color: RgColors.textTertiary),
+              ),
+            ]), style: RgText.titleList),
           // 「코 / 딩 능력」처럼 낱말 중간에서 갈라지지 않게
           if (sub != null) KeepAllText(sub!, style: RgText.meta.copyWith(color: RgColors.textSecondary)),
         ]),

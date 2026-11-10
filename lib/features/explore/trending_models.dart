@@ -104,7 +104,6 @@ class _TrendingModelsSectionState extends State<TrendingModelsSection> {
                         at: (m) => m.createdAt!,
                         tag: (m) => m.author,
                         now: now,
-                        showDayHeaders: false,
                         builder: (context, rows) => Padding(
                           padding: const EdgeInsets.symmetric(
                             horizontal: RgSpace.gutterText,

@@ -21,6 +21,7 @@
 출력: worker/out/x_posts.json(이번 실행에 받은 글), worker/out/x_state.json(상태). 커밋하지 않는다(HANDOFF 0.1).
 """
 import argparse
+import html
 import json
 import re
 import sys
@@ -111,7 +112,8 @@ def resolve_ids(handles: list[str], state: dict, get, today: dict) -> list[str]:
 
 
 def to_row(t: dict, user: dict, tier: int, now: datetime) -> dict:
-    text = (t.get("note_tweet") or {}).get("text") or t["text"]
+    # X API는 본문의 <·>·&를 &lt;·&gt;·&amp;로 보낸다. 풀지 않으면 앱과 번역에 「&gt;」가 그대로 남는다(2026-11-10 @simonw 글)
+    text = html.unescape((t.get("note_tweet") or {}).get("text") or t["text"])
     m = t.get("public_metrics") or {}
     words = perk_words(text)
     # 글에 단 링크(t.co가 아니라 펼친 주소). 앱이 같은 주소의 공식 소식에 X 반응으로 붙인다
@@ -208,9 +210,9 @@ def translate_recent(db, api_key: str, now: datetime) -> str:
     done = 0
     for i in range(0, len(todo), TRANSLATE_BATCH):
         chunk = todo[i:i + TRANSLATE_BATCH]
-        ko = translate_texts([r["text"] for r in chunk], api_key, lambda e: None)
+        ko = translate_texts([html.unescape(r["text"]) for r in chunk], api_key, lambda e: None)
         for r, t in zip(chunk, ko or []):
-            db._req("PATCH", f"x_posts?id=eq.{r['id']}", {"text_ko": t}, "return=minimal")
+            db._req("PATCH", f"x_posts?id=eq.{r['id']}", {"text_ko": html.unescape(t)}, "return=minimal")
             done += 1
     return f"X 글 번역: 새 {done}/{len(todo)}개"
 

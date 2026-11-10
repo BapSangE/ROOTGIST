@@ -306,7 +306,7 @@ class TrendingModel {
         arxiv = (j['arxiv'] as List?)?.firstOrNull,
         url = j['url'],
         strengths = [for (final s in j['card']?['strengths'] ?? const []) s as String],
-        benchmarks = [for (final b in j['card']?['benchmarks'] ?? const []) (b['name'] as String, b['score'] as String)],
+        benchmarks = [for (final b in j['card']?['benchmarks'] ?? const []) Benchmark.fromJson(b)],
         limitation = j['card']?['limitation'],
         variants = [for (final v in j['variants'] ?? const []) ModelVariant.fromJson(v)];
 
@@ -321,7 +321,7 @@ class TrendingModel {
   final String? arxiv;
   final String url;
   final List<String> strengths; // 비면 「제작사가 밝히지 않았어요」
-  final List<(String, String)> benchmarks; // (이름, 점수) 제작사 측정
+  final List<Benchmark> benchmarks; // 제작사 측정
   final String? limitation;
   final List<ModelVariant> variants; // 같은 모델의 양자화판·형제 모델(수집기가 묶는다)
 
@@ -386,7 +386,25 @@ class ModelVariant {
 String _comma(int n) => n.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => ',');
 String countKo(int n) => n >= 10000 ? '${(n / 10000).toStringAsFixed(n < 100000 ? 1 : 0)}만' : _comma(n);
 
-// 모델 카드에 자주 나오는 벤치마크의 한국어 풀이. 없는 이름은 풀이 없이 이름만(P9).
+// 모델 카드의 평가 항목 하나. about·higherBetter는 수집기가 카드를 정리할 때 함께 만든다(2026-11-10, 근거 없으면 null).
+class Benchmark {
+  Benchmark.fromJson(Map<String, dynamic> j)
+      : name = j['name'] as String,
+        score = j['score'] as String,
+        _about = j['about'] as String?,
+        _higherBetter = j['higher_better'] as bool?;
+
+  final String name, score;
+  final String? _about;
+  final bool? _higherBetter;
+
+  // 무엇을 재는지: 앱에 적어 둔 풀이(검수한 것)가 먼저, 없으면 수집기 풀이
+  String? get about => benchmarkKo(name) ?? _about;
+  // 앱에 적어 둔 항목은 모두 「맞힌 비율」이라 높을수록 좋다
+  bool? get higherBetter => _higherBetter ?? (benchmarkKo(name) != null ? true : null);
+}
+
+// 모델 카드에 자주 나오는 벤치마크의 한국어 풀이. 없는 이름은 수집기 풀이, 그것도 없으면 이름만(P9).
 String? benchmarkKo(String name) {
   final n = name.toLowerCase();
   if (n.contains('swe-bench')) return '실제 GitHub 이슈를 고치는 코딩 능력';

@@ -327,6 +327,26 @@
   min-height: 0;
   scroll-padding: 10px;
 }
+.term-admin .seen-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+  animation: seen-note-in 180ms ease-out;
+}
+.term-admin .seen-note .text-button {
+  min-height: 32px;
+  white-space: nowrap;
+}
+@keyframes seen-note-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+}
 .term-admin .queue-row {
   width: 100%;
   text-align: left;
