@@ -400,9 +400,11 @@ class DateHeader extends StatelessWidget {
     required this.open,
     this.onTap,
     this.onMore,
+    this.moreLabel = '다른 날짜 보기',
   });
   final String label;
   final String? range;
+  final String moreLabel;
   final String count; // 「4건」 「12일치」
   final bool open;
   final VoidCallback? onTap;
@@ -464,7 +466,7 @@ class DateHeader extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        '다른 날짜 보기',
+                        moreLabel,
                         style: RgText.homeMore.copyWith(
                           color: RgColors.textSecondary,
                         ),

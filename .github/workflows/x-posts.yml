@@ -1,0 +1,33 @@
+# X(구 트위터) 감시 계정의 새 글 받기(2026-11-06, docs/X_WATCHLIST.md). 「한도 초기화」 같은 소식은 X에서 먼저 나와 자주 본다.
+# 비용은 받은 글 수에 비례하고 자주 돌아도 새 글만 받는다(since_id). 하루 상한은 X_DAILY_READ_CAP(기본 200개 ≈ $1).
+# 저장소 Secrets에 X_BEARER_TOKEN이 없으면 바로 끝난다. LLM을 부르지 않으므로 daily-batch와 다른 concurrency 그룹.
+# GitHub 예약은 붐비면 늦게 시작하거나 건너뛴다. 더 촘촘히 봐야 하면 상시 서버(예: 오라클 무료 서버)의 cron으로 옮긴다.
+name: x-posts
+
+on:
+  schedule:
+    - cron: "7,37 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: x-posts
+  cancel-in-progress: false
+
+jobs:
+  x-posts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN }}
+      X_DAILY_READ_CAP: ${{ vars.X_DAILY_READ_CAP }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install -r worker/requirements.txt
+      - name: X 계정 새 글
+        run: python -m worker.x_posts

@@ -70,6 +70,7 @@ jobs:
       NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      GITHUB_TOKEN: ${{ github.token }} # GitHub 검색 한도(분당 10 → 30번). 저장소 읽기 권한만
       PYTHONIOENCODING: utf-8
     steps:
       - uses: actions/checkout@v6

@@ -398,3 +398,84 @@ String? benchmarkKo(String name) {
   if (n.contains('mmmu')) return '이미지가 섞인 전문 문제 풀이';
   return null;
 }
+
+// GitHub 칸의 기간별 순위(2026-11-10). 일간·주간·월간마다 「언제부터 언제 사이에 생긴 저장소」를 별 많은 순으로.
+// 모양은 list_github_rankings(supabase/migrations/20261110090000_github_rankings.sql) = worker/official_news.py rankings_doc.
+class GithubRankings {
+  GithubRankings.fromJson(Map<String, dynamic> j)
+      : collectedAt = j['collected_at'] == null ? null : DateTime.parse(j['collected_at']),
+        periods = {
+          for (final MapEntry(:key, :value) in ((j['periods'] ?? const {}) as Map<String, dynamic>).entries)
+            key: GithubPeriod.fromJson(value),
+        };
+  const GithubRankings.empty() : collectedAt = null, periods = const {};
+
+  final DateTime? collectedAt; // 별 수를 모은 시각
+  final Map<String, GithubPeriod> periods; // day | week | month
+}
+
+class GithubPeriod {
+  GithubPeriod.fromJson(Map<String, dynamic> j)
+      : start = DateTime.parse(j['start']),
+        end = DateTime.parse(j['end']),
+        repos = [for (final r in j['repos'] ?? const []) GithubRepo.fromJson(r)];
+
+  final DateTime start, end; // 이 사이에 생긴 저장소
+  final List<GithubRepo> repos; // 순위순
+}
+
+class GithubRepo {
+  GithubRepo.fromJson(Map<String, dynamic> j)
+      : rank = j['rank'],
+        fullName = j['full_name'],
+        url = j['url'],
+        descriptionEn = j['description_en'],
+        descriptionKo = j['description_ko'],
+        language = j['language'],
+        stars = j['stars'] ?? 0,
+        forks = j['forks'] ?? 0,
+        createdAt = j['created_at'] == null ? null : DateTime.parse(j['created_at']);
+
+  final int rank;
+  final String fullName, url; // 소유자/이름
+  final String? descriptionEn, descriptionKo, language;
+  final int stars, forks;
+  final DateTime? createdAt;
+
+  String get owner => fullName.split('/').first;
+  String get name => fullName.split('/').last;
+  String? get description => descriptionKo ?? descriptionEn;
+}
+
+// X 계정 글(2026-11-10, supabase/migrations/20261106180000_x_posts.sql list_x_posts). 최근 3일.
+// 탐색 HOT 칸(Hacker News와 섞어 반응 순), 발표 카드의 「X 반응」(글에 단 링크가 같은 소식), 홈 혜택·한도 카드.
+// X 표시 규정: 원문·작성자 이름·@핸들·시각·원문 링크를 함께 보인다. 번역은 원문 아래 「AI 번역」으로만.
+class XPost {
+  XPost.fromJson(Map<String, dynamic> j)
+      : id = j['id'],
+        handle = j['handle'],
+        authorName = j['author_name'],
+        tier = j['tier'] ?? 3,
+        text = j['text'],
+        textKo = j['text_ko'],
+        url = j['url'],
+        postedAt = DateTime.parse(j['posted_at']),
+        likes = j['likes'] ?? 0,
+        reposts = j['reposts'] ?? 0,
+        replies = j['replies'] ?? 0,
+        perk = j['perk'] ?? false,
+        links = [for (final l in j['links'] ?? const []) l as String];
+
+  final String id, handle, text, url;
+  final String? authorName, textKo;
+  final int tier; // 1 혜택·한도 발표, 2 회사 공식, 3 소식 정리
+  final DateTime postedAt;
+  final int likes, reposts, replies;
+  final bool perk; // 혜택·한도 낱말이 있는 글
+  final List<String> links;
+
+  String get author => authorName ?? handle;
+}
+
+// 주소 비교용: 앞뒤 http(s)·www·끝 / ·쿼리를 뗀다(X 글 링크와 공식 소식 주소를 맞출 때)
+String normUrl(String u) => u.replaceFirst(RegExp(r'^https?://(www\.)?'), '').split(RegExp(r'[?#]')).first.replaceFirst(RegExp(r'/+$'), '').toLowerCase();

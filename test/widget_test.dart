@@ -30,6 +30,7 @@ import 'package:flutter/semantics.dart';
 import 'package:rootgist/features/explore/explore_screen.dart';
 import 'package:rootgist/features/explore/official_news.dart';
 import 'package:rootgist/features/explore/date_groups.dart';
+import 'package:rootgist/features/explore/x_posts.dart';
 import 'package:rootgist/features/common/collect_schedule.dart';
 import 'package:rootgist/features/common/term_text.dart';
 import 'package:rootgist/features/home/home_screen.dart';
@@ -51,6 +52,7 @@ Future<void> pumpApp(WidgetTester tester) async {
   exploreTab.value = 0;
   newsTab.value = 0;
   modelsFresh.value = false;
+  githubPeriod.value = 0;
   fixtureMode.value = FixtureMode.normal;
   exploreJump.value = null;
   // 새 글 점은 기본으로 끈다(따로 확인하는 테스트에서 켠다)
@@ -63,6 +65,10 @@ Future<void> pumpApp(WidgetTester tester) async {
   // 홈 키워드 칩이 바로 사전을 부른다: 지난 테스트의 끝나지 않은 요청을 물려받지 않게 새로, 실제 비동기에서 미리 받아 둔다
   resetDictionary();
   await tester.runAsync(dictionary);
+  // GitHub 순위는 소식 HOT 칸 카드 줄이 탭을 누른 뒤(fake async) 처음 읽는다: 실제 비동기에서 미리 읽어 캐시를 채워 둔다
+  await tester.runAsync(() => rootBundle.loadString('fixtures/github_rankings.json'));
+  await tester.runAsync(() => rootBundle.loadString('fixtures/x_posts.json')); // X 글도 같은 이유로
+  resetXPerks();
   await tester.runAsync(() async {
     await tester.pumpWidget(const RootgistApp());
     await Future<void>.delayed(const Duration(milliseconds: 200));
@@ -1217,7 +1223,7 @@ void main() {
       'url': 'u', 'published_at': '2026-10-29T00:00:00Z', 'points': 331}).reaction, 'HN 추천 331'); // 공식 소식에 붙은 반응
   });
 
-  testWidgets('소식 · HOT: 전체·Hacker News·GitHub 필터, 순위 카드, 상세는 원문·HN 토론 링크', (tester) async {
+  testWidgets('소식 · HOT: 맨 위 오늘 뜨는 저장소 줄 → GitHub 칸, 아래는 「전체 | Hacker News | X」 반응 순, 상세는 원문·HN 토론 링크', (tester) async {
     tester.view.physicalSize = const Size(390, 2400);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -1229,40 +1235,109 @@ void main() {
     await slide(tester);
     await settle(tester);
     await tester.tap(find.descendant(of: find.byType(ExploreSectionTabs), matching: find.text('HOT')));
-    await tester.pumpAndSettle();
-    // 발표·업데이트와 같은 텍스트 필터. 숫자는 아이콘 알약이다.
+    await settle(tester); // 카드 줄이 GitHub 순위 fixture를 읽는다
+    // GitHub는 칩이 아니라 맨 위 카드 줄. 칩은 Hacker News와 X
     Finder filter(String label) => find.descendant(of: find.byType(ExploreTextFilters), matching: find.text(label));
+    expect(filter('GitHub'), findsNothing);
     expect(filter('Hacker News'), findsOneWidget);
-    expect(filter('GitHub'), findsOneWidget);
-    for (final title in ['Example-4 가중치 공개', 'LLM 글쓰기 문체에 관한 가상 글', 'example-tool: 가상의 에이전트 도구']) {
+    expect(filter('X'), findsOneWidget);
+    // X 글: 번역이 있으면 한국어 위·원문 아래(「AI 번역」), 없으면 원문. 발표 소식을 단 글(9001)은 HOT에 넣지 않는다
+    expect(find.text(keepAll('모든 유료 요금제의 주간 사용량 한도를 초기화했어요. 이번 주는 넉넉하게 써 보세요.')), findsOneWidget);
+    expect(find.text("We've reset weekly usage limits for all paid plans. Enjoy the extra room this week, on us."), findsOneWidget);
+    expect(find.text(keepAll('Spotted: Example Assistant is testing a new memory panel in its web app. Not live for everyone yet.')), findsOneWidget);
+    expect(find.text(keepAll('가장 새로운 예시 모델을 소개해요. 자세히 보기: https://t.co/x')), findsNothing);
+    expect(find.text('@ExampleLab · 10시간 전'), findsOneWidget); // 작성자·@핸들·시각을 늘 같이
+    await tester.tap(filter('Hacker News'));
+    await tester.pumpAndSettle();
+    expect(find.byType(XPostCard), findsNothing);
+    await tester.tap(filter('X'));
+    await tester.pumpAndSettle();
+    expect(find.byType(XPostCard), findsNWidgets(2));
+    expect(find.text(keepAll('LLM 글쓰기 문체에 관한 가상 글')), findsNothing);
+    double yx(String id) => tester.getTopLeft(find.byWidgetPredicate((w) => w is XPostCard && w.post.id == id)).dy;
+    expect(yx('9002'), lessThan(yx('9003'))); // 좋아요 순(2,400 > 650)
+    await tester.tap(filter('전체'));
+    await tester.pumpAndSettle();
+    expect(find.text('오늘 뜨는 저장소'), findsOneWidget);
+    expect(find.text(keepAll('10월 18일 15:17 ~ 10월 19일 15:17 사이에 생긴 저장소')), findsOneWidget); // 기간을 그대로 적는다
+    expect(find.text('day-tool-1'), findsOneWidget);
+    for (final title in ['Example-4 가중치 공개', 'LLM 글쓰기 문체에 관한 가상 글']) {
       expect(find.text(keepAll(title)), findsOneWidget);
     }
+    expect(find.text(keepAll('example-tool: 가상의 에이전트 도구')), findsNothing); // 저장소는 GitHub 칸 순위로
     double y(String t) => tester.getTopLeft(find.text(keepAll(t))).dy;
-    // 날짜로 묶는다: 어제(HN 두 건, 점수 순) → 10월 16일(GitHub). 같은 날 안에서는 HN·GitHub를 번갈아 놓는다
-    expect(y('Example-4 가중치 공개'), lessThan(y('LLM 글쓰기 문체에 관한 가상 글')));
-    expect(y('LLM 글쓰기 문체에 관한 가상 글'), lessThan(y('example-tool: 가상의 에이전트 도구')));
-    expect(find.text('10월 18일'), findsNWidgets(2)); // 시계는 KST 10월 19일 새벽, 카드에는 공개일
-    expect(find.text('10월 16일'), findsOneWidget);
+    expect(y('Example-4 가중치 공개'), lessThan(y('LLM 글쓰기 문체에 관한 가상 글'))); // 점수 순
     Finder stat(String label) => find.byWidgetPredicate((w) => w is HomeStat && w.label == label);
     expect(stat('Example AI 추천 1,314'), findsOneWidget);
     expect(stat('댓글 360'), findsOneWidget);
-    expect(stat('GitHub 별 179'), findsOneWidget); // GitHub는 추천이 아니라 별
     expect(find.text('추천'), findsNothing);
-    await tester.tap(filter('GitHub'));
-    await tester.pumpAndSettle();
-    expect(find.text(keepAll('example-tool: 가상의 에이전트 도구')), findsOneWidget);
-    expect(find.text(keepAll('Example-4 가중치 공개')), findsNothing);
-    expect(find.text(keepAll('LLM 글쓰기 문체에 관한 가상 글')), findsNothing);
-    await tester.tap(filter('Hacker News'));
-    await tester.pumpAndSettle();
-    expect(find.text(keepAll('example-tool: 가상의 에이전트 도구')), findsNothing);
-    expect(find.text(keepAll('Example-4 가중치 공개')), findsOneWidget);
-    expect(find.text(keepAll('LLM 글쓰기 문체에 관한 가상 글')), findsOneWidget);
-    expect(y('Example-4 가중치 공개'), lessThan(y('LLM 글쓰기 문체에 관한 가상 글'))); // 점수 순
     await tester.tap(find.text(keepAll('LLM 글쓰기 문체에 관한 가상 글')));
     await settle(tester);
     expect(find.text('Hacker News 토론'), findsOneWidget);
     expect(find.text('댓글 213'), findsOneWidget);
+    router.pop();
+    await settle(tester);
+    // 「전체 순위」 → GitHub 칸 일간
+    await tester.tap(find.text('전체 순위'));
+    await slide(tester);
+    await settle(tester);
+    expect((exploreTab.value, githubPeriod.value), (3, 0));
+    clock = DateTime.now;
+  });
+
+  testWidgets('X: 발표 카드에 같은 소식을 단 X 글의 반응, 홈 맨 위 혜택·한도 소식', (tester) async {
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    clock = () => DateTime.utc(2026, 10, 18, 20);
+    await pumpApp(tester);
+    clock = () => DateTime.utc(2026, 10, 18, 20);
+    resetXPerks();
+    router.go('/home');
+    await settle(tester);
+    expect(find.text(keepAll('혜택·한도 소식')), findsOneWidget);
+    expect(find.byType(XPostCard), findsOneWidget); // 혜택 글 하나(9002)만
+    expect(find.text(keepAll('모든 유료 요금제의 주간 사용량 한도를 초기화했어요. 이번 주는 넉넉하게 써 보세요.')), findsOneWidget);
+    router.go('/explore');
+    await settle(tester);
+    await tester.tap(find.text('소식'));
+    await slide(tester);
+    await settle(tester);
+    await openDates(tester);
+    expect(find.byType(XReactionLine), findsOneWidget); // fixture anthropic-1 소식을 단 X 글
+    expect(find.text('X 좋아요 5,200 · @ExampleLab'), findsOneWidget);
+    clock = DateTime.now;
+  });
+
+  testWidgets('GitHub 칸: 「일간 | 주간 | 월간」, 기간 시작·끝과 모은 시각, 별 많은 순 순위', (tester) async {
+    tester.view.physicalSize = const Size(390, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+    clock = () => DateTime.utc(2026, 10, 18, 20);
+    router.go('/explore');
+    await settle(tester);
+    await tester.tap(find.text('GitHub'));
+    await slide(tester);
+    await settle(tester);
+    Finder tab(String l) => find.descendant(of: find.byType(ExploreSectionTabs), matching: find.text(l));
+    expect(tab('일간'), findsOneWidget);
+    expect(find.text(keepAll('10월 18일 15:17 ~ 10월 19일 15:17')), findsOneWidget);
+    expect(find.textContaining(keepAll('별 수는 10월 19일 15:17에 모은 값이에요.')), findsOneWidget);
+    expect(find.text('day-tool-1'), findsOneWidget);
+    await tester.tap(tab('주간'));
+    await tester.pumpAndSettle();
+    expect(githubPeriod.value, 1);
+    expect(find.text(keepAll('10월 12일 15:17 ~ 10월 19일 15:17')), findsOneWidget);
+    double y(String t) => tester.getTopLeft(find.text(t)).dy;
+    expect(y('week-tool-1'), lessThan(y('week-tool-2'))); // 별 많은 순
+    expect(find.text('day-tool-1'), findsNothing);
+    // 설명이 아직 옮겨지지 않은 저장소는 원문 설명
+    expect(find.text(keepAll('An open-source agent toolkit #4 for running LLM workflows locally')), findsOneWidget);
+    await tester.tap(tab('월간'));
+    await tester.pumpAndSettle();
+    expect(find.text(keepAll('9월 19일 15:17 ~ 10월 19일 15:17')), findsOneWidget);
+    expect(tester.takeException(), isNull);
     clock = DateTime.now;
   });
 
@@ -1551,7 +1626,7 @@ void main() {
     expect(scaffoldBg(), RgPalette.white.bgApp);
   });
 
-  testWidgets('옆으로 밀기: 홈 → 탐색 칸들 → 공식 소식 발표·업데이트 → 모델 트렌딩·새로 나옴 → 보관함 → 설정, 반대로 밀면 거꾸로', (tester) async {
+  testWidgets('옆으로 밀기: 홈 → 탐색 칸들 → 공식 소식 발표·업데이트 → 모델 트렌딩·새로 나옴 → GitHub 일간·주간·월간 → 보관함 → 설정, 반대로 밀면 거꾸로', (tester) async {
     tester.view.physicalSize = const Size(390, 2400);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -1561,6 +1636,7 @@ void main() {
       final sub = switch (exploreTab.value) {
         1 => const [' 발표', ' 업데이트', ' 화제'][newsTab.value],
         2 => modelsFresh.value ? ' 새로 나옴' : ' 트렌딩',
+        3 => const [' 일간', ' 주간', ' 월간'][githubPeriod.value],
         _ => '',
       };
       return path == '/explore' ? 'explore ${exploreTab.value}$sub' : path;
@@ -1573,7 +1649,8 @@ void main() {
       await settle(tester);
     }
 
-    const forward = ['explore 0', 'explore 1 발표', 'explore 1 업데이트', 'explore 1 화제', 'explore 2 트렌딩', 'explore 2 새로 나옴', '/library', '/settings'];
+    const forward = ['explore 0', 'explore 1 발표', 'explore 1 업데이트', 'explore 1 화제', 'explore 2 트렌딩', 'explore 2 새로 나옴',
+      'explore 3 일간', 'explore 3 주간', 'explore 3 월간', '/library', '/settings'];
     for (final w in forward) {
       await swipe(-300);
       expect(where(), w);

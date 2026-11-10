@@ -1,0 +1,441 @@
+{
+ "collected_at": "2026-10-19T06:17:00Z",
+ "periods": {
+  "day": {
+   "start": "2026-10-18T06:17:00Z",
+   "end": "2026-10-19T06:17:00Z",
+   "repos": [
+    {
+     "rank": 1,
+     "full_name": "day-lab/day-tool-1",
+     "url": "https://github.com/day-lab/day-tool-1",
+     "description_en": "An open-source agent toolkit #1 for running LLM workflows locally",
+     "description_ko": "LLM 작업 흐름을 내 컴퓨터에서 돌리는 오픈소스 에이전트 도구 1번이에요",
+     "language": "Python",
+     "stars": 420,
+     "forks": 10,
+     "created_at": "2026-10-19T02:51:17Z"
+    },
+    {
+     "rank": 2,
+     "full_name": "day-lab/day-tool-2",
+     "url": "https://github.com/day-lab/day-tool-2",
+     "description_en": "An open-source agent toolkit #2 for running LLM workflows locally",
+     "description_ko": "LLM 작업 흐름을 내 컴퓨터에서 돌리는 오픈소스 에이전트 도구 2번이에요",
+     "language": "TypeScript",
+     "stars": 262,
+     "forks": 11,
+     "created_at": "2026-10-18T23:25:34Z"
+    },
+    {
+     "rank": 3,
+     "full_name": "day-lab/day-tool-3",
+     "url": "https://github.com/day-lab/day-tool-3",
+     "description_en": "An open-source agent toolkit #3 for running LLM workflows locally",
+     "description_ko": "LLM 작업 흐름을 내 컴퓨터에서 돌리는 오픈소스 에이전트 도구 3번이에요",
+     "language": "Rust",
+     "stars": 190,
+     "forks": 12,
+     "created_at": "2026-10-18T19:59:51Z"
+    },
+    {
+     "rank": 4,
+     "full_name": "day-lab/day-tool-4",
+     "url": "https://github.com/day-lab/day-tool-4",
+     "description_en": "An open-source agent toolkit #4 for running LLM workflows locally",
+     "description_ko": null,
+     "language": "Go",
+     "stars": 150,
+     "forks": 13,
+     "created_at": "2026-10-18T16:34:08Z"
+    },
+    {
+     "rank": 5,
+     "full_name": "day-lab/day-tool-5",
+     "url": "https://github.com/day-lab/day-tool-5",
+     "description_en": "An open-source agent toolkit #5 for running LLM workflows locally",
+     "description_ko": "LLM 작업 흐름을 내 컴퓨터에서 돌리는 오픈소스 에이전트 도구 5번이에요",
+     "language": "Python",
+     "stars": 123,
+     "forks": 14,
+     "created_at": "2026-10-18T13:08:25Z"
+    },
+    {
+     "rank": 6,
+     "full_name": "day-lab/day-tool-6",
+     "url": "https://github.com/day-lab/day-tool-6",
+     "description_en": "An open-source agent toolkit #6 for running LLM workflows locally",
+     "description_ko": "LLM 작업 흐름을 내 컴퓨터에서 돌리는 오픈소스 에이전트 도구 6번이에요",
+     "language": "TypeScript",
+     "stars": 105,
+     "forks": 15,
+     "created_at": "2026-10-18T09:42:42Z"
+    }
+   ]
+  },
+  "week": {
+   "start": "2026-10-12T06:17:00Z",
+   "end": "2026-10-19T06:17:00Z",
+   "repos": [
+    {
+     "rank": 1,
+     "full_name": "week-lab/week-tool-1",
+     "url": "https://github.com/week-lab/week-tool-1",
+     "description_en": "An open-source agent toolkit #1 for running LLM workflows locally",
+     "description_ko": "LLM 작업 흐름을 내 컴퓨터에서 돌리는 오픈소스 에이전트 도구 1번이에요",
+     "language": "Python",
+     "stars": 1800,
+     "forks": 10,
+     "created_at": "2026-10-18T17:21:36Z"
+    },
+    {
+     "rank": 2,
+     "full_name": "week-lab/week-tool-2",
+     "url": "https://github.com/week-lab/week-tool-2",
+     "description_en": "An open-source agent toolkit #2 for running LLM workflows locally",
+     "description_ko": "LLM 작업 흐름을 내 컴퓨터에서 돌리는 오픈소스 에이전트 도구 2번이에요",
+     "language": "TypeScript",
+     "stars": 1125,
+     "forks": 11,
+     "created_at": "2026-10-18T04:26:13Z"
+    },
+    {
+     "rank": 3,
+     "full_name": "week-lab/week-tool-3",
+     "url": "https://github.com/week-lab/week-tool-3",
+     "description_en": "An open-source agent toolkit #3 for running LLM workflows locally",
+     "description_ko": "LLM 작업 흐름을 내 컴퓨터에서 돌리는 오픈소스 에이전트 도구 3번이에요",
+     "language": "Rust",
+     "stars": 818,
+     "forks": 12,
+     "created_at": "2026-10-17T15:30:50Z"
+    },
+    {
+     "rank": 4,
+     "full_name": "week-lab/week-tool-4",
+     "url": "https://github.com/week-lab/week-tool-4",
+     "description_en": "An open-source agent toolkit #4 for running LLM workflows locally",
+     "description_ko": null,
+     "language": "Go",
+     "stars": 642,
+     "forks": 13,
+     "created_at": "2026-10-17T02:35:27Z"
+    },
+    {
+     "rank": 5,
+     "full_name": "week-lab/week-tool-5",
+     "url": "https://github.com/week-lab/week-tool-5",
+     "description_en": "An open-source agent toolkit #5 for running LLM workflows locally",
+     "description_ko": "LLM 작업 흐름을 내 컴퓨터에서 돌리는 오픈소스 에이전트 도구 5번이에요",
+     "language": "Python",
+     "stars": 529,
+     "forks": 14,
+     "created_at": "2026-10-16T13:40:04Z"
+    },
+    {
+     "rank": 6,
+     "full_name": "week-lab/week-tool-6",
+     "url": "https://github.com/week-lab/week-tool-6",
+     "description_en": "An open-source agent toolkit #6 for running LLM workflows locally",
+     "description_ko": "LLM 작업 흐름을 내 컴퓨터에서 돌리는 오픈소스 에이전트 도구 6번이에요",
+     "language": "TypeScript",
+     "stars": 450,
+     "forks": 15,
+     "created_at": "2026-10-16T00:44:41Z"
+    },
+    {
+     "rank": 7,
+     "full_name": "week-lab/week-tool-7",
+     "url": "https://github.com/week-lab/week-tool-7",
+     "description_en": "An open-source agent toolkit #7 for running LLM workflows locally",
+     "description_ko": "LLM 작업 흐름을 내 컴퓨터에서 돌리는 오픈소스 에이전트 도구 7번이에요",
+     "language": "Rust",
+     "stars": 391,
+     "forks": 16,
+     "created_at": "2026-10-15T11:49:18Z"
+    },
+    {
+     "rank": 8,
+     "full_name": "week-lab/week-tool-8",
+     "url": "https://github.com/week-lab/week-tool-8",
+     "description_en": "An open-source agent toolkit #8 for running LLM workflows locally",
+     "description_ko": null,
+     "language": "Go",
+     "stars": 346,
+     "forks": 17,
+     "created_at": "2026-10-14T22:53:55Z"
+    },
+    {
+     "rank": 9,
+     "full_name": "week-lab/week-tool-9",
+     "url": "https://github.com/week-lab/week-tool-9",
+     "description_en": "An open-source agent toolkit #9 for running LLM workflows locally",
+     "description_ko": "LLM 작업 흐름을 내 컴퓨터에서 돌리는 오픈소스 에이전트 도구 9번이에요",
+     "language": "Python",
+     "stars": 310,
+     "forks": 18,
+     "created_at": "2026-10-14T09:58:32Z"
+    },
+    {
+     "rank": 10,
+     "full_name": "week-lab/week-tool-10",
+     "url": "https://github.com/week-lab/week-tool-10",
+     "description_en": "An open-source agent toolkit #10 for running LLM workflows locally",
+     "description_ko": "LLM 작업 흐름을 내 컴퓨터에서 돌리는 오픈소스 에이전트 도구 10번이에요",
+     "language": "TypeScript",
+     "stars": 281,
+     "forks": 19,
+     "created_at": "2026-10-13T21:03:09Z"
+    },
+    {
+     "rank": 11,
+     "full_name": "week-lab/week-tool-11",
+     "url": "https://github.com/week-lab/week-tool-11",
+     "description_en": "An open-source agent toolkit #11 for running LLM workflows locally",
+     "description_ko": "LLM 작업 흐름을 내 컴퓨터에서 돌리는 오픈소스 에이전트 도구 11번이에요",
+     "language": "Rust",
+     "stars": 257,
+     "forks": 20,
+     "created_at": "2026-10-13T08:07:46Z"
+    },
+    {
+     "rank": 12,
+     "full_name": "week-lab/week-tool-12",
+     "url": "https://github.com/week-lab/week-tool-12",
+     "description_en": "An open-source agent toolkit #12 for running LLM workflows locally",
+     "description_ko": null,
+     "language": "Go",
+     "stars": 236,
+     "forks": 21,
+     "created_at": "2026-10-12T19:12:23Z"
+    }
+   ]
+  },
+  "month": {
+   "start": "2026-09-19T06:17:00Z",
+   "end": "2026-10-19T06:17:00Z",
+   "repos": [
+    {
+     "rank": 1,
+     "full_name": "month-lab/month-tool-1",
+     "url": "https://github.com/month-lab/month-tool-1",
+     "description_en": "An open-source agent toolkit #1 for running LLM workflows locally",
+     "description_ko": "LLM 작업 흐름을 내 컴퓨터에서 돌리는 오픈소스 에이전트 도구 1번이에요",
+     "language": "Python",
+     "stars": 9200,
+     "forks": 10,
+     "created_at": "2026-10-17T19:59:51Z"
+    },
+    {
+     "rank": 2,
+     "full_name": "month-lab/month-tool-2",
+     "url": "https://github.com/month-lab/month-tool-2",
+     "description_en": "An open-source agent toolkit #2 for running LLM workflows locally",
+     "description_ko": "LLM 작업 흐름을 내 컴퓨터에서 돌리는 오픈소스 에이전트 도구 2번이에요",
+     "language": "TypeScript",
+     "stars": 5750,
+     "forks": 11,
+     "created_at": "2026-10-16T09:42:42Z"
+    },
+    {
+     "rank": 3,
+     "full_name": "month-lab/month-tool-3",
+     "url": "https://github.com/month-lab/month-tool-3",
+     "description_en": "An open-source agent toolkit #3 for running LLM workflows locally",
+     "description_ko": "LLM 작업 흐름을 내 컴퓨터에서 돌리는 오픈소스 에이전트 도구 3번이에요",
+     "language": "Rust",
+     "stars": 4181,
+     "forks": 12,
+     "created_at": "2026-10-14T23:25:34Z"
+    },
+    {
+     "rank": 4,
+     "full_name": "month-lab/month-tool-4",
+     "url": "https://github.com/month-lab/month-tool-4",
+     "description_en": "An open-source agent toolkit #4 for running LLM workflows locally",
+     "description_ko": null,
+     "language": "Go",
+     "stars": 3285,
+     "forks": 13,
+     "created_at": "2026-10-13T13:08:25Z"
+    },
+    {
+     "rank": 5,
+     "full_name": "month-lab/month-tool-5",
+     "url": "https://github.com/month-lab/month-tool-5",
+     "description_en": "An open-source agent toolkit #5 for running LLM workflows locally",
+     "description_ko": "LLM 작업 흐름을 내 컴퓨터에서 돌리는 오픈소스 에이전트 도구 5번이에요",
+     "language": "Python",
+     "stars": 2705,
+     "forks": 14,
+     "created_at": "2026-10-12T02:51:17Z"
+    },
+    {
+     "rank": 6,
+     "full_name": "month-lab/month-tool-6",
+     "url": "https://github.com/month-lab/month-tool-6",
+     "description_en": "An open-source agent toolkit #6 for running LLM workflows locally",
+     "description_ko": "LLM 작업 흐름을 내 컴퓨터에서 돌리는 오픈소스 에이전트 도구 6번이에요",
+     "language": "TypeScript",
+     "stars": 2300,
+     "forks": 15,
+     "created_at": "2026-10-10T16:34:08Z"
+    },
+    {
+     "rank": 7,
+     "full_name": "month-lab/month-tool-7",
+     "url": "https://github.com/month-lab/month-tool-7",
+     "description_en": "An open-source agent toolkit #7 for running LLM workflows locally",
+     "description_ko": "LLM 작업 흐름을 내 컴퓨터에서 돌리는 오픈소스 에이전트 도구 7번이에요",
+     "language": "Rust",
+     "stars": 2000,
+     "forks": 16,
+     "created_at": "2026-10-09T06:17:00Z"
+    },
+    {
+     "rank": 8,
+     "full_name": "month-lab/month-tool-8",
+     "url": "https://github.com/month-lab/month-tool-8",
+     "description_en": "An open-source agent toolkit #8 for running LLM workflows locally",
+     "description_ko": null,
+     "language": "Go",
+     "stars": 1769,
+     "forks": 17,
+     "created_at": "2026-10-07T19:59:51Z"
+    },
+    {
+     "rank": 9,
+     "full_name": "month-lab/month-tool-9",
+     "url": "https://github.com/month-lab/month-tool-9",
+     "description_en": "An open-source agent toolkit #9 for running LLM workflows locally",
+     "description_ko": "LLM 작업 흐름을 내 컴퓨터에서 돌리는 오픈소스 에이전트 도구 9번이에요",
+     "language": "Python",
+     "stars": 1586,
+     "forks": 18,
+     "created_at": "2026-10-06T09:42:42Z"
+    },
+    {
+     "rank": 10,
+     "full_name": "month-lab/month-tool-10",
+     "url": "https://github.com/month-lab/month-tool-10",
+     "description_en": "An open-source agent toolkit #10 for running LLM workflows locally",
+     "description_ko": "LLM 작업 흐름을 내 컴퓨터에서 돌리는 오픈소스 에이전트 도구 10번이에요",
+     "language": "TypeScript",
+     "stars": 1437,
+     "forks": 19,
+     "created_at": "2026-10-04T23:25:34Z"
+    },
+    {
+     "rank": 11,
+     "full_name": "month-lab/month-tool-11",
+     "url": "https://github.com/month-lab/month-tool-11",
+     "description_en": "An open-source agent toolkit #11 for running LLM workflows locally",
+     "description_ko": "LLM 작업 흐름을 내 컴퓨터에서 돌리는 오픈소스 에이전트 도구 11번이에요",
+     "language": "Rust",
+     "stars": 1314,
+     "forks": 20,
+     "created_at": "2026-10-03T13:08:25Z"
+    },
+    {
+     "rank": 12,
+     "full_name": "month-lab/month-tool-12",
+     "url": "https://github.com/month-lab/month-tool-12",
+     "description_en": "An open-source agent toolkit #12 for running LLM workflows locally",
+     "description_ko": null,
+     "language": "Go",
+     "stars": 1210,
+     "forks": 21,
+     "created_at": "2026-10-02T02:51:17Z"
+    },
+    {
+     "rank": 13,
+     "full_name": "month-lab/month-tool-13",
+     "url": "https://github.com/month-lab/month-tool-13",
+     "description_en": "An open-source agent toolkit #13 for running LLM workflows locally",
+     "description_ko": "LLM 작업 흐름을 내 컴퓨터에서 돌리는 오픈소스 에이전트 도구 13번이에요",
+     "language": "Python",
+     "stars": 1121,
+     "forks": 22,
+     "created_at": "2026-09-30T16:34:08Z"
+    },
+    {
+     "rank": 14,
+     "full_name": "month-lab/month-tool-14",
+     "url": "https://github.com/month-lab/month-tool-14",
+     "description_en": "An open-source agent toolkit #14 for running LLM workflows locally",
+     "description_ko": "LLM 작업 흐름을 내 컴퓨터에서 돌리는 오픈소스 에이전트 도구 14번이에요",
+     "language": "TypeScript",
+     "stars": 1045,
+     "forks": 23,
+     "created_at": "2026-09-29T06:17:00Z"
+    },
+    {
+     "rank": 15,
+     "full_name": "month-lab/month-tool-15",
+     "url": "https://github.com/month-lab/month-tool-15",
+     "description_en": "An open-source agent toolkit #15 for running LLM workflows locally",
+     "description_ko": "LLM 작업 흐름을 내 컴퓨터에서 돌리는 오픈소스 에이전트 도구 15번이에요",
+     "language": "Rust",
+     "stars": 978,
+     "forks": 24,
+     "created_at": "2026-09-27T19:59:51Z"
+    },
+    {
+     "rank": 16,
+     "full_name": "month-lab/month-tool-16",
+     "url": "https://github.com/month-lab/month-tool-16",
+     "description_en": "An open-source agent toolkit #16 for running LLM workflows locally",
+     "description_ko": null,
+     "language": "Go",
+     "stars": 920,
+     "forks": 25,
+     "created_at": "2026-09-26T09:42:42Z"
+    },
+    {
+     "rank": 17,
+     "full_name": "month-lab/month-tool-17",
+     "url": "https://github.com/month-lab/month-tool-17",
+     "description_en": "An open-source agent toolkit #17 for running LLM workflows locally",
+     "description_ko": "LLM 작업 흐름을 내 컴퓨터에서 돌리는 오픈소스 에이전트 도구 17번이에요",
+     "language": "Python",
+     "stars": 867,
+     "forks": 26,
+     "created_at": "2026-09-24T23:25:34Z"
+    },
+    {
+     "rank": 18,
+     "full_name": "month-lab/month-tool-18",
+     "url": "https://github.com/month-lab/month-tool-18",
+     "description_en": "An open-source agent toolkit #18 for running LLM workflows locally",
+     "description_ko": "LLM 작업 흐름을 내 컴퓨터에서 돌리는 오픈소스 에이전트 도구 18번이에요",
+     "language": "TypeScript",
+     "stars": 821,
+     "forks": 27,
+     "created_at": "2026-09-23T13:08:25Z"
+    },
+    {
+     "rank": 19,
+     "full_name": "month-lab/month-tool-19",
+     "url": "https://github.com/month-lab/month-tool-19",
+     "description_en": "An open-source agent toolkit #19 for running LLM workflows locally",
+     "description_ko": "LLM 작업 흐름을 내 컴퓨터에서 돌리는 오픈소스 에이전트 도구 19번이에요",
+     "language": "Rust",
+     "stars": 779,
+     "forks": 28,
+     "created_at": "2026-09-22T02:51:17Z"
+    },
+    {
+     "rank": 20,
+     "full_name": "month-lab/month-tool-20",
+     "url": "https://github.com/month-lab/month-tool-20",
+     "description_en": "An open-source agent toolkit #20 for running LLM workflows locally",
+     "description_ko": null,
+     "language": "Go",
+     "stars": 741,
+     "forks": 29,
+     "created_at": "2026-09-20T16:34:08Z"
+    }
+   ]
+  }
+ }
+}

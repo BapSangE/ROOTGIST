@@ -4,7 +4,7 @@ import unittest
 from datetime import datetime, timezone
 from unittest import mock
 
-from . import build, collect, llm, official_news, split, validate
+from . import build, collect, llm, official_news, split, validate, x_posts
 
 ABSTRACT = (
     "We study toy routing in example graphs, e.g. small grids. Our method improves accuracy by 3.5 pp. "
@@ -799,3 +799,109 @@ class OfficialNewsTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class XPostsTest(unittest.TestCase):
+    NOW = datetime(2026, 11, 6, 12, 0, tzinfo=timezone.utc)
+    ACCOUNTS = [("ExampleLab", "가상 연구소", 1, True), ("ToyDev", "가상 개발자", 3, True)]
+
+    def fake(self, pages=None, fail=None):
+        calls = []
+
+        def get(path, params):
+            calls.append((path, dict(params)))
+            if path == "users/by":
+                return {"data": [{"id": "11", "username": "ExampleLab", "name": "Example Lab"},
+                                 {"id": "22", "username": "ToyDev", "name": "Toy Dev"}]}
+            if fail and path.startswith(f"users/{fail[0]}/"):
+                raise x_posts.XError(fail[1], "가상 오류")
+            return (pages or {}).get(path, {"meta": {"result_count": 0}})
+        return get, calls
+
+    def test_perk_words(self):
+        self.assertEqual(x_posts.perk_words("We've reset rate limits for all toy plans, 2x usage on us"),
+                         ["2x", "on us", "rate limits", "reset"])
+        self.assertEqual(x_posts.perk_words("Feel free to try the new toy model"), [])
+        self.assertEqual(x_posts.perk_words("The toy method found the exact limit of a technique"), [])
+        self.assertEqual(x_posts.perk_words("Toy models are now free for everyone, weekly limits doubled"),
+                         ["doubled", "now free", "weekly limits"])
+
+    def test_first_run_then_since_id(self):
+        page = {"data": [{"id": "105", "text": "short", "note_tweet": {"text": "Toy limits reset today, full text"},
+                          "created_at": "2026-11-06T10:00:00.000Z",
+                          "public_metrics": {"like_count": 3, "retweet_count": 1, "reply_count": 0, "quote_count": 0}}],
+                "meta": {"result_count": 1, "newest_id": "105"}}
+        get, calls = self.fake({"users/11/tweets": page})
+        state = {}
+        rows, stop = x_posts.collect(self.ACCOUNTS, state, get, self.NOW)
+        self.assertIsNone(stop)
+        first = dict(calls)["users/11/tweets"]
+        self.assertEqual(first["start_time"], "2026-11-05T12:00:00Z")
+        self.assertNotIn("since_id", first)
+        self.assertEqual(len(rows), 1)
+        r = rows[0]
+        self.assertEqual((r["handle"], r["text"], r["url"]),
+                         ("ExampleLab", "Toy limits reset today, full text", "https://x.com/ExampleLab/status/105"))
+        self.assertTrue(r["perk"])
+        self.assertEqual(state["since"], {"examplelab": "105"})
+        self.assertEqual(state["usage"]["2026-11-06"], {"posts": 1, "users": 2, "requests": 3})
+        # 두 번째 실행: id는 다시 찾지 않고 since_id로 새 글만
+        get2, calls2 = self.fake()
+        x_posts.collect(self.ACCOUNTS, state, get2, self.NOW)
+        self.assertNotIn("users/by", [c[0] for c in calls2])
+        self.assertEqual(dict(calls2)["users/11/tweets"]["since_id"], "105")
+
+    def test_daily_cap_stops(self):
+        state = {"usage": {"2026-11-06": {"posts": 197, "users": 0, "requests": 0}}}
+        get, calls = self.fake()
+        rows, stop = x_posts.collect(self.ACCOUNTS, state, get, self.NOW, cap=200)
+        self.assertIn("상한", stop)
+        self.assertEqual([c[0] for c in calls], ["users/by"])
+
+    def test_no_credit_stops_and_keeps_state(self):
+        state = {"since": {"examplelab": "99"}}
+        get, _ = self.fake(fail=("11", 402))
+        rows, stop = x_posts.collect(self.ACCOUNTS, state, get, self.NOW)
+        self.assertIn("402", stop)
+        self.assertEqual(state["since"], {"examplelab": "99"})
+
+    def test_links_are_expanded_and_x_links_dropped(self):
+        t = {"id": "7", "text": "Toy blog https://t.co/a", "created_at": "2026-11-06T10:00:00.000Z",
+             "entities": {"urls": [{"expanded_url": "https://toy.example/blog/post"},
+                                   {"expanded_url": "https://x.com/ToyDev/status/6"},
+                                   {"expanded_url": "https://toy.example/blog/post"}]}}
+        row = x_posts.to_row(t, {"username": "ToyDev", "name": "Toy Dev"}, 3, self.NOW)
+        self.assertEqual(row["links"], ["https://toy.example/blog/post"])
+
+    def test_refresh_metrics_once_and_drops_deleted(self):
+        class FakeDb:
+            def __init__(self):
+                self.patched, self.deleted, self.query = {}, [], None
+
+            def select(self, table, query):
+                self.query = query
+                return [{"id": "1"}, {"id": "2"}]
+
+            def _req(self, method, path, body=None, prefer=None):
+                self.patched[path.split("eq.")[1]] = body
+
+            def delete(self, table, **eq):
+                self.deleted.append(eq["id"])
+
+        db = FakeDb()
+        calls = []
+
+        def get(path, params):
+            calls.append((path, params))
+            return {"data": [{"id": "1", "public_metrics": {"like_count": 900, "retweet_count": 40, "reply_count": 7, "quote_count": 2}}]}
+
+        state = {}
+        line = x_posts.refresh_metrics(db, get, state, self.NOW)
+        self.assertEqual(calls[0], ("tweets", {"ids": "1,2", "tweet.fields": "public_metrics"}))
+        self.assertIn("refreshed_at=is.null", db.query)
+        self.assertEqual(db.patched["1"]["likes"], 900)
+        self.assertEqual(db.patched["1"]["refreshed_at"], "2026-11-06T12:00:00Z")
+        self.assertEqual(db.deleted, ["2"])  # X에서 지워진 글
+        self.assertEqual(state["usage"]["2026-11-06"]["posts"], 1)
+        self.assertIn("1개", line)
+

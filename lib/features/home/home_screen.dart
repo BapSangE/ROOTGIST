@@ -14,6 +14,7 @@ import '../../design/widgets/rg_states.dart';
 import '../../data/unread.dart';
 import '../common/collect_schedule.dart';
 import 'briefing_section.dart';
+import '../explore/x_posts.dart';
 import 'home_sections.dart';
 
 // S01 홈 (HANDOFF 7.1 → 2026-10-30 「오늘의 브리핑」 시안): 맨 위 브리핑(최근 24시간 소식·주요 소식 5개) → 오늘의 논문 3편
@@ -97,7 +98,8 @@ class _HomeScreenState extends State<HomeScreen> {
               ...?children,
               if (children == null) ...[
                 if (home) ...[
-                  // 디자이너 시안 home_re(2026-10-31): 주요 소식 → 개발자 화제 → 오늘의 논문 → 바뀐 도구 → 모델 트렌드 순위
+                  // 디자이너 시안 home_re(2026-10-31): (혜택·한도 소식, 2026-11-10) → 주요 소식 → 개발자 화제 → 오늘의 논문 → 바뀐 도구 → 모델 트렌드 순위
+                  const XPerkSection(), // X 혜택·한도 소식(최근 48시간, 있을 때만)
                   BriefingSection(news: _extras?.$1),
                   _homePapers(digest, fallback),
                   _extrasSection(context, _extras),

@@ -39,7 +39,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from . import glossary, llm
+from . import glossary, llm, x_posts
 from .db import Db
 from .run import setting
 
@@ -147,7 +147,11 @@ MAX_PARAS, BODY_CHARS = 60, 12000  # 글 요약에 넘길 문단 수·길이 상
 
 
 def fetch(url: str) -> bytes:
-    req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept-Encoding": "gzip"})
+    headers = {"User-Agent": UA, "Accept-Encoding": "gzip"}
+    # GitHub 검색은 키 없이 분당 10번이라, 배치(Actions)가 넘겨 주는 GITHUB_TOKEN이 있으면 붙인다(분당 30번)
+    if url.startswith("https://api.github.com/") and (token := setting("GITHUB_TOKEN")):
+        headers["Authorization"] = f"Bearer {token}"
+    req = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(req, timeout=30) as r:
         body = r.read()
         # DeepMind는 gzip으로 보낸다
@@ -388,6 +392,51 @@ def from_github(now: datetime, hn_urls: set[str] = frozenset()) -> list[dict]:
     return sorted(found.values(), key=lambda i: -i["_score"])[:GH_TOP]
 
 
+# GitHub 칸의 기간별 순위(2026-11-10): 일간·주간·월간. GitHub는 「기간 동안 늘어난 별」을 주지 않으므로
+# 「그 기간 안에 생긴 저장소」를 별 많은 순으로 세운다. 기간 시작·끝은 앱이 그대로 보여 준다(언제부터 언제 기준인지).
+# 주제(topic)로만 찾으면 갓 생긴 저장소는 주제를 아직 안 달아 하루치가 2~4개뿐이었다(실데이터) → 이름·설명·주제의 낱말로 찾는다
+# (GitHub 검색은 OR를 다섯 개까지만 받는다). 갓 생긴 저장소는 별이 적어 기간이 짧을수록 최소 별 수를 낮춘다.
+GH_PERIODS = (("day", timedelta(days=1), 10), ("week", timedelta(days=7), 50), ("month", timedelta(days=30), 100))
+GH_RANK_WORDS = "llm OR agent OR ai OR claude OR mcp in:name,description,topics"
+GH_RANK_TOP = 20
+# 낱말 검색에는 게임 치트·「무료 정품 인증」 같은 홍보 저장소가 섞인다(포크 0개로 별 40개씩, 실데이터 2026-11-10)
+GH_SPAM = re.compile(r"\b(cheats?|hacks?|crack(ed)?|keygen|aimbot|esp|pre-?activated|free[- ]?(claude|gpt|chatgpt|opus))\b", re.I)
+
+
+def gh_rank_ok(r: dict) -> bool:
+    """순위에 넣을 저장소: 「새 도구」 거르기(gh_quality) + 홍보 낱말 없음 + 포크가 하나는 있음(아무도 안 써 본 저장소는 뺀다)."""
+    text = f"{r.get('name', '')} {r.get('description') or ''}"
+    return gh_quality(r) and not GH_SPAM.search(text) and (r.get("forks_count") or 0) >= 1
+
+
+def gh_rankings(now: datetime) -> dict[str, dict]:
+    """{기간: {"start", "end", "repos": [...]}}. 기간 안에 생긴 AI 저장소를 별 많은 순으로 받아,
+    거르기(gh_rank_ok)를 지난 것 20개. 한 기간이 실패해도 나머지는 돌려준다."""
+    out: dict[str, dict] = {}
+    for period, span, min_stars in GH_PERIODS:
+        start = now - span
+        since = start.strftime("%Y-%m-%dT%H:%M:%SZ")
+        q = urllib.parse.urlencode({"q": f"{GH_RANK_WORDS} created:>={since} stars:>={min_stars}", "sort": "stars",
+                                    "order": "desc", "per_page": 100})
+        try:
+            items = json.loads(fetch(f"{GH_SEARCH}?{q}"))["items"]
+        except Exception:
+            continue
+        found: dict[str, dict] = {}
+        for r in items:
+            if r["html_url"] in found or not gh_rank_ok(r):
+                continue
+            found[r["html_url"]] = {
+                "full_name": r["full_name"], "url": r["html_url"], "description_en": r["description"].strip()[:300],
+                "language": r.get("language"), "stars": r.get("stargazers_count") or 0,
+                "forks": r.get("forks_count") or 0, "created_at": _date(r["created_at"])}
+        repos = sorted(found.values(), key=lambda x: (-x["stars"], x["full_name"]))[:GH_RANK_TOP]
+        for i, x in enumerate(repos):
+            x["rank"] = i + 1
+        out[period] = {"start": start, "end": now, "repos": repos}
+    return out
+
+
 # 번호가 붙은 모델 이름(앱 briefing.dart의 출시 규칙과 같다): 「Mistral Large 4」「Gemini 4 Carbon」「GPT-6.1」 → mistral-large-4 …
 MODEL_NAME = re.compile(r"\b(gpt|gemini|claude|llama|mistral|grok|qwen|deepseek|nemotron|gemma|phi|sora|veo|imagen)"
                         r"(?:[- ]?(v?\d+(?:\.\d+)*)|[- ](?!code\b)(\w+)[- ](\d+(?:\.\d+)*))", re.I)
@@ -469,6 +518,8 @@ def save_state(db, key: str, path: Path, value: dict):
 
 NEWS_COLUMNS = ("id", "source", "source_label", "kind", "category", "title_en", "title_ko", "url", "published_at",
                 "summary_ko", "key_points", "thin", "related", "points", "comments", "discussion_url")
+RANK_COLUMNS = ("id", "period", "rank", "full_name", "url", "description_en", "description_ko", "language", "stars", "forks",
+                "created_at", "period_start", "period_end")
 MODEL_COLUMNS = ("id", "rank", "author", "name", "task", "params", "license", "likes", "downloads", "created_at",
                  "arxiv", "url", "card", "variants")
 
@@ -550,6 +601,37 @@ def save_db(db, items: list[dict], models: list[dict], now: datetime):
         except Exception:  # variants 열을 더하는 마이그레이션 전이면 그 열만 빼고 저장한다
             db.upsert("trending_models", [{k: v for k, v in r.items() if k != "variants"} for r in rows], "id")
         db._req("DELETE", f"trending_models?collected_at=lt.{urllib.parse.quote(stamp)}", prefer="return=minimal")
+
+
+def _iso(d: datetime) -> str:
+    return d.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def rank_records(ranks: dict[str, dict]) -> list[dict]:
+    """기간별 순위 → github_rankings 테이블 줄(기간·저장소마다 한 줄)."""
+    return [{"id": f"{period}:{x['full_name']}", "period": period, "rank": x["rank"], "full_name": x["full_name"],
+             "url": x["url"], "description_en": x["description_en"], "description_ko": x.get("description_ko"),
+             "language": x["language"], "stars": x["stars"], "forks": x["forks"], "created_at": _iso(x["created_at"]),
+             "period_start": _iso(v["start"]), "period_end": _iso(v["end"])}
+            for period, v in ranks.items() for x in v["repos"]]
+
+
+def rankings_doc(rows: list[dict], now: datetime) -> dict:
+    """앱이 읽는 모양(list_github_rankings와 같다): {"collected_at", "periods": {기간: {"start", "end", "repos"}}}."""
+    periods: dict[str, dict] = {}
+    for r in rows:
+        p = periods.setdefault(r["period"], {"start": r["period_start"], "end": r["period_end"], "repos": []})
+        p["repos"].append({k: r[k] for k in RANK_COLUMNS if k not in ("id", "period", "period_start", "period_end")})
+    return {"collected_at": _iso(now), "periods": periods}
+
+
+def save_rankings(db, rows: list[dict], now: datetime):
+    """이번에 받은 기간만 새 순위로 바꾼다(못 받은 기간은 지난 순위를 그대로 둔다)."""
+    stamp = now.isoformat()
+    db.upsert("github_rankings", [{k: r[k] for k in RANK_COLUMNS} | {"collected_at": stamp} for r in rows], "id")
+    for period in sorted({r["period"] for r in rows}):
+        db._req("DELETE", f"github_rankings?period=eq.{period}&collected_at=lt.{urllib.parse.quote(stamp)}",
+                prefer="return=minimal")
 
 
 def pick(items: list[dict], now: datetime) -> list[dict]:
@@ -912,6 +994,13 @@ def main(argv=None):
             report.append(f"{label}: 실패 {e!r}")
 
     try:
+        ranks = gh_rankings(now)
+        report.append("GitHub 기간별 순위: " + ", ".join(f"{k} {len(v['repos'])}개" for k, v in ranks.items()) if ranks else "GitHub 기간별 순위: 실패")
+    except Exception as e:
+        ranks = {}
+        report.append(f"GitHub 기간별 순위: 실패 {e!r}")
+
+    try:
         models = from_hf_trending()
         report.append(f"HF 트렌딩 모델: {len(models)}개")
     except Exception as e:
@@ -1020,6 +1109,23 @@ def main(argv=None):
     for m in models:
         if m["card"] is not None:
             cache[m["url"]] = {"card": m["card"]}
+    # 순위 저장소 설명: 한 번 옮긴 설명은 캐시에서(설명이 바뀌면 다시). 여러 기간에 같은 저장소가 나와도 한 번만
+    repos = {x["url"]: x for v in ranks.values() for x in v["repos"]}
+    for x in repos.values():
+        hit = cache.get("ghd:" + x["url"])
+        x["description_ko"] = hit["ko"] if hit and hit.get("en") == x["description_en"] else None
+    todo = [x for x in repos.values() if not x["description_ko"]]
+    for i in range(0, len(todo) if key else 0, 25):
+        chunk = todo[i:i + 25]
+        ko = translate([x["description_en"] for x in chunk], key, lambda e: None)
+        for x, t in zip(chunk, ko or []):
+            x["description_ko"] = t
+            cache["ghd:" + x["url"]] = {"en": x["description_en"], "ko": t}
+    for v in ranks.values():
+        for x in v["repos"]:
+            x["description_ko"] = repos[x["url"]]["description_ko"]
+    if repos:
+        report.append(f"순위 저장소 설명 번역: {sum(bool(x['description_ko']) for x in repos.values())}/{len(repos)}")
     save_state(db, "digest_cache", DIGEST_CACHE, cache)
     items += releases
     for item in items:
@@ -1035,15 +1141,28 @@ def main(argv=None):
 
     items.sort(key=lambda i: i["published_at"], reverse=True)
     OUT.mkdir(parents=True, exist_ok=True)
-    doc = {"collected_at": now.isoformat(), "window_days": WINDOW_DAYS, "items": items, "models": models}
+    rank_rows = rank_records(ranks)
+    doc = {"collected_at": now.isoformat(), "window_days": WINDOW_DAYS, "items": items, "models": models,
+           "github_rankings": rankings_doc(rank_rows, now)}
     (OUT / "official_news.json").write_text(json.dumps(doc, ensure_ascii=False, indent=2), encoding="utf-8")
     (OUT / "official_news.define.json").write_text(
         json.dumps({"OFFICIAL_NEWS_PREVIEW": json.dumps(doc, ensure_ascii=False)}, ensure_ascii=False), encoding="utf-8")
     if db:
         save_db(db, items, models, now)
+        if rank_rows:
+            try:
+                save_rankings(db, rank_rows, now)
+                report.append(f"DB 저장: GitHub 순위 {len(rank_rows)}줄")
+            except Exception as e:  # 순위 테이블 마이그레이션 전이면 건너뛴다
+                report.append(f"DB 저장: GitHub 순위 실패 {e!r}")
         for m in merged:  # 지난 실행에서 따로 저장된 중복 글도 지운다
             db.delete("official_news", id=hashlib.sha1(m["url"].encode()).hexdigest()[:12])
         report.append(f"DB 저장: 소식 {len(items)}개, 모델 {len(models)}개")
+        if key:  # X 글 번역(x_posts 테이블이 없으면 건너뛴다)
+            try:
+                report.append(x_posts.translate_recent(db, key, now))
+            except Exception as e:
+                report.append(f"X 글 번역: 실패 {e!r}")
         # 소식·모델 글의 용어 후보(관리자 웹에서 승인하면 다음 배치에 앱 사전에 들어간다). 실패해도 소식 저장에는 영향이 없다
         if key:
             seen = load_state(db, "news_terms_seen", NEWS_TERMS_SEEN)

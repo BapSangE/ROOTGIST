@@ -29,6 +29,8 @@ abstract class Repository {
   Future<PaperDetail> getPaper(String id); // ③
   Future<List<OfficialNews>> listOfficialNews(); // P8d 공식 소식, 최신순
   Future<List<TrendingModel>> listTrendingModels(); // P9 HF 트렌딩 모델, 순위순
+  Future<GithubRankings> listGithubRankings(); // GitHub 칸 기간별 순위(일간·주간·월간)
+  Future<List<XPost>> listXPosts(); // X 계정 최근 3일 글, 최신순. 못 받으면 빈 목록으로 다룬다
   Future<List<GlossaryTerm>> listTerms(); // 공용 용어 사전(공식 소식·모델 상세 하이라이트). 못 받으면 빈 목록
   Future<Digest?> today() => getDigest();
 }
@@ -101,6 +103,14 @@ class FixtureRepository extends Repository {
       ];
 
   @override
+  Future<List<XPost>> listXPosts() async => [
+        for (final p in (await _load('x_posts.json'))['posts']) XPost.fromJson(p),
+      ];
+
+  @override
+  Future<GithubRankings> listGithubRankings() async => GithubRankings.fromJson(await _load('github_rankings.json'));
+
+  @override
   Future<List<GlossaryTerm>> listTerms() async => [
         for (final t in (await _load('terms.json'))['terms']) GlossaryTerm.dictionary(t),
       ];
@@ -159,11 +169,12 @@ void restoreBookmark(Bookmark b) {
 // 홈 「더 보기」·옆으로 밀기 → 탐색의 그 칸으로. (칸, 업데이트 선택 여부). 같은 칸을 다시 눌러도 알리도록 매번 새 값.
 // animate: 탐색 안에서 밀어 넘길 때는 칸이 미끄러져 넘어간다(다른 탭에서 들어올 때는 바로).
 class ExploreJump {
-  const ExploreJump(this.tab, {this.updates = false, this.hot = false, this.fresh = false, this.animate = false});
-  final int tab; // 0 논문, 1 소식, 2 모델
+  const ExploreJump(this.tab, {this.updates = false, this.hot = false, this.fresh = false, this.period = 0, this.animate = false});
+  final int tab; // 0 논문, 1 소식, 2 모델, 3 GitHub
   final bool updates; // 소식: 업데이트 칸
   final bool hot; // 소식: 화제 칸
   final bool fresh; // 모델: 새로 나옴 칸
+  final int period; // GitHub: 0 일간, 1 주간, 2 월간
   int get newsTab => hot ? 2 : (updates ? 1 : 0);
   final bool animate;
 }
@@ -174,3 +185,4 @@ final exploreJump = ValueNotifier<ExploreJump?>(null);
 final exploreTab = ValueNotifier(0);
 final newsTab = ValueNotifier(0); // 소식 칸의 발표(0) | 업데이트(1) | 화제(2)
 final modelsFresh = ValueNotifier(false); // 모델 칸의 트렌딩(false) | 새로 나옴(true)
+final githubPeriod = ValueNotifier(0); // GitHub 칸의 일간(0) | 주간(1) | 월간(2)

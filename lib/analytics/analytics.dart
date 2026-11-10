@@ -184,6 +184,7 @@ class AppAnalytics {
         'explore' => switch (exploreTab) {
           1 => updates ? 'explore_updates' : 'explore_news',
           2 => 'explore_models',
+          3 => 'explore_github',
           _ => 'explore_papers',
         },
         _ => null,

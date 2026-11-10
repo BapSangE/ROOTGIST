@@ -102,7 +102,7 @@ flutter build ipa --release --build-number="$NEXT_BUILD_NUMBER" \
 | `category_selected` | 탐색의 실제 표시 분류 변경/진입 | `scope=explore`, `category=papers/news/updates/models` |
 | `reader_active_time` | 리더 화면 이탈, 활성 해제, 30초 체크포인트 | `content_id`, `active_ms`, `reason=navigation/background/checkpoint` |
 
-화면 이름: home, explore_papers, explore_news, explore_updates, explore_models, digest_archive, library, settings, settings_reading, settings_source, settings_privacy, settings_notices, paper_detail, paper_reader, news_detail, model_detail. 개발 갤러리·알 수 없는 경로는 제외한다. 동일 경로의 문장 쿼리 변경은 재방문으로 세지 않는다.
+화면 이름: home, explore_papers, explore_news, explore_updates, explore_models, explore_github, digest_archive, library, settings, settings_reading, settings_source, settings_privacy, settings_notices, paper_detail, paper_reader, news_detail, model_detail. 개발 갤러리·알 수 없는 경로는 제외한다. 동일 경로의 문장 쿼리 변경은 재방문으로 세지 않는다.
 
 `*_opened`는 상세를 **연 동작**이다. 서버 데이터 로딩 성공이나 끝까지 읽음을 뜻하지 않는다. content_id는 120자 이내의 영숫자와 `._/-`만 허용하며, URL fallback 등은 생략한다. 모델에 용어 ID가 없으므로 용어 텍스트·정의·문장·sense_id를 수집하지 않는다. 출처 칩 필터, 전체 북마크 비우기는 이번 명세의 별도 이벤트에 포함하지 않는다.
 

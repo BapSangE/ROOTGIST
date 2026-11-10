@@ -101,6 +101,25 @@ class SupabaseRepository extends Repository {
     return [for (final m in j['models'] ?? const []) TrendingModel.fromJson(m)];
   }
 
+  // GitHub 기간별 순위(supabase/migrations/20261110090000_github_rankings.sql). 마이그레이션 전이면 빈 순위
+  @override
+  Future<GithubRankings> listGithubRankings() async {
+    if (_officialNewsPreview.isNotEmpty) {
+      final g = jsonDecode(_officialNewsPreview)['github_rankings'];
+      return g == null ? const GithubRankings.empty() : GithubRankings.fromJson(g);
+    }
+    final j = await _rpc('list_github_rankings', {}, 'github_rankings');
+    return j == null ? const GithubRankings.empty() : GithubRankings.fromJson(j);
+  }
+
+  // X 계정 글(supabase/migrations/20261106180000_x_posts.sql). 마이그레이션 전이면 빈 목록
+  @override
+  Future<List<XPost>> listXPosts() async {
+    if (_officialNewsPreview.isNotEmpty) return const [];
+    final j = await _rpc('list_x_posts', {}, 'x_posts');
+    return [for (final p in j?['posts'] ?? const []) XPost.fromJson(p)];
+  }
+
   // 공용 용어 사전(supabase/migrations/20261029120000_terms_everywhere_model_variants.sql)
   @override
   Future<List<GlossaryTerm>> listTerms() async {

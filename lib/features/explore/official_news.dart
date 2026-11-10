@@ -18,6 +18,8 @@ import '../../design/widgets/rg_row_head.dart';
 import '../common/item_actions.dart';
 import '../home/home_sections.dart';
 import 'date_groups.dart';
+import 'github_rankings.dart';
+import 'x_posts.dart';
 import '../guide/coach_marks.dart';
 import '../../data/guide.dart';
 
@@ -36,7 +38,8 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
       exploreJump.value?.newsTab ?? 0; // 0 발표, 1 업데이트, 2 화제
   bool get _updates => _tab == 1;
   String? _source; // null = 전체
-  String? _hot; // 개발자 화제 칩: null 전체, 'hn', 'github'
+  String? _hot; // HOT 칸 칩: null 전체, 'hn', 'x'
+  final _x = Reloadable(loadXPosts); // X 글: HOT 칸에 섞고 발표에 반응으로 붙인다
   final _chipsKey = GlobalKey(); // 처음 안내: 회사 칩 줄
 
   // 소식 칸을 처음 열고 회사 칩이 보이면 도움말 한 장. 탐색의 다른 칸에 있거나 다른 탭이면 다음 기회에
@@ -115,16 +118,20 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
     exploreJump.removeListener(_jump);
     exploreTab.removeListener(_tip);
     _req.dispose();
+    _x.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: _req,
+      listenable: Listenable.merge([_req, _x]),
       builder: (context, _) => FutureBuilder(
         future: _req.future,
-        builder: (context, snap) => ListView(
+        builder: (context, snap) => FutureBuilder(
+        future: _x.future,
+        initialData: const <XPost>[],
+        builder: (context, xsnap) => ListView(
           padding: const EdgeInsets.only(bottom: RgSpace.bottomScrollInset),
           children: [
             ExploreSectionTabs(
@@ -144,6 +151,7 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
               AsyncSnapshot(connectionState: ConnectionState.done) => _list(
                 context,
                 snap.data!,
+                xsnap.data ?? const [],
               ),
               _ => const [
                 RgSkeleton(
@@ -156,12 +164,14 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
             },
           ],
         ),
+        ),
       ),
     );
   }
 
-  List<Widget> _list(BuildContext context, List<OfficialNews> all) {
-    if (_tab == 2) return _hotList(context, all);
+  List<Widget> _list(BuildContext context, List<OfficialNews> all, List<XPost> xs) {
+    if (_tab == 2) return _hotList(context, all, xs);
+    final reactions = xByLink(xs);
     final kind = [
       for (final n in all)
         if (!n.isHot && n.isUpdate == _updates) n,
@@ -225,7 +235,7 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
                           shown.first.publishedAt.isAfter(seen) &&
                           _firstSeen(shown) == n)
                     const _ReadLine(),
-                  _ExploreNewsRow(news: n, update: _updates),
+                  _ExploreNewsRow(news: n, update: _updates, x: reactions[normUrl(n.url)]),
                 ],
               ],
             ),
@@ -262,51 +272,41 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
     ];
   }
 
-  // 개발자 화제 칸: 「전체 | Hacker News | GitHub」 칩(발표·업데이트의 출처 칩과 같은 자리), 홈 개발자 화제 카드를 날짜로 묶어.
-  // 점수 단위가 달라(HN 추천 · GitHub 별) 한 줄로 섞어 세우지 않는다: 각자 점수 순, 「전체」는 둘을 한 개씩 번갈아 놓는다.
-  List<Widget> _hotList(BuildContext context, List<OfficialNews> all) {
+  // 개발자 화제 칸(2026-11-10): 맨 위 「오늘 뜨는 저장소」 카드 줄(GitHub 칸 일간 순위, 옆으로 넘김) →
+  // 「전체 | Hacker News | X」 Hacker News 글과 X 글(최근 3일). 점수 단위가 달라(HN 추천 · X 좋아요) 한 줄로 섞어 세우지 않고
+  // 각자 반응 순, 「전체」는 둘을 한 개씩 번갈아 놓는다. 발표 소식을 단 X 글은 발표 카드의 반응으로 가므로 여기서는 뺀다.
+  List<Widget> _hotList(BuildContext context, List<OfficialNews> all, List<XPost> xs) {
     final now = clock();
-    int byPoints(OfficialNews a, OfficialNews b) =>
-        (b.points ?? 0).compareTo(a.points ?? 0);
     final hn = [
       for (final n in all)
         if (n.isHot && !n.isGithub) n,
-    ]..sort(byPoints);
-    final gh = [
-      for (final n in all)
-        if (n.isGithub) n,
-    ]..sort(byPoints);
-    final shown = switch (_hot) {
+    ]..sort((a, b) => (b.points ?? 0).compareTo(a.points ?? 0));
+    final official = {for (final n in all) if (!n.isHot) normUrl(n.url)};
+    final x = [
+      for (final p in xs)
+        if (!p.links.any((l) => official.contains(normUrl(l)))) p,
+    ]..sort((a, b) => b.likes.compareTo(a.likes));
+    final keys = [null, if (hn.isNotEmpty) 'hn', if (x.isNotEmpty) 'x'];
+    final List<Object> shown = switch (_hot) {
       'hn' => hn,
-      'github' => gh,
+      'x' => x,
       _ => [
-        for (var i = 0; i < hn.length || i < gh.length; i++) ...[
+        for (var i = 0; i < hn.length || i < x.length; i++) ...[
           if (i < hn.length) hn[i],
-          if (i < gh.length) gh[i],
+          if (i < x.length) x[i],
         ],
       ],
     };
     return [
-      ExploreTextFilters(
-        labels: [
-          '전체',
-          if (hn.isNotEmpty) 'Hacker News',
-          if (gh.isNotEmpty) 'GitHub',
-        ],
-        selected: [
-          null,
-          if (hn.isNotEmpty) 'hn',
-          if (gh.isNotEmpty) 'github',
-        ].indexOf(_hot),
-        onTap: (i) => setState(
-          () => _hot = [
-            null,
-            if (hn.isNotEmpty) 'hn',
-            if (gh.isNotEmpty) 'github',
-          ][i],
+      const GithubRepoStrip(),
+      DateHeader(label: '많이 본 글', count: '${shown.length}개', open: true),
+      if (keys.length > 2)
+        ExploreTextFilters(
+          labels: ['전체', if (hn.isNotEmpty) 'Hacker News', if (x.isNotEmpty) 'X'],
+          selected: keys.indexOf(_hot).clamp(0, keys.length - 1),
+          onTap: (i) => setState(() => _hot = keys[i]),
         ),
-      ),
-      const SizedBox(height: RgSpace.s16),
+      if (keys.length > 2) const SizedBox(height: RgSpace.s16),
       RgFilterSwitch(
         switchKey: (_tab, _hot),
         child: shown.isEmpty
@@ -324,11 +324,11 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
                   ),
                 ),
               )
-            : DateGroups<OfficialNews>(
+            : DateGroups<Object>(
                 key: ValueKey(_hot),
                 items: shown,
-                at: (n) => n.publishedAt,
-                tag: (n) => n.sourceLabel,
+                at: (o) => o is XPost ? o.postedAt : (o as OfficialNews).publishedAt,
+                tag: (o) => o is XPost ? 'X' : (o as OfficialNews).sourceLabel,
                 now: now,
                 showDayHeaders: false,
                 builder: (context, rows) => Padding(
@@ -338,7 +338,10 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     spacing: RgSpace.s12,
-                    children: [for (final n in rows) _ExploreHotCard(news: n)],
+                    children: [
+                      for (final o in rows)
+                        o is XPost ? XPostCard(post: o, now: now) : _ExploreHotCard(news: o as OfficialNews),
+                    ],
                   ),
                 ),
               ),
@@ -360,7 +363,7 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
             ),
             Expanded(
               child: KeepAllText(
-                '개발자들이 많이 본 글과 새 도구예요. 공식 발표가 아니라 각 사이트의 글이고, 숫자는 Hacker News 추천(upvote)·댓글 수와 GitHub 별 수예요. 요약은 원문 사이트가 허용할 때만 AI가 만들어요.',
+                '개발자들이 많이 본 글과 새 도구예요. 공식 발표가 아니라 각 사이트·계정의 글이고, 숫자는 Hacker News 추천(upvote)·댓글 수, X 좋아요 수, GitHub 별 수예요. 저장소 전체 순위는 GitHub 칸에 있어요. X 글은 원문과 함께 AI 번역을 보여 주고, 누르면 X에서 열려요.',
                 perSentence: true,
                 style: RgText.caption.copyWith(color: RgColors.textSecondary),
               ),
@@ -375,9 +378,10 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
 // 발표는 제목과 출처·날짜만, 업데이트는 도구 이름과 변경 제목을 보인다.
 // 원래 소식 상세·북마크·읽음 상태는 그대로 연결한다.
 class _ExploreNewsRow extends StatelessWidget {
-  const _ExploreNewsRow({required this.news, required this.update});
+  const _ExploreNewsRow({required this.news, required this.update, this.x});
   final OfficialNews news;
   final bool update;
+  final XPost? x; // 이 소식을 단 X 글(좋아요가 가장 많은 것)
 
   @override
   Widget build(BuildContext context) {
@@ -467,6 +471,7 @@ class _ExploreNewsRow extends StatelessWidget {
                   ],
                 ),
               ),
+              if (x case final post?) XReactionLine(post: post),
             ],
           ),
         ),

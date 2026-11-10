@@ -1,0 +1,18 @@
+{
+ "posts": [
+  {"id": "9003", "handle": "ToyNews", "author_name": "Toy News", "tier": 3,
+   "text": "Spotted: Example Assistant is testing a new memory panel in its web app. Not live for everyone yet.",
+   "text_ko": null, "url": "https://x.com/ToyNews/status/9003", "posted_at": "2026-10-18T14:00:00Z",
+   "likes": 650, "reposts": 41, "replies": 12, "perk": false, "links": []},
+  {"id": "9002", "handle": "ExampleLab", "author_name": "Example Lab", "tier": 1,
+   "text": "We've reset weekly usage limits for all paid plans. Enjoy the extra room this week, on us.",
+   "text_ko": "모든 유료 요금제의 주간 사용량 한도를 초기화했어요. 이번 주는 넉넉하게 써 보세요.",
+   "url": "https://x.com/ExampleLab/status/9002", "posted_at": "2026-10-18T10:00:00Z",
+   "likes": 2400, "reposts": 310, "replies": 95, "perk": true, "links": []},
+  {"id": "9001", "handle": "ExampleLab", "author_name": "Example Lab", "tier": 1,
+   "text": "Introducing our newest example model. Read more: https://t.co/x",
+   "text_ko": "가장 새로운 예시 모델을 소개해요. 자세히 보기: https://t.co/x",
+   "url": "https://x.com/ExampleLab/status/9001", "posted_at": "2026-10-18T01:00:00Z",
+   "likes": 5200, "reposts": 820, "replies": 240, "perk": false, "links": ["https://example.com/fixture/anthropic-1"]}
+ ]
+}
