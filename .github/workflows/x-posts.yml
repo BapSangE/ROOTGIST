@@ -1,8 +1,8 @@
 # X(구 트위터) 감시 계정의 새 글 받기(2026-11-06, docs/X_WATCHLIST.md). 「한도 초기화」 같은 소식은 X에서 먼저 나와 자주 본다.
 # 비용은 받은 글 수에 비례하고 자주 돌아도 새 글만 받는다(since_id). 하루 상한은 X_DAILY_READ_CAP(기본 200개 ≈ $1).
 # 저장소 Secrets에 X_BEARER_TOKEN이 없으면 바로 끝난다. 새 글 번역에 LLM을 부르지만 30분마다 몇 개뿐이라 daily-batch와 다른 concurrency 그룹(긴 배치에 막혀 수집이 밀리지 않게).
-# GitHub 예약은 붐비면 건너뛰어 11-10에는 하루 4번만 돌았다. 그래서 Supabase pg_cron이 매시 2·32분에 workflow_dispatch로 깨운다
-# (supabase/migrations/20261111120000_x_posts_dispatch.sql). 아래 예약은 예비.
+# GitHub 예약은 붐비면 건너뛰어 11-10에는 하루 4번만 돌았다. 그래서 Supabase pg_cron이 매시 정각·30분에 workflow_dispatch로 깨운다
+# (supabase/migrations/20261111120000_x_posts_dispatch.sql, 20261111130000_cron_on_the_hour.sql). 아래 예약은 예비.
 name: x-posts
 
 on:

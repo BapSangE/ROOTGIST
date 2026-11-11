@@ -1066,11 +1066,11 @@ void main() {
     }
   });
 
-  test('다음 수집 시각: KST 6시 전·15시 전·그 뒤', () {
+  test('다음 수집 시각: KST 6시 전·13시 전·그 뒤', () {
     expect(nextCollectLabel(DateTime.utc(2026, 11, 8, 20)), '오늘 아침 6시쯤'); // KST 05시
-    expect(nextCollectLabel(DateTime.utc(2026, 11, 8, 21)), '오후 3시쯤'); // KST 06시
-    expect(nextCollectLabel(DateTime.utc(2026, 11, 9, 5, 59)), '오후 3시쯤'); // KST 14:59
-    expect(nextCollectLabel(DateTime.utc(2026, 11, 9, 6)), '내일 아침 6시쯤'); // KST 15시
+    expect(nextCollectLabel(DateTime.utc(2026, 11, 8, 21)), '오후 1시쯤'); // KST 06시
+    expect(nextCollectLabel(DateTime.utc(2026, 11, 9, 3, 59)), '오후 1시쯤'); // KST 12:59
+    expect(nextCollectLabel(DateTime.utc(2026, 11, 9, 4)), '내일 아침 6시쯤'); // KST 13시
     expect(nextCollectLabel(DateTime.utc(2026, 11, 9, 14, 59)), '내일 아침 6시쯤'); // KST 23:59
   });
 
@@ -1084,12 +1084,12 @@ void main() {
     clock = () => DateTime.utc(2026, 10, 19, 1); // KST 10시
     addTearDown(() => clock = DateTime.now);
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: Center(child: NextCollectPill()))));
-    expect(find.text('다음 수집 오후 3시쯤'), findsOneWidget);
-    await tester.tap(find.bySemanticsLabel('다음 수집 오후 3시쯤, 수집 일정 보기'));
+    expect(find.text('다음 수집 오후 1시쯤'), findsOneWidget);
+    await tester.tap(find.bySemanticsLabel('다음 수집 오후 1시쯤, 수집 일정 보기'));
     await tester.pumpAndSettle();
     expect(find.text('언제 새로 올라와요?'), findsOneWidget);
     expect(find.text('아침 6시쯤'), findsOneWidget);
-    expect(find.text('오후 3시쯤'), findsOneWidget);
+    expect(find.text('오후 1시쯤'), findsOneWidget);
     expect(find.text('30분마다'), findsOneWidget); // X 글
     expect(find.textContaining(keepAll('arXiv와 Hugging Face')), findsOneWidget);
   });
