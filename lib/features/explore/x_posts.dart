@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -110,6 +112,39 @@ String xAgo(DateTime at, DateTime now) {
 }
 
 // 소식 링크 → 그 소식을 단 X 글(좋아요가 가장 많은 것). 발표 카드의 「X 반응」에 쓴다.
+// 「적당히 새로운」 화제 순(2026-11-11): 커뮤니티 「전체」 칩이 쓴다(「X」 칩은 최신 순, 홈 혜택 카드는 좋아요 순).
+// · 계정마다 평소보다 얼마나 떴나: 좋아요 ÷ 그 계정의 평소 좋아요(최근 3일 글의 중간값). OpenAI는 평범해도 1만,
+//   소식 정리 계정은 300이면 크게 뜬 것이라 좋아요 그대로 세우면 큰 계정이 늘 위를 차지했다.
+// · 시간 감쇠는 약하게: ÷ (지난 시간 + 2)^0.8. 좋아요는 수집 때와 4~30시간 뒤에만 다시 받아 막 들어온 글은 0에 가깝다.
+//   세게 깎으면(HN의 1.8) 오래된 글이 너무 빨리 빠지고, 약하게 두면 새 글이 며칠 묵은 화제 글에 밀리지 않을 만큼만 올라온다.
+// 글이 2개 미만인 계정은 평소 값을 알 수 없어 전체 글의 중간값을 쓴다.
+List<XPost> rankXBuzz(Iterable<XPost> posts, {required Iterable<XPost> baseline, required DateTime now}) {
+  double median(List<int> v) {
+    if (v.isEmpty) return 0;
+    v.sort();
+    final m = v.length ~/ 2;
+    return v.length.isOdd ? v[m].toDouble() : (v[m - 1] + v[m]) / 2;
+  }
+
+  final byHandle = <String, List<int>>{};
+  for (final p in baseline) {
+    (byHandle[p.handle.toLowerCase()] ??= []).add(p.likes);
+  }
+  final overall = median([for (final p in baseline) p.likes]);
+  double usual(XPost p) {
+    final v = byHandle[p.handle.toLowerCase()];
+    return v == null || v.length < 2 ? overall : median([...v]);
+  }
+
+  double score(XPost p) {
+    final hours = math.max(0, now.difference(p.postedAt).inMinutes / 60);
+    return (p.likes + 1) / (usual(p) + 1) / math.pow(hours + 2, 0.8);
+  }
+
+  final scored = {for (final p in posts) p: score(p)};
+  return scored.keys.toList()..sort((a, b) => scored[b]!.compareTo(scored[a]!));
+}
+
 Map<String, XPost> xByLink(List<XPost> posts) {
   final out = <String, XPost>{};
   for (final p in posts) {
@@ -249,6 +284,8 @@ class _XPerkSectionState extends State<XPerkSection> {
   @override
   Widget build(BuildContext context) {
     final now = clock();
+    // 혜택 카드는 좋아요 순 그대로(48시간 창이 이미 신선도를 거른다). 화제 순(rankXBuzz)을 써 보니 실데이터(11-11)에서
+    // 2칸뿐인 카드에서 실제 리셋 발표(bcherny 1.3만)가 빠지고 「리셋 해 볼까?」 같은 암시 글이 올라왔다.
     final perks = [
       for (final p in _posts ?? const <XPost>[])
         if (p.perk && now.difference(p.postedAt) < const Duration(hours: 48)) p,

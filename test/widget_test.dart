@@ -1262,7 +1262,7 @@ void main() {
       'url': 'u', 'published_at': '2026-10-29T00:00:00Z', 'points': 331}).reaction, 'HN 추천 331'); // 공식 소식에 붙은 반응
   });
 
-  testWidgets('소식 · 커뮤니티: 「전체 | Hacker News | X」 반응 순, 카드마다 출처 칩, 저장소 줄은 없다, 상세는 원문·HN 토론 링크', (tester) async {
+  testWidgets('소식 · 커뮤니티: 「전체 | Hacker News」 반응 순·「X」 최신 순, 카드마다 출처 칩, 저장소 줄은 없다, 상세는 원문·HN 토론 링크', (tester) async {
     tester.view.physicalSize = const Size(390, 2400);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -1295,7 +1295,7 @@ void main() {
     expect(find.byType(XPostCard), findsNWidgets(2));
     expect(find.text(keepAll('LLM 글쓰기 문체에 관한 가상 글')), findsNothing);
     double yx(String id) => tester.getTopLeft(find.byWidgetPredicate((w) => w is XPostCard && w.post.id == id)).dy;
-    expect(yx('9002'), lessThan(yx('9003'))); // 좋아요 순(2,400 > 650)
+    expect(yx('9003'), lessThan(yx('9002'))); // 「X」 칩은 같은 날이어도 최신 순(23시 글이 좋아요 많은 19시 글보다 위)
     // 카드를 누르면 앱 안 시트: 번역 전문 + 원문(접지 않음) + 「X에서 보기」
     await tester.tap(find.byWidgetPredicate((w) => w is XPostCard && w.post.id == '9002'));
     await tester.pumpAndSettle();
@@ -1574,6 +1574,25 @@ void main() {
     await tester.pumpAndSettle();
     expect(pulled, 1);
     expect(find.text(keepAll('6편이 올라왔어요')), findsOneWidget); // 보던 홈 그대로
+  });
+
+  test('X 화제 순: 계정별 평소 대비 반응 + 약한 시간 감쇠', () {
+    final now = DateTime.utc(2026, 11, 11, 12);
+    XPost post(String id, String handle, int likes, int hoursAgo) => XPost.fromJson({
+      'id': id, 'handle': handle, 'text': id, 'url': '', 'likes': likes,
+      'posted_at': now.subtract(Duration(hours: hoursAgo)).toIso8601String(),
+    });
+    final big = [post('big-usual-1', 'Big', 10000, 10), post('big-usual-2', 'Big', 10000, 12), post('big-new', 'Big', 10000, 3)];
+    final small = [post('small-usual', 'Small', 100, 10), post('small-hit', 'Small', 900, 3)];
+    final old = post('big-old-hit', 'Big', 30000, 40);
+    final all = [...big, ...small, old];
+    final ranked = rankXBuzz(all, baseline: all, now: now).map((p) => p.id).toList();
+    // 작은 계정이 평소의 9배 뜬 글이 큰 계정의 평범한 글(좋아요는 11배 많음)보다 위
+    expect(ranked.indexOf('small-hit'), lessThan(ranked.indexOf('big-new')));
+    // 같은 계정·같은 반응이면 새 글이 위
+    expect(ranked.indexOf('big-new'), lessThan(ranked.indexOf('big-usual-2')));
+    // 이틀 묵은 큰 화제 글(평소의 3배)도 감쇠가 약해 평범한 새 글보다는 위
+    expect(ranked.indexOf('big-old-hit'), lessThan(ranked.indexOf('big-usual-1')));
   });
 
   testWidgets('C02: 약어는 정식 명칭 한 줄, 원어와 같은 대응어는 숨김', (tester) async {

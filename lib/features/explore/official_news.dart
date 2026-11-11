@@ -288,6 +288,8 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
   // 개발자 화제 칸(2026-11-10): 맨 위 「오늘 뜨는 저장소」 카드 줄(GitHub 칸 일간 순위, 옆으로 넘김) →
   // 「전체 | Hacker News | X」 Hacker News 글과 X 글(최근 3일). 점수 단위가 달라(HN 추천 · X 좋아요) 한 줄로 섞어 세우지 않고
   // 각자 반응 순, 「전체」는 둘을 한 개씩 번갈아 놓는다. 발표 소식을 단 X 글은 발표 카드의 반응으로 가므로 여기서는 뺀다.
+  // X 글은 좋아요 그대로가 아니라 계정별 상대 반응 + 약한 시간 감쇠(rankXBuzz, x_posts.dart). HN은 추천 순 그대로.
+  // 「X」 칩만 최신 순(2026-11-11): 한도 초기화 같은 소식은 빨리 봐야 하는데, 30분마다 막 들어온 글은 좋아요가 적어 아래로 밀렸다.
   List<Widget> _hotList(BuildContext context, List<OfficialNews> all, List<XPost> xs) {
     final now = clock();
     final hn = [
@@ -295,14 +297,15 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
         if (n.isHot && !n.isGithub) n,
     ]..sort((a, b) => (b.points ?? 0).compareTo(a.points ?? 0));
     final official = {for (final n in all) if (!n.isHot) normUrl(n.url)};
-    final x = [
-      for (final p in xs)
-        if (!p.links.any((l) => official.contains(normUrl(l)))) p,
-    ]..sort((a, b) => b.likes.compareTo(a.likes));
+    final x = rankXBuzz(
+      [for (final p in xs) if (!p.links.any((l) => official.contains(normUrl(l)))) p],
+      baseline: xs,
+      now: now,
+    );
     final keys = [null, if (hn.isNotEmpty) 'hn', if (x.isNotEmpty) 'x'];
     final List<Object> shown = switch (_hot) {
       'hn' => hn,
-      'x' => x,
+      'x' => <XPost>[...x]..sort((a, b) => b.postedAt.compareTo(a.postedAt)),
       _ => [
         for (var i = 0; i < hn.length || i < x.length; i++) ...[
           if (i < hn.length) hn[i],
