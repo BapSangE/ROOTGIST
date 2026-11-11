@@ -15,6 +15,7 @@ import '../../data/unread.dart';
 import '../home/home_screen.dart';
 import '../common/term_text.dart';
 import 'benchmark_sheet.dart';
+import 'github_rankings.dart';
 import 'official_news.dart';
 import 'trending_models.dart';
 
@@ -348,6 +349,141 @@ class _ModelDetailScreenState extends State<ModelDetailScreen> {
 }
 
 // 「278억 파라미터 이미지·텍스트 이해 모델」: 목록 행·다크 카드(만든 곳은 칩에 있다)
+// GitHub 순위 저장소 상세(2026-11-11). 모델 상세와 같은 틀: 머리(출처 칩·순위) → 이름 → 한눈에(숫자) → README 정리 → 안내 → GitHub 링크.
+// 지금 보고 있는 기간(githubPeriod)의 순위를 먼저 찾고, 없으면 다른 기간에서.
+class RepoDetailScreen extends StatefulWidget {
+  const RepoDetailScreen({super.key, required this.fullName});
+  final String fullName;
+
+  @override
+  State<RepoDetailScreen> createState() => _RepoDetailScreenState();
+}
+
+class _RepoDetailScreenState extends State<RepoDetailScreen> {
+  late final _req = Reloadable(() async {
+    final g = await repository.listGithubRankings();
+    final order = [githubPeriods[githubPeriod.value], ...githubPeriods.where((p) => p != githubPeriods[githubPeriod.value])];
+    for (final p in order) {
+      for (final r in g.periods[p]?.repos ?? const <GithubRepo>[]) {
+        if (r.fullName == widget.fullName) return (r, p);
+      }
+    }
+    return null;
+  });
+
+  @override
+  void dispose() {
+    _req.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: _req,
+      builder: (context, _) => FutureBuilder(
+        future: _req.future,
+        builder: (context, snap) {
+          final hit = snap.data;
+          return StatusBarBand(child: ListView(
+            padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top, bottom: RgSpace.bottomScrollInset),
+            children: [
+              _TopBar(url: hit?.$1.url, actions: hit == null ? null : repoActions(hit.$1)),
+              if (snap.hasError) RgErrorCard(error: snap.error, onRetry: _req.reload),
+              if (snap.connectionState == ConnectionState.done && hit == null)
+                Padding(
+                  padding: const EdgeInsets.all(RgSpace.gutterText),
+                  child: KeepAllText('이 저장소는 순위에서 빠졌어요', style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
+                ),
+              if (hit case (final r, final period)) ..._repoBody(r, period),
+            ],
+          ));
+        },
+      ),
+    );
+  }
+
+  List<Widget> _repoBody(GithubRepo r, String period) {
+    final body = RgText.bodySummary.copyWith(color: RgColors.textBody);
+    final c = r.createdAt?.toUtc().add(const Duration(hours: 9));
+    final rd = r.readme;
+    return [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s12, RgSpace.gutterText, 0),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          RgRowHead(
+            chip: const RgChip('GitHub'),
+            meta: '최근 ${githubPeriodLabels[githubPeriods.indexOf(period)]} 새 저장소 ${r.rank}위',
+          ),
+          const SizedBox(height: RgSpace.s12),
+          HeadingTextScale(child: Semantics(header: true, child: Text(r.name, style: RgText.titleDetail))),
+          const SizedBox(height: RgSpace.s8),
+          Text(
+            [r.owner, if (c != null) '${c.year}.${c.month.toString().padLeft(2, '0')}.${c.day.toString().padLeft(2, '0')} 생성'].join(' · '),
+            style: RgText.meta.copyWith(color: RgColors.textSecondary),
+          ),
+        ]),
+      ),
+      const SizedBox(height: RgSpace.s24),
+      RgCard(
+        padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s18),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Semantics(header: true, child: Text('한눈에', style: RgText.titleCard)),
+          if (r.description case final d?) ...[
+            const SizedBox(height: RgSpace.s8),
+            KeepAllText(d, style: body),
+          ],
+          const SizedBox(height: RgSpace.s16),
+          Container(
+            padding: const EdgeInsets.only(top: RgSpace.s14),
+            decoration: BoxDecoration(border: Border(top: BorderSide(color: RgColors.dividerCard))),
+            child: IntrinsicHeight(
+              child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                _Stat('별', countKo(r.stars), first: true),
+                _Stat('포크', countKo(r.forks)),
+                _Stat('언어', r.language ?? '정보 없음', muted: r.language == null, flex: 4),
+              ]),
+            ),
+          ),
+        ]),
+      ),
+      const SizedBox(height: RgSpace.s12),
+      RgCard(
+        padding: const EdgeInsets.symmetric(horizontal: RgSpace.s20, vertical: RgSpace.s18),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Semantics(header: true, child: Text('어떤 저장소인가요', style: RgText.titleCard)),
+          const SizedBox(height: RgSpace.s10),
+          if (rd == null)
+            KeepAllText('README에 설명이 거의 없거나 아직 정리하지 못했어요. GitHub에서 확인해 보세요.',
+                perSentence: true, style: body.copyWith(color: RgColors.textSecondary))
+          else ...[
+            for (final s in rd.summary)
+              Padding(padding: const EdgeInsets.only(bottom: RgSpace.s6), child: KeepAllText(s, style: body)),
+            if (rd.uses.isNotEmpty) ...[
+              const SizedBox(height: RgSpace.s10),
+              Text('이런 데 써요', style: RgText.meta.copyWith(fontWeight: FontWeight.w600)),
+              const SizedBox(height: RgSpace.s8),
+              Wrap(spacing: RgSpace.s8, runSpacing: RgSpace.s6, children: [
+                for (final u in rd.uses) RgTag(label: keepAll(u), height: 28),
+              ]),
+            ],
+            if (rd.how case final h?) ...[
+              const SizedBox(height: RgSpace.s16),
+              Text('시작하는 법', style: RgText.meta.copyWith(fontWeight: FontWeight.w600)),
+              const SizedBox(height: RgSpace.s6),
+              KeepAllText(h, style: RgText.bodySmall.copyWith(color: RgColors.textBody)),
+            ],
+          ],
+        ]),
+      ),
+      const SizedBox(height: RgSpace.s12),
+      const _Note('저장소 README를 AI가 정리했어요. 실제로 써 보기 전에 GitHub에서 라이선스와 최근 변경을 확인해 주세요.'),
+      const SizedBox(height: RgSpace.s28),
+      _LinkCard(label: '저장소', value: 'GitHub', url: r.url),
+    ];
+  }
+}
+
 String modelSpec(TrendingModel m) => [?m.paramsKo, '${m.taskKo} 모델'].join(' ');
 
 // 「Qwen 공개 · 278억 파라미터 이미지·텍스트 이해 모델」: 메타데이터만으로 만든 한 줄(LLM 없음, P9 1단계)

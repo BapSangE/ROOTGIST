@@ -452,17 +452,30 @@ class GithubRepo {
         language = j['language'],
         stars = j['stars'] ?? 0,
         forks = j['forks'] ?? 0,
-        createdAt = j['created_at'] == null ? null : DateTime.parse(j['created_at']);
+        createdAt = j['created_at'] == null ? null : DateTime.parse(j['created_at']),
+        readme = j['readme_ko'] == null ? null : RepoReadme.fromJson(j['readme_ko']);
 
   final int rank;
   final String fullName, url; // 소유자/이름
   final String? descriptionEn, descriptionKo, language;
+  final RepoReadme? readme; // README를 AI가 정리한 것(2026-11-11). 정리 못 한 저장소는 null
   final int stars, forks;
   final DateTime? createdAt;
 
   String get owner => fullName.split('/').first;
   String get name => fullName.split('/').last;
   String? get description => descriptionKo ?? descriptionEn;
+}
+
+// GitHub 저장소 README 정리(worker/official_news.py summarize_readme): 무엇을 하는지 1~3문장, 쓰임 최대 3개, 시작하는 법 한 문장.
+class RepoReadme {
+  RepoReadme.fromJson(Map<String, dynamic> j)
+      : summary = [for (final s in j['summary'] ?? const []) s as String],
+        uses = [for (final s in j['uses'] ?? const []) s as String],
+        how = j['how'];
+
+  final List<String> summary, uses;
+  final String? how;
 }
 
 // X 계정 글(2026-11-10, supabase/migrations/20261106180000_x_posts.sql list_x_posts). 최근 3일.

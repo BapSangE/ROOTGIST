@@ -80,13 +80,15 @@ class _RgUnderlineTabsState extends State<RgUnderlineTabs> {
               Semantics(
                 button: true,
                 selected: i == widget.selected,
-                child: RgPressable(
+                // 위치는 눌림으로 작아지기 전 크기로 잰다(키를 눌림 바깥에: 짧게 톡 누르면 바로 97%가 돼 밑줄이 어긋났다)
+                child: KeyedSubtree(
+                  key: _keys[i],
+                  child: RgPressable(
                   onTap: () {
                     if (i != widget.selected) HapticFeedback.selectionClick();
                     widget.onTap(i);
                   },
                   child: Container(
-                    key: _keys[i],
                     constraints: BoxConstraints(
                       minHeight: RgSpace.minTouch,
                       minWidth: explore ? RgSpace.minTouch : 0,
@@ -128,6 +130,7 @@ class _RgUnderlineTabsState extends State<RgUnderlineTabs> {
                       ],
                     ),
                   ),
+                ),
                 ),
               ),
           ],

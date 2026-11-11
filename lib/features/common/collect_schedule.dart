@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../data/unread.dart' show clock;
 import '../../design/tokens.dart';
@@ -62,10 +61,7 @@ class _NextCollectPillState extends State<NextCollectPill> {
       label: '다음 수집 $label, 수집 일정 보기',
       excludeSemantics: true,
       child: RgPressable(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          showCollectScheduleSheet(context);
-        },
+        onTap: () => showCollectScheduleSheet(context), // 진동은 시트가 연다
         // 누르는 영역은 44, 보이는 알약은 32
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: RgSpace.minTouch),

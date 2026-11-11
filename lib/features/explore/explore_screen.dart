@@ -179,7 +179,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
           Expanded(
             // 옆으로 밀기는 쉘이 맡는다(홈 → 탐색 칸들 → 공식 소식 발표·업데이트 → 보관함 → 설정이 한 줄로 이어진다).
             // PageView가 끌기를 먼저 가져가면 모델 칸 끝에서 보관함으로, 공식 소식 안에서 업데이트로 넘어가지 못한다.
-            child: PageView(
+            // 당겨서 새로고침: 세 칸(논문·소식·도구)의 세로 목록 어디서든
+            child: RgRefresh(child: PageView(
               controller: _pages,
               physics: const NeverScrollableScrollPhysics(),
               allowImplicitScrolling: true, // 옆 칸을 미리 만들어 두어 넘기자마자 내용이 보인다
@@ -189,7 +190,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 const OfficialNewsSection(),
                 const ToolsSection(),
               ],
-            ),
+            )),
           ),
         ],
       ),
@@ -200,6 +201,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     return ListenableBuilder(
       listenable: _req,
       builder: (context, _) => FutureBuilder(
+        key: ValueKey(_req.generation), // 다시 시도면 빈 자리 표시부터, 당겨서 새로고침이면 보던 내용 유지
         future: _req.future,
         builder: (context, snap) {
           if (snap.hasError) {
@@ -210,7 +212,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
               ],
             );
           }
-          if (snap.connectionState != ConnectionState.done) {
+          if (snap.connectionState != ConnectionState.done && !snap.hasData) {
             return const RgSkeleton(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -829,6 +829,19 @@ class OfficialNewsTest(unittest.TestCase):
         got = official_news.extra_term_texts(FakeDb(), rows, official_news.datetime(2026, 11, 10, tzinfo=official_news.timezone.utc))
         self.assertEqual([g["id"] for g in got], ["x:1", "gh:a/b"])  # 빈 번역·설명 없는 저장소는 빼고, 여러 기간의 같은 저장소는 한 번
 
+    def test_readme_summary_strips_badges_and_skips_thin_readme(self):
+        raw = "# tool\n![ci](https://x/badge.svg) <img src='a.png'>\n\n\n\nRuns agents locally. " + "Details. " * 60
+        t = official_news.readme_text(raw)
+        self.assertNotIn("badge", t)
+        self.assertNotIn("<img", t)
+        self.assertNotIn("\n\n\n", t)
+        self.assertIsNone(official_news.summarize_readme("# tiny", "k", lambda e: None))  # 설명이 거의 없으면 요약하지 않는다
+        reply = {"summary": ["에이전트를 내 컴퓨터에서 돌리는 도구예요."], "uses": ["로컬 에이전트 실행.", "agents"], "how": "pip install tool로 설치해요."}
+        with mock.patch.object(llm, "stream_chat", return_value={"content": json.dumps(reply, ensure_ascii=False), "finish_reason": "stop"}):
+            out = official_news.summarize_readme(raw, "k", lambda e: None)
+        self.assertEqual(out, {"summary": ["에이전트를 내 컴퓨터에서 돌리는 도구예요."], "uses": ["로컬 에이전트 실행"],
+                               "how": "pip install tool로 설치해요."})  # 영어만인 쓰임은 빼고 끝 마침표를 뗀다
+
     def test_date_without_timezone_is_utc(self):
         self.assertEqual(official_news._date("2026-10-22").tzinfo, official_news.timezone.utc)
 

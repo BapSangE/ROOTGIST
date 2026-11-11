@@ -278,8 +278,10 @@ abstract class RgMotion {
   static const release = Duration(milliseconds: 160); // 떼고 돌아옴(살짝 튐)
   static const fast = Duration(milliseconds: 150); // 칩 채움·색 바뀜
   static const base = Duration(milliseconds: 220); // 미끄러짐·접힘·탭 넘김
+  static const scrollTop = Duration(milliseconds: 260); // 탭을 다시 눌러 맨 위로
   static const curve = Curves.easeOutCubic;
   static const pressScale = 0.98; // 행·카드 눌림
+  static const buttonPressScale = 0.97; // 버튼·칩·원 버튼 눌림(작은 것이라 조금 더)
   static Duration of(BuildContext context, Duration d) =>
       MediaQuery.disableAnimationsOf(context) ? Duration.zero : d;
 }

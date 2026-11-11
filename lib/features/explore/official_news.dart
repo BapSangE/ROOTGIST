@@ -126,6 +126,7 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
     return ListenableBuilder(
       listenable: Listenable.merge([_req, _x]),
       builder: (context, _) => FutureBuilder(
+        key: ValueKey(_req.generation), // 다시 시도면 빈 자리 표시부터, 당겨서 새로고침이면 보던 내용 유지
         future: _req.future,
         builder: (context, snap) => FutureBuilder(
         future: _x.future,
@@ -158,7 +159,7 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
                 const SizedBox(height: RgSpace.s20),
                 RgErrorCard(error: snap.error, onRetry: _req.reload),
               ],
-              AsyncSnapshot(connectionState: ConnectionState.done) => _list(
+              AsyncSnapshot(connectionState: ConnectionState.done) || AsyncSnapshot(hasData: true) => _list(
                 context,
                 snap.data!,
                 xsnap.data ?? const [],

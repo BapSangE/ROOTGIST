@@ -14,7 +14,8 @@
      "language": "Python",
      "stars": 420,
      "forks": 10,
-     "created_at": "2026-10-19T02:51:17Z"
+     "created_at": "2026-10-19T02:51:17Z",
+     "readme_ko": {"summary": ["LLM 작업 흐름을 내 컴퓨터에서 돌리는 가상의 에이전트 도구예요.", "작업을 단계로 나눠 차례로 실행해요."], "uses": ["로컬 에이전트 실행", "작업 흐름 자동화"], "how": "pip install day-tool로 설치해요."}
     },
     {
      "rank": 2,

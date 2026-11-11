@@ -6,19 +6,98 @@ import '../../data/models.dart';
 import '../../data/repository.dart';
 import '../../design/tokens.dart';
 import '../../design/typography.dart';
+import '../../design/widgets/rg_bottom_sheet.dart';
+import '../../design/widgets/rg_buttons.dart';
 import '../../design/widgets/rg_pressable.dart';
 import '../../design/widgets/rg_row_head.dart';
+import '../../design/widgets/rg_states.dart';
 import '../../data/unread.dart';
 import '../home/home_sections.dart';
 
-// X 글 화면 조각(2026-11-10). X 표시 규정에 맞춰 늘 작성자 이름·@핸들·시각·원문을 함께 보이고, 누르면 X에서 연다.
+// X 글 화면 조각(2026-11-10). X 표시 규정에 맞춰 늘 작성자 이름·@핸들·시각·원문을 함께 보인다.
 // 번역이 있으면 위에 한국어(「AI 번역」), 아래에 원문을 작게.
+// 2026-11-11: 카드를 누르면 바로 X로 나가지 않고 앱 안 시트에서 번역 전문·원문을 먼저 읽는다. X는 시트의 「X에서 보기」로.
 
 Future<List<XPost>> loadXPosts() => repository.listXPosts().catchError((Object _) => <XPost>[]);
 
-Future<void> openXPost(XPost p) async {
+Future<void> openXPostExternal(XPost p) async {
   HapticFeedback.selectionClick();
   await launchUrl(Uri.parse(p.url), mode: LaunchMode.externalApplication);
+}
+
+// 카드·반응 줄을 누르면 여는 X 글 시트: 작성자 → 번역 전문 → 원문 전문 → 반응 → 「X에서 보기」.
+Future<void> showXPostSheet(BuildContext context, XPost p) {
+  final ko = p.textKo;
+  final meta = RgText.homeMeta.copyWith(color: RgColors.textSecondary);
+  return showRgBottomSheet<void>(
+    context,
+    builder: (sheet) => Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: RgSpace.s4),
+        Row(spacing: RgSpace.s8, children: [
+          const RgChip('X'),
+          Flexible(
+            child: Text(p.author, maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: RgText.homeMeta.copyWith(fontWeight: FontWeight.w600, color: RgColors.textPrimary)),
+          ),
+          Flexible(child: Text('@${p.handle} · ${xAgo(p.postedAt, DateTime.now())}', maxLines: 1, overflow: TextOverflow.ellipsis, style: meta)),
+        ]),
+        const SizedBox(height: RgSpace.s16),
+        KeepAllText(ko ?? p.text, style: RgText.bodyDefinition),
+        if (ko != null) ...[
+          const SizedBox(height: RgSpace.s6),
+          Text('AI 번역', style: RgText.caption.copyWith(color: RgColors.textTertiary)),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: RgSpace.s16),
+            child: Divider(height: 1, thickness: 1, color: RgColors.dividerCard),
+          ),
+          // 원문은 접지 않는다(X 표시 규정: 번역과 함께 원문을 보인다)
+          Text('원문', style: RgText.meta.copyWith(fontWeight: FontWeight.w600, color: RgColors.textSecondary)),
+          const SizedBox(height: RgSpace.s6),
+          Text(p.text, style: RgText.bodySmall.copyWith(color: RgColors.textBody)),
+        ],
+        const SizedBox(height: RgSpace.s16),
+        Wrap(spacing: RgSpace.s6, runSpacing: RgSpace.s6, children: _stats(p)),
+        const SizedBox(height: RgSpace.s24),
+        RgPrimaryButton(label: 'X에서 보기', icon: 'arrow-up-right', onTap: () => openXPostExternal(p)),
+      ],
+    ),
+  );
+}
+
+List<Widget> _stats(XPost p) => [
+  HomeStat(countKo(p.likes), icon: 'heart', label: 'X 좋아요 ${countKo(p.likes)}'),
+  if (p.reposts > 0) HomeStat('재게시 ${countKo(p.reposts)}', label: '재게시 ${countKo(p.reposts)}'),
+  if (p.replies > 0) HomeStat(countKo(p.replies), icon: 'message-circle', label: '답글 ${countKo(p.replies)}'),
+];
+
+// 카드 본문: 정한 줄 수를 넘으면 끝에 흐린 「더 보기」를 붙여 시트에서 다 읽을 수 있다는 걸 알린다.
+class _ClampedText extends StatelessWidget {
+  const _ClampedText(this.text, {required this.maxLines, required this.style});
+  final String text;
+  final int maxLines;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(builder: (context, c) {
+    final shown = keepAll(text);
+    final painter = TextPainter(
+      text: TextSpan(text: shown, style: style),
+      maxLines: maxLines,
+      textDirection: TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context),
+    )..layout(maxWidth: c.maxWidth);
+    final cut = painter.didExceedMaxLines;
+    painter.dispose();
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Text(shown, maxLines: maxLines, overflow: TextOverflow.ellipsis, style: style, semanticsLabel: text),
+      if (cut) ...[
+        const SizedBox(height: RgSpace.s4),
+        ExcludeSemantics(child: Text('더 보기', style: RgText.caption.copyWith(fontWeight: FontWeight.w600, color: RgColors.textTertiary))),
+      ],
+    ]);
+  });
 }
 
 // 「3시간 전」 「어제」 「10월 17일」
@@ -54,11 +133,11 @@ class XPostCard extends StatelessWidget {
     final ko = p.textKo;
     return Semantics(
       button: true,
-      hint: 'X에서 열기',
+      hint: '번역 전문 보기',
       child: HomeCard(
         radius: 20,
         padding: const EdgeInsets.all(RgSpace.s20),
-        onTap: () => openXPost(p),
+        onTap: () => showXPostSheet(context, p),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -74,15 +153,12 @@ class XPostCard extends StatelessWidget {
                   child: Text('@${p.handle} · ${xAgo(p.postedAt, now)}', maxLines: 1, overflow: TextOverflow.ellipsis,
                       style: RgText.homeMeta.copyWith(color: RgColors.textSecondary)),
                 ),
-                const Spacer(),
-                RgIcon('arrow-up-right', size: 16, color: RgColors.textTertiary),
               ],
             ),
             const SizedBox(height: RgSpace.s12),
-            KeepAllText(
+            _ClampedText(
               ko ?? p.text,
               maxLines: compact ? 3 : 5,
-              overflow: TextOverflow.ellipsis,
               style: RgText.titleList.copyWith(fontSize: 16, height: 25 / 16, fontWeight: FontWeight.w500),
             ),
             if (ko != null) ...[
@@ -97,15 +173,7 @@ class XPostCard extends StatelessWidget {
               Text('AI 번역', style: RgText.caption.copyWith(color: RgColors.textTertiary)),
             ],
             const SizedBox(height: RgSpace.s16),
-            Wrap(
-              spacing: RgSpace.s6,
-              runSpacing: RgSpace.s6,
-              children: [
-                HomeStat(countKo(p.likes), icon: 'heart', label: 'X 좋아요 ${countKo(p.likes)}'),
-                if (p.reposts > 0) HomeStat('재게시 ${countKo(p.reposts)}', label: '재게시 ${countKo(p.reposts)}'),
-                if (p.replies > 0) HomeStat(countKo(p.replies), icon: 'message-circle', label: '답글 ${countKo(p.replies)}'),
-              ],
-            ),
+            Wrap(spacing: RgSpace.s6, runSpacing: RgSpace.s6, children: _stats(p)),
           ],
         ),
       ),
@@ -113,7 +181,7 @@ class XPostCard extends StatelessWidget {
   }
 }
 
-// 발표 행 아래 「X 좋아요 5,200 · @ExampleLab」: 누르면 그 X 글을 연다(행 전체 누르기와 겹치지 않게 이 줄만).
+// 발표 행 아래 「X 좋아요 5,200 · @ExampleLab」: 누르면 그 X 글 시트(행 전체 누르기와 겹치지 않게 이 줄만).
 class XReactionLine extends StatelessWidget {
   const XReactionLine({super.key, required this.post});
   final XPost post;
@@ -126,7 +194,7 @@ class XReactionLine extends StatelessWidget {
       label: 'X 반응: 좋아요 ${countKo(post.likes)}, @${post.handle} 글 열기',
       excludeSemantics: true,
       child: RgPressable(
-        onTap: () => openXPost(post),
+        onTap: () => showXPostSheet(context, post),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: RgSpace.minTouch),
           child: Row(
@@ -163,10 +231,19 @@ class _XPerkSectionState extends State<XPerkSection> {
   @override
   void initState() {
     super.initState();
-    loadXPosts().then((v) {
-      _last = v;
-      if (mounted) setState(() => _posts = v);
-    });
+    _load();
+    pullRefreshers.add(_load); // 당겨서 새로고침 때 X 글도 다시(30분마다 새로 모은다)
+  }
+
+  Future<void> _load() => loadXPosts().then((v) {
+    _last = v;
+    if (mounted) setState(() => _posts = v);
+  });
+
+  @override
+  void dispose() {
+    pullRefreshers.remove(_load);
+    super.dispose();
   }
 
   @override

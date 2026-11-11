@@ -23,6 +23,7 @@ worker/out/official_news.json          수집 결과
 worker/out/official_news.define.json   DB 없이 앱 미리보기용(--dart-define-from-file)
 """
 import argparse
+import base64
 import difflib
 import email.utils
 import gzip
@@ -538,7 +539,7 @@ def save_state(db, key: str, path: Path, value: dict):
 NEWS_COLUMNS = ("id", "source", "source_label", "kind", "category", "title_en", "title_ko", "url", "published_at",
                 "summary_ko", "key_points", "thin", "related", "points", "comments", "discussion_url")
 RANK_COLUMNS = ("id", "period", "rank", "full_name", "url", "description_en", "description_ko", "language", "stars", "forks",
-                "created_at", "period_start", "period_end")
+                "created_at", "period_start", "period_end", "readme_ko")
 MODEL_COLUMNS = ("id", "rank", "author", "name", "task", "params", "license", "likes", "downloads", "created_at",
                  "arxiv", "url", "card", "variants")
 
@@ -631,7 +632,7 @@ def rank_records(ranks: dict[str, dict]) -> list[dict]:
     return [{"id": f"{period}:{x['full_name']}", "period": period, "rank": x["rank"], "full_name": x["full_name"],
              "url": x["url"], "description_en": x["description_en"], "description_ko": x.get("description_ko"),
              "language": x["language"], "stars": x["stars"], "forks": x["forks"], "created_at": _iso(x["created_at"]),
-             "period_start": _iso(v["start"]), "period_end": _iso(v["end"])}
+             "period_start": _iso(v["start"]), "period_end": _iso(v["end"]), "readme_ko": x.get("readme_ko")}
             for period, v in ranks.items() for x in v["repos"]]
 
 
@@ -647,7 +648,11 @@ def rankings_doc(rows: list[dict], now: datetime) -> dict:
 def save_rankings(db, rows: list[dict], now: datetime):
     """이번에 받은 기간만 새 순위로 바꾼다(못 받은 기간은 지난 순위를 그대로 둔다)."""
     stamp = now.isoformat()
-    db.upsert("github_rankings", [{k: r[k] for k in RANK_COLUMNS} | {"collected_at": stamp} for r in rows], "id")
+    full = [{k: r.get(k) for k in RANK_COLUMNS} | {"collected_at": stamp} for r in rows]
+    try:
+        db.upsert("github_rankings", full, "id")
+    except Exception:  # readme_ko 열을 더하는 마이그레이션 전이면 그 열만 빼고 저장한다
+        db.upsert("github_rankings", [{k: v for k, v in r.items() if k != "readme_ko"} for r in full], "id")
     for period in sorted({r["period"] for r in rows}):
         db._req("DELETE", f"github_rankings?period=eq.{period}&collected_at=lt.{urllib.parse.quote(stamp)}",
                 prefer="return=minimal")
@@ -974,6 +979,65 @@ def clean_about(about) -> str | None:
     return about.strip().rstrip(".") or None
 
 
+# GitHub 순위 저장소 상세(2026-11-11): README를 받아 무엇을 하는 저장소인지 한국어로. 앱 상세 화면이 보여 준다.
+README_CHARS = 12000
+README_VERSION = 1
+README_SYSTEM = (
+    "You read a GitHub repository README and explain, in Korean, only what the README itself says. Do not guess or use outside knowledge. "
+    "Return only a JSON object: {\"summary\": [\"...\"], \"uses\": [\"...\"], \"how\": \"...\" or null}. "
+    "summary: 1 to 3 short Korean sentences on what this repository is and what it does, for a developer seeing it for the first time. "
+    "uses: up to 3 short Korean noun phrases for what people can use it for (e.g. \"로컬에서 LLM 에이전트 실행\"). Empty list if the README does not say. "
+    "how: one Korean sentence on how to start (install command or first step) as the README states it, keeping commands in their original form, or null. "
+    "Keep product, library, model and command names in their original spelling."
+) + HAEYO
+
+
+def readme_text(raw: str) -> str:
+    """README에서 요약에 쓸 글만: 배지·그림·HTML 꼬리표를 빼고 빈 줄을 줄인다."""
+    t = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", raw)           # ![badge](...)
+    t = re.sub(r"\[\s*\]\([^)]*\)", "", t)                  # 그림을 뺀 빈 링크
+    t = re.sub(r"<img\b[^>]*>|<[^>]+>", "", t)
+    t = re.sub(r"\n{3,}", "\n\n", t)
+    return t.strip()[:README_CHARS]
+
+
+def fetch_readme(full_name: str) -> str:
+    """GitHub API의 README(기본 브랜치, 파일 이름이 무엇이든). 없으면 빈 글."""
+    try:
+        j = json.loads(fetch(f"https://api.github.com/repos/{full_name}/readme"))
+        return base64.b64decode(j.get("content") or "").decode("utf-8", "replace")
+    except Exception:
+        return ""
+
+
+def summarize_readme(raw: str, api_key: str, log) -> dict | None:
+    text = readme_text(raw)
+    if len(text) < 300:  # 설명이 거의 없는 README는 요약하지 않는다(지어내기 쉽다)
+        return None
+    msgs = [{"role": "system", "content": README_SYSTEM}, {"role": "user", "content": text}]
+
+    def check(out):
+        if not isinstance(out, dict):
+            return ["not_object"]
+        sm, uses, how = out.get("summary"), out.get("uses"), out.get("how")
+        ok = (isinstance(sm, list) and 1 <= len(sm) <= 3 and all(isinstance(x, str) and x.strip() and len(x) <= 200 for x in sm)
+              and isinstance(uses, list) and len(uses) <= 3 and all(isinstance(x, str) and x.strip() and len(x) <= 60 for x in uses)
+              and (how is None or (isinstance(how, str) and len(how) <= 200)))
+        if not ok:
+            return ["readme_shape"]
+        if not all(re.search(r"[가-힣]", x) for x in sm):
+            return ["not_korean"]
+        return ["not_haeyo"] if not_haeyo(sm + [how]) else []
+
+    out, _ = llm.generate(api_key, msgs, check, log)
+    if not out:
+        return None
+    how = out.get("how")
+    return {"summary": [x.strip() for x in out["summary"]],
+            "uses": [x.strip().rstrip(".") for x in out["uses"] if re.search(r"[가-힣]", x)],
+            "how": how.strip() if isinstance(how, str) and how.strip() else None}
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-llm", action="store_true")
@@ -1157,11 +1221,33 @@ def main(argv=None):
         for x, t in zip(chunk, ko or []):
             x["description_ko"] = t
             cache["ghd:" + x["url"]] = {"en": x["description_en"], "ko": t}
+    # README 요약: 한 번 정리한 저장소는 캐시에서(순위에 머무는 며칠 동안 README가 크게 바뀌는 일은 드물다)
+    for x in repos.values():
+        hit = cache.get("ghr:" + x["url"])
+        x["readme_ko"] = hit["readme"] if hit and hit.get("v") == README_VERSION else None
+    fresh = [x for x in repos.values() if x["readme_ko"] is None and not (cache.get("ghr:" + x["url"]) or {}).get("none")]
+
+    def digest_readme(x):
+        raw = fetch_readme(x["full_name"])
+        x["_thin"] = len(readme_text(raw)) < 300
+        x["readme_ko"] = None if x["_thin"] else summarize_readme(raw, key, lambda e: None)
+
+    if key and fresh:
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            list(pool.map(digest_readme, fresh))
+        for x in fresh:  # 설명이 거의 없는 README도 남겨 두어 매번 다시 받지 않는다(요약 실패는 다음 배치에 다시)
+            if x["readme_ko"]:
+                cache["ghr:" + x["url"]] = {"readme": x["readme_ko"], "v": README_VERSION}
+            elif x["_thin"]:
+                cache["ghr:" + x["url"]] = {"none": True, "v": README_VERSION}
+            x.pop("_thin", None)
     for v in ranks.values():
         for x in v["repos"]:
             x["description_ko"] = repos[x["url"]]["description_ko"]
+            x["readme_ko"] = repos[x["url"]]["readme_ko"]
     if repos:
-        report.append(f"순위 저장소 설명 번역: {sum(bool(x['description_ko']) for x in repos.values())}/{len(repos)}")
+        report.append(f"순위 저장소 설명 번역: {sum(bool(x['description_ko']) for x in repos.values())}/{len(repos)}, "
+                      f"README 요약: {sum(bool(x['readme_ko']) for x in repos.values())}/{len(repos)}")
     save_state(db, "digest_cache", DIGEST_CACHE, cache)
     items += releases
     for item in items:

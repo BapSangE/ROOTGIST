@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/cupertino.dart' show CupertinoActivityIndicator;
 import 'package:flutter/material.dart';
 import 'package:rootgist/app_shell.dart';
 import 'package:rootgist/data/guide.dart';
@@ -26,6 +27,7 @@ import 'package:rootgist/design/tokens.dart';
 import 'package:rootgist/design/widgets/rg_buttons.dart';
 import 'package:rootgist/design/widgets/rg_row_head.dart';
 import 'package:rootgist/design/widgets/rg_segmented.dart';
+import 'package:rootgist/design/widgets/rg_states.dart';
 import 'package:flutter/semantics.dart';
 import 'package:rootgist/features/explore/explore_screen.dart';
 import 'package:rootgist/features/explore/official_news.dart';
@@ -93,7 +95,9 @@ Future<void> slide(WidgetTester tester) => tester.runAsync(() async {
 // 화면 이동 뒤 새 화면의 fixture 읽기도 같은 이유로 실제 async 영역에서 프레임을 그린다.
 Future<void> settle(WidgetTester tester) async {
   await tester.runAsync(() async {
-    await tester.pump();
+    // 행을 짧게 톡 누르면 눌린 모양을 90ms 보인 뒤 연다: 새 화면의 첫 프레임(fixture 읽기)도 실제 async 안에서
+    await tester.pump(); // 눌림 시계가 이 프레임에서 시작
+    await tester.pump(const Duration(milliseconds: 100));
     await Future<void>.delayed(const Duration(milliseconds: 200));
   });
   await tester.pumpAndSettle();
@@ -365,6 +369,21 @@ void main() {
     });
     expect(firstHighlights(p4, korean: true)['A01']!.single.$3, '동결 인코더');
     expect(findHighlights('요약: 동결 인코더로 학습해요.', p4.glossary).single.$3, '동결 인코더');
+
+    // 용어 두 개가 공백 없이 붙어도(「월드 모델·지속 상태」) 앞 용어 뒤 덩어리가 다음 용어를 삼키지 않는다(WorldFoundry 회색 화면, 2026-11-11)
+    final p5 = PaperDetail.fromJson({
+      'paper_id': 'w', 'title_en': 'T', 'authors': ['A'], 'published_at': '2026-11-10', 'hf_url': '', 'arxiv_url': '',
+      'ai_status': 'ready', 'sentences': [],
+      'glossary': [
+        {'term': 'world model', 'definition_ko': '정의.', 'sentence_ids': [], 'highlight': true, 'term_ko_span': '월드 모델'},
+        {'term': 'persistent state', 'definition_ko': '정의.', 'sentence_ids': [], 'highlight': true, 'term_ko_span': '지속 상태'},
+      ],
+    });
+    const glued = '생성 월드 모델·지속 상태를 다뤄요.';
+    final hs = findHighlights(glued, p5.glossary);
+    expect(hs.map((h) => h.$3), ['월드 모델', '지속 상태']);
+    final span = highlightedSpan(glued, hs, const TextStyle(), (s) => s);
+    expect(span.children, hasLength(5));
   });
 
   testWidgets('iOS: 왼쪽 가장자리에서 밀면 S03 → S02 → 홈으로 뒤로 간다', (tester) async {
@@ -1143,7 +1162,10 @@ void main() {
     await tester.runAsync(() async {
       await tester.tap(find.text('다시 시도'));
       await tester.pump();
+      expect(find.bySemanticsLabel('불러오는 중'), findsWidgets); // 다시 시도는 빈 자리 표시부터(지난 오류를 들고 있지 않는다)
+      await Future<void>.delayed(const Duration(milliseconds: 100));
     });
+    await tester.pump();
     expect(find.text('불러오지 못했어요'), findsOneWidget);
     await switchTo(FixtureMode.normal);
     await tester.pumpAndSettle();
@@ -1274,6 +1296,15 @@ void main() {
     expect(find.text(keepAll('LLM 글쓰기 문체에 관한 가상 글')), findsNothing);
     double yx(String id) => tester.getTopLeft(find.byWidgetPredicate((w) => w is XPostCard && w.post.id == id)).dy;
     expect(yx('9002'), lessThan(yx('9003'))); // 좋아요 순(2,400 > 650)
+    // 카드를 누르면 앱 안 시트: 번역 전문 + 원문(접지 않음) + 「X에서 보기」
+    await tester.tap(find.byWidgetPredicate((w) => w is XPostCard && w.post.id == '9002'));
+    await tester.pumpAndSettle();
+    expect(find.text('원문'), findsOneWidget);
+    expect(find.text('X에서 보기'), findsOneWidget);
+    expect(find.text("We've reset weekly usage limits for all paid plans. Enjoy the extra room this week, on us."), findsNWidgets(2)); // 카드 + 시트
+    await tester.tapAt(const Offset(20, 40)); // 시트 바깥을 눌러 닫기
+    await tester.pumpAndSettle();
+    expect(find.text('X에서 보기'), findsNothing);
     await tester.tap(filter('전체'));
     await tester.pumpAndSettle();
     expect(find.text('오늘 뜨는 저장소'), findsNothing);
@@ -1365,6 +1396,24 @@ void main() {
     await tester.pumpAndSettle();
     expect(bookmarks.value[repo.url]?.kind, 'repo');
     expect(bookmarks.value[repo.url]?.title, repo.fullName);
+    // 카드를 누르면 바로 GitHub으로 나가지 않고 앱 안 상세(README 정리)
+    await tester.tap(tab('24시간'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('day-tool-1'));
+    await settle(tester);
+    expect(find.text('어떤 저장소인가요'), findsOneWidget);
+    expect(find.text(keepAll('작업을 단계로 나눠 차례로 실행해요.')), findsOneWidget);
+    expect(find.text('이런 데 써요'), findsOneWidget);
+    expect(find.text(keepAll('pip install day-tool로 설치해요.')), findsOneWidget);
+    expect(find.text(keepAll('최근 24시간 새 저장소 1위')), findsOneWidget);
+    router.pop();
+    await settle(tester);
+    // README 정리가 없는 저장소는 안내 문구
+    await tester.tap(find.text('day-tool-2'));
+    await settle(tester);
+    expect(find.textContaining(keepAll('README에 설명이 거의 없거나')), findsOneWidget);
+    router.pop();
+    await settle(tester);
     router.go('/library');
     await settle(tester);
     expect(find.text('저장소'), findsOneWidget);
@@ -1481,6 +1530,50 @@ void main() {
     expect(find.text('WER'), findsOneWidget);
     expect(find.text(keepAll('음성을 글로 옮길 때 틀린 낱말 비율')), findsOneWidget);
     expect(find.text(keepAll('낮을수록 좋아요.')), findsOneWidget);
+  });
+
+  testWidgets('지금 탭을 다시 누르면 맨 위로, 홈을 당기면 새로고침', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+    final list = find.byType(Scrollable).first;
+    ScrollPosition pos() => tester.state<ScrollableState>(list).position;
+    await tester.drag(list, const Offset(0, -600));
+    await tester.pumpAndSettle();
+    expect(pos().pixels, greaterThan(0));
+    await tester.tap(find.text('홈'));
+    await tester.pumpAndSettle();
+    expect(pos().pixels, 0);
+    // 당기면 등록된 것들을 모두 다시 부른다
+    var pulled = 0;
+    Future<void> probe() async => pulled++;
+    pullRefreshers.add(probe);
+    addTearDown(() => pullRefreshers.remove(probe));
+    expect(find.byType(RgRefresh), findsOneWidget);
+    // 당기는 동안: 목록이 내려가 위에 빈 자리가 생기고, 그 자리에 돌림표가 있다(글 위에 덮이지 않음)
+    final firstTop = tester.getTopLeft(find.byType(Scrollable).first).dy;
+    final g = await tester.startGesture(tester.getCenter(list));
+    await g.moveBy(const Offset(0, 40));
+    await g.moveBy(const Offset(0, 60));
+    await tester.pump();
+    expect(find.byType(CupertinoActivityIndicator), findsOneWidget);
+    final spinner = tester.getRect(find.byType(CupertinoActivityIndicator));
+    final shifted = tester.getTopLeft(find.byType(Scrollable).first).dy;
+    expect(shifted, greaterThan(firstTop));
+    expect(spinner.center.dy, lessThan(shifted + MediaQuery.paddingOf(tester.element(list)).top + 1));
+    expect(pulled, 0); // 아직 덜 당김
+    await g.up();
+    await tester.pumpAndSettle();
+    expect(find.byType(CupertinoActivityIndicator), findsNothing);
+    expect(tester.getTopLeft(find.byType(Scrollable).first).dy, firstTop);
+    await tester.fling(list, const Offset(0, 400), 1200);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
+    await tester.pumpAndSettle();
+    expect(pulled, 1);
+    expect(find.text(keepAll('6편이 올라왔어요')), findsOneWidget); // 보던 홈 그대로
   });
 
   testWidgets('C02: 약어는 정식 명칭 한 줄, 원어와 같은 대응어는 숨김', (tester) async {
@@ -1739,7 +1832,8 @@ void main() {
     await tester.tap(find.bySemanticsLabel('북마크에 저장').first);
     await tester.pump(const Duration(milliseconds: 100));
     expect(haptics, ['HapticFeedbackType.lightImpact']);
-    expect(find.byWidgetPredicate((w) => w is ScaleTransition && w.scale.value != 1), findsOneWidget);
+    // 북마크 원이 튀는 중(누름 크기 0.97은 130ms까지 함께 남아 있어 그건 빼고 센다)
+    expect(find.byWidgetPredicate((w) => w is ScaleTransition && w.scale.value != 1 && w.scale.value != RgMotion.buttonPressScale), findsOneWidget);
     await tester.pumpAndSettle();
 
     // 탭바: 다른 칸을 누르면 선택 틱, 지금 칸을 다시 누르면 없음

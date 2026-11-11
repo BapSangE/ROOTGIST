@@ -67,6 +67,22 @@ class GithubRankingsTest(unittest.TestCase):
         self.assertEqual((week["start"], week["end"]), ("2026-11-03T06:00:00Z", "2026-11-10T06:00:00Z"))
         self.assertEqual(week["repos"][0]["full_name"], "x/big")
         self.assertNotIn("period", week["repos"][0])
+        self.assertIn("readme_ko", week["repos"][0])  # 앱 상세가 읽는 README 정리(아직 없으면 null)
+
+    def test_save_rankings_without_readme_column_still_saves(self):
+        saved = []
+
+        class FakeDb:
+            def upsert(self, table, rows, key):
+                if any("readme_ko" in r for r in rows):
+                    raise RuntimeError("column readme_ko does not exist")
+                saved.extend(rows)
+
+            def _req(self, *a, **k): pass
+
+        got, _ = self.run_with({"2026-11-03T06:00:00Z": [repo("big", 900, "2026-11-05T00:00:00Z")]})
+        official_news.save_rankings(FakeDb(), official_news.rank_records(got), self.now)
+        self.assertEqual(len(saved), len(official_news.rank_records(got)))  # 마이그레이션 전이면 그 열만 빼고
 
 
 if __name__ == "__main__":

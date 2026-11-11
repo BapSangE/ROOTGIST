@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../data/models.dart';
 import '../../design/tokens.dart';
@@ -72,12 +71,15 @@ TextSpan highlightedSpan(
 }) {
   final spans = <InlineSpan>[];
   var at = 0;
-  for (final (start, t, label) in hs) {
+  for (final (i, (start, t, label)) in hs.indexed) {
     spans.add(TextSpan(text: wrap(text.substring(at, start))));
     // 용어 뒤에 공백 없이 붙은 글자(조사 「을」, 복수 「s.」)는 같은 덩어리로 묶어 줄 끝에서 갈라지지 않게 한다.
+    // 다음 용어가 공백 없이 바로 붙으면(「월드 모델·지속 상태」) 그 앞에서 끊는다: 안 끊으면 다음 조각 시작이 거꾸로 가 화면이 깨졌다(2026-11-11).
     final end = start + label.length;
     final gap = text.indexOf(RegExp(r'\s'), end);
-    final suffix = text.substring(end, gap < 0 ? text.length : gap);
+    var stop = gap < 0 ? text.length : gap;
+    if (i + 1 < hs.length && hs[i + 1].$1 < stop) stop = hs[i + 1].$1;
+    final suffix = text.substring(end, stop);
     spans.add(
       WidgetSpan(
         alignment: PlaceholderAlignment.baseline,
@@ -170,8 +172,7 @@ class _TermHighlightState extends State<TermHighlight> {
   var _active = false;
 
   Future<void> _open() async {
-    HapticFeedback.selectionClick();
-    setState(() => _active = true);
+    setState(() => _active = true); // 진동은 시트가 연다(showRgBottomSheet)
     await showTermSheet(context, widget.term);
     if (mounted) setState(() => _active = false);
   }

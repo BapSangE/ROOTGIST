@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../data/models.dart';
 import '../../data/repository.dart';
@@ -180,9 +180,10 @@ String createdAgo(DateTime created, DateTime now) {
 ItemActions repoActions(GithubRepo r) =>
     ItemActions(id: r.url, title: r.fullName, url: r.url, source: 'GitHub', kind: 'repo', visualSize: 40);
 
-Future<void> openRepo(GithubRepo r) async {
+// 카드를 누르면 앱 안 상세(README 정리·숫자)를 먼저 연다(2026-11-11). GitHub은 상세 화면의 버튼으로.
+void openRepo(BuildContext context, GithubRepo r) {
   HapticFeedback.selectionClick();
-  await launchUrl(Uri.parse(r.url), mode: LaunchMode.externalApplication);
+  context.push('/repo/${Uri.encodeComponent(r.fullName)}');
 }
 
 // 순위 카드: 모델 칸 트렌딩 카드와 같은 틀(순위 칸 폭 고정 30/46 → 이름 시작점이 맞는다)
@@ -196,11 +197,11 @@ class GithubRepoCard extends StatelessWidget {
     final r = repo;
     return Semantics(
       button: true,
-      hint: 'GitHub에서 열기',
+      hint: '저장소 설명 보기',
       child: HomeCard(
         radius: 20,
         padding: const EdgeInsets.all(RgSpace.s20),
-        onTap: () => openRepo(r),
+        onTap: () => openRepo(context, r),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           spacing: RgSpace.s16,

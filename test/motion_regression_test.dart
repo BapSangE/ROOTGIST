@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rootgist/data/repository.dart';
 import 'package:rootgist/design/theme.dart';
 import 'package:rootgist/design/widgets/rg_buttons.dart';
 import 'package:rootgist/design/widgets/rg_bookmark_motion.dart';
 import 'package:rootgist/design/widgets/rg_pressable.dart';
+import 'package:rootgist/design/widgets/rg_bottom_sheet.dart';
+import 'package:rootgist/design/widgets/rg_states.dart';
+import 'package:rootgist/design/tokens.dart';
 import 'package:rootgist/features/paper/paper_screen.dart';
 
 Future<void> mount(
@@ -28,6 +32,81 @@ Future<void> mount(
 }
 
 void main() {
+  testWidgets('스크롤 목록 안에서 짧게 톡 눌러도 눌린 모양이 바로 그려져 130ms는 보인다, 버튼도 살짝 작아진다', (tester) async {
+    var taps = 0;
+    await mount(tester, ListView(children: [
+      RgPressable(row: true, onTap: () => taps++, child: const SizedBox(height: 80, child: Text('행'))),
+      RgPressable(onTap: () => taps++, child: const SizedBox(height: 44, child: Text('버튼'))),
+    ]));
+    // 목표값이 아니라 지금 그려지는 크기(애니메이션 중간값)
+    double drawn(String label) => tester
+        .widget<ScaleTransition>(find.ancestor(of: find.text(label), matching: find.byType(ScaleTransition)).first)
+        .scale
+        .value;
+    await tester.tap(find.text('행')); // 누르고 바로 뗀다(목록 안이라 누름은 뗄 때 확정)
+    await tester.pump();
+    expect(drawn('행'), RgMotion.pressScale); // 들어가는 애니메이션 없이 첫 프레임부터 눌린 크기
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(drawn('행'), RgMotion.pressScale); // 100ms 뒤에도 아직 눌려 있다
+    await tester.pump(const Duration(milliseconds: 40)); // 130ms에 풀린다(타이머라 프레임을 넘겨 준다)
+    await tester.pumpAndSettle();
+    expect(drawn('행'), 1);
+    await tester.tap(find.text('버튼'));
+    await tester.pump();
+    expect(drawn('버튼'), RgMotion.buttonPressScale);
+    await tester.pump(const Duration(milliseconds: 140));
+    await tester.pumpAndSettle();
+    expect(drawn('버튼'), 1);
+    expect(taps, 2);
+  });
+
+  testWidgets('카드·행을 짧게 톡 누르면 눌린 모양을 먼저 보이고 90ms 뒤에 동작한다(새 화면이 바로 덮지 않게)', (tester) async {
+    var taps = 0;
+    await mount(tester, ListView(children: [
+      RgPressable(row: true, onTap: () => taps++, child: const SizedBox(height: 80, child: Text('카드'))),
+    ]));
+    await tester.tap(find.text('카드'));
+    await tester.pump();
+    expect(taps, 0); // 아직 눌린 모양만
+    expect(tester.widget<ScaleTransition>(find.ancestor(of: find.text('카드'), matching: find.byType(ScaleTransition)).first).scale.value,
+        RgMotion.pressScale);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(taps, 1);
+    await tester.pumpAndSettle();
+    expect(taps, 1);
+  });
+
+  testWidgets('시트는 열릴 때 가벼운 진동 한 번', (tester) async {
+    final calls = <String>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (c) async {
+      if (c.method == 'HapticFeedback.vibrate') calls.add(c.arguments as String);
+      return null;
+    });
+    addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
+    await mount(tester, Builder(builder: (context) => TextButton(
+      onPressed: () => showRgBottomSheet<void>(context, builder: (_) => const Text('시트')),
+      child: const Text('열기'),
+    )));
+    await tester.tap(find.text('열기'));
+    await tester.pumpAndSettle();
+    expect(find.text('시트'), findsOneWidget);
+    expect(calls, ['HapticFeedbackType.selectionClick']);
+  });
+
+  test('당겨서 새로고침은 다 받은 뒤에만 값을 바꾸고 빈 자리 표시로 되돌리지 않는다(다시 시도는 되돌린다)', () async {
+    var n = 0;
+    final r = Reloadable(() async => ++n);
+    expect(await r.future, 1);
+    expect(pullRefreshers, contains(r.refresh));
+    await refreshAll();
+    expect(await r.future, 2);
+    expect(r.generation, 0); // FutureBuilder 키 그대로 → 보던 내용 유지
+    r.reload();
+    expect(r.generation, 1);
+    r.dispose();
+    expect(pullRefreshers, isNot(contains(r.refresh)));
+  });
+
   tearDown(() => bookmarks.value = {});
 
   testWidgets('활성 북마크를 iOS 접근성에도 활성 컨트롤로 전달한다', (tester) async {
@@ -70,10 +149,11 @@ void main() {
         },
       ),
     );
+    // 바깥 것이 북마크 반응(안쪽은 버튼 눌림 크기)
     final pulse = find.descendant(
       of: find.byType(RgBookmarkButton),
       matching: find.byType(ScaleTransition),
-    );
+    ).first;
     expect(tester.widget<ScaleTransition>(pulse).scale.value, 1);
     await tester.tap(find.bySemanticsLabel('북마크에 저장'));
     await tester.pump();
@@ -96,13 +176,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 70));
     expect(bookmarks.value.containsKey('0000.00001'), isTrue);
     expect(
-      find.descendant(
-        of: find.byType(RgBookmarkMotion),
-        matching: find.byWidgetPredicate(
-          (w) => w is ScaleTransition && w.scale.value != 1,
-        ),
-      ),
-      findsOneWidget,
+      tester.widget<ScaleTransition>(find.descendant(of: find.byType(RgBookmarkMotion), matching: find.byType(ScaleTransition)).first).scale.value,
+      isNot(1), // 바깥 것이 북마크 반응(안쪽은 버튼 눌림 크기)
     );
     await tester.pumpAndSettle();
     // 연속 탭으로 상태가 밀리거나 애니메이션이 남지 않는다.
@@ -117,7 +192,7 @@ void main() {
             find.descendant(
               of: find.byType(RgBookmarkMotion),
               matching: find.byType(ScaleTransition),
-            ),
+            ).first,
           )
           .scale
           .value,

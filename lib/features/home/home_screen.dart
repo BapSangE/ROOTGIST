@@ -65,11 +65,17 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     // 논문과 함께 바로 불러오기 시작한다
-    if (widget.date == null) _loadExtras().then((v) => mounted ? setState(() => _extras = v) : null);
+    if (widget.date == null) {
+      _refreshExtras();
+      pullRefreshers.add(_refreshExtras);
+    }
   }
+
+  Future<void> _refreshExtras() => _loadExtras().then((v) => mounted ? setState(() => _extras = v) : null);
 
   @override
   void dispose() {
+    pullRefreshers.remove(_refreshExtras);
     _req.dispose();
     super.dispose();
   }
@@ -79,6 +85,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return ListenableBuilder(
       listenable: _req,
       builder: (context, _) => FutureBuilder(
+        key: ValueKey(_req.generation), // 다시 시도면 빈 자리 표시부터, 당겨서 새로고침이면 보던 내용 유지
         future: _req.future,
         builder: (context, snap) {
           final children = switch (snap) {
@@ -86,7 +93,8 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: RgSpace.s20),
               RgErrorCard(error: snap.error, onRetry: _req.reload),
             ],
-            AsyncSnapshot(connectionState: ConnectionState.done) => null,
+            // 당겨서 새로고침으로 바뀌는 한 프레임(받아 둔 값이 있는 대기)에도 빈 자리 표시로 깜빡이지 않게
+            AsyncSnapshot(connectionState: ConnectionState.done) || AsyncSnapshot(hasData: true) => null,
             _ => const [_HomeSkeleton()],
           };
           final (digest, fallback) = snap.data ?? (null, null);
@@ -111,7 +119,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           );
           // 홈은 카드 경계가 드러나는 흰 바탕을 쓴다.
-          return home ? ColoredBox(color: RgHome.bg, child: list) : list;
+          final pull = RgRefresh(edgeOffset: MediaQuery.paddingOf(context).top, child: list);
+          return home ? ColoredBox(color: RgHome.bg, child: pull) : pull;
         },
       ),
     );

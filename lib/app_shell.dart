@@ -88,6 +88,10 @@ final router = GoRouter(
       pageBuilder: (_, state) => _detailPage(state, NewsDetailScreen(id: Uri.decodeComponent(state.pathParameters['id']!))),
     ),
     GoRoute(
+      path: '/repo/:name',
+      pageBuilder: (_, state) => _detailPage(state, RepoDetailScreen(fullName: Uri.decodeComponent(state.pathParameters['name']!))),
+    ),
+    GoRoute(
       path: '/model/:id',
       pageBuilder: (_, state) => _detailPage(state, ModelDetailScreen(id: Uri.decodeComponent(state.pathParameters['id']!))),
     ),
@@ -142,10 +146,37 @@ class AppShell extends StatelessWidget {
       bottomNavigationBar: RgBottomTabBar(
         tabs: _tabs,
         currentIndex: shell.currentIndex,
-        onTap: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
+        onTap: (i) {
+          // 지금 탭을 다시 누르면: 하위 화면이 있으면 첫 화면으로, 이미 첫 화면이면 맨 위로(iOS 관례)
+          if (i == shell.currentIndex) {
+            final nav = shell.route.branches[i].navigatorKey.currentState;
+            if (nav != null && !nav.canPop()) return scrollToTop(nav.context);
+          }
+          shell.goBranch(i, initialLocation: i == shell.currentIndex);
+        },
       ),
     );
   }
+}
+
+// 탭 안의 세로 목록을 모두 맨 위로(가로 칩 줄·옆으로 넘기는 칸은 그대로). 260ms, 「동작 줄이기」면 바로.
+// 목록마다 컨트롤러가 따로라 위젯 트리에서 지금 그려진 세로 Scrollable을 찾아 올린다.
+void scrollToTop(BuildContext context) {
+  final still = MediaQuery.disableAnimationsOf(context);
+  var moved = false;
+  void visit(Element e) {
+    if (e is StatefulElement && e.state is ScrollableState) {
+      final p = (e.state as ScrollableState).position;
+      if (p.axis == Axis.vertical && p.hasPixels && p.pixels > p.minScrollExtent) {
+        moved = true;
+        still ? p.jumpTo(p.minScrollExtent) : p.animateTo(p.minScrollExtent, duration: RgMotion.scrollTop, curve: RgMotion.curve);
+      }
+    }
+    e.visitChildren(visit);
+  }
+
+  context.visitChildElements(visit);
+  if (moved) HapticFeedback.selectionClick(); // 이미 맨 위면 아무 일도 없다
 }
 
 // 쉘 위로 푸시된 상세(논문·소식·모델)에도 같은 탭바를 단다. 들어온 탭이 계속 선택돼 있다.
