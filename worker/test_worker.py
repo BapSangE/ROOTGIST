@@ -829,6 +829,16 @@ class OfficialNewsTest(unittest.TestCase):
         got = official_news.extra_term_texts(FakeDb(), rows, official_news.datetime(2026, 11, 10, tzinfo=official_news.timezone.utc))
         self.assertEqual([g["id"] for g in got], ["x:1", "gh:a/b"])  # 빈 번역·설명 없는 저장소는 빼고, 여러 기간의 같은 저장소는 한 번
 
+    def test_cached_readme_handles_thin_marker(self):
+        # README가 거의 빈 저장소는 {"none": True}만 캐시된다. 두 번째 실행에서 그걸 읽다 배치가 멈췄다(2026-11-11)
+        v = official_news.README_VERSION
+        cache = {"ghr:a": {"none": True, "v": v}, "ghr:b": {"readme": {"summary": ["요약이에요."]}, "v": v},
+                 "ghr:c": {"readme": {"summary": ["옛 판"]}, "v": v - 1}}
+        self.assertEqual(official_news.cached_readme(cache, "a"), (None, True))   # 처리함, 요약 없음 → 다시 받지 않음
+        self.assertEqual(official_news.cached_readme(cache, "b"), ({"summary": ["요약이에요."]}, True))
+        self.assertEqual(official_news.cached_readme(cache, "c"), (None, False))  # 판이 바뀌면 다시
+        self.assertEqual(official_news.cached_readme(cache, "d"), (None, False))  # 처음 보는 저장소
+
     def test_readme_summary_strips_badges_and_skips_thin_readme(self):
         raw = "# tool\n![ci](https://x/badge.svg) <img src='a.png'>\n\n\n\nRuns agents locally. " + "Details. " * 60
         t = official_news.readme_text(raw)

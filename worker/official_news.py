@@ -1010,6 +1010,18 @@ def fetch_readme(full_name: str) -> str:
         return ""
 
 
+def cached_readme(cache: dict, url: str) -> tuple[dict | None, bool]:
+    """캐시의 README 요약: (요약 또는 None, 이미 처리했는지). README가 거의 빈 저장소는 {"none": True}만 남겨 둔다
+    (2026-11-11: 그 기록에서 hit["readme"]를 꺼내다 두 번째 실행부터 공식 소식 배치 전체가 KeyError로 멈췄다)."""
+    hit = cache.get("ghr:" + url)
+    if not isinstance(hit, dict) or hit.get("v") != README_VERSION:
+        return None, False
+    if hit.get("none"):
+        return None, True
+    readme = hit.get("readme")
+    return (readme, True) if readme else (None, False)
+
+
 def summarize_readme(raw: str, api_key: str, log) -> dict | None:
     text = readme_text(raw)
     if len(text) < 300:  # 설명이 거의 없는 README는 요약하지 않는다(지어내기 쉽다)
@@ -1223,9 +1235,9 @@ def main(argv=None):
             cache["ghd:" + x["url"]] = {"en": x["description_en"], "ko": t}
     # README 요약: 한 번 정리한 저장소는 캐시에서(순위에 머무는 며칠 동안 README가 크게 바뀌는 일은 드물다)
     for x in repos.values():
-        hit = cache.get("ghr:" + x["url"])
-        x["readme_ko"] = hit["readme"] if hit and hit.get("v") == README_VERSION else None
-    fresh = [x for x in repos.values() if x["readme_ko"] is None and not (cache.get("ghr:" + x["url"]) or {}).get("none")]
+        x["readme_ko"], known = cached_readme(cache, x["url"])
+        x["_known"] = known
+    fresh = [x for x in repos.values() if not x.pop("_known")]
 
     def digest_readme(x):
         raw = fetch_readme(x["full_name"])
