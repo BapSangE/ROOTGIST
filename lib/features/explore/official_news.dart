@@ -432,7 +432,7 @@ class _ExploreNewsRow extends StatelessWidget {
                         // 어디 소식인지 맨 앞 칩으로(모든 소식 카드가 같은 자리·같은 모양, 2026-11-10)
                         RgChip(n.sourceLabel, source: n.source),
                         const SizedBox(height: RgSpace.s8),
-                        KeepAllText(
+                        ReaderTextScale(child: KeepAllText(
                           update ? (line2.isEmpty ? title : line2) : title,
                           maxLines: update ? 3 : null,
                           overflow: update ? TextOverflow.ellipsis : null,
@@ -442,7 +442,7 @@ class _ExploreNewsRow extends StatelessWidget {
                             fontWeight: FontWeight.w500,
                             letterSpacing: -0.32,
                           ),
-                        ),
+                        )),
                       ],
                     ),
                   ),

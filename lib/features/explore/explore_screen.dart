@@ -19,6 +19,7 @@ import '../home/home_screen.dart';
 import 'date_groups.dart';
 import 'official_news.dart';
 import 'tools_section.dart';
+import '../reader/text_size_sheet.dart';
 
 // S04 탐색 (HANDOFF 7.6). 위쪽 「논문 | 소식 | 도구」 칸. 읽을 것(논문·소식)과 써 볼 것(도구: 모델·GitHub)으로 나눴다(2026-11-10). 옆으로 밀어 넘긴다.
 // 논문 칸: 오늘의 논문 전체(홈은 3편만 미리 보여 준다) → 아래로 지난 논문을 달마다. 이번 달은 펼치고 지난달부터는 접는다.
@@ -456,7 +457,7 @@ class _ExplorePaperRow extends StatelessWidget {
                 spacing: RgSpace.s12,
                 children: [
                   Expanded(
-                    child: KeepAllText(
+                    child: ReaderTextScale(child: KeepAllText(
                       p.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -466,7 +467,7 @@ class _ExplorePaperRow extends StatelessWidget {
                         fontWeight: FontWeight.w500,
                         letterSpacing: -0.32,
                       ),
-                    ),
+                    )),
                   ),
                   ItemActions(
                     id: p.id,

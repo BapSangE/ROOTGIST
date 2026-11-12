@@ -13,6 +13,7 @@ import '../../design/widgets/rg_states.dart';
 import '../home/home_sections.dart';
 import '../common/item_actions.dart';
 import 'date_groups.dart';
+import '../reader/text_size_sheet.dart';
 
 // 탐색 「도구 › GitHub」 칸(2026-11-10): 「24시간 · 7일 · 30일」 칩. 그 기간 안에 생긴 AI 저장소를 별 많은 순으로(worker gh_rankings).
 // 기간이 언제부터 언제인지, 별 수는 언제 모은 값인지를 목록 위에 그대로 적는다. 저장소를 누르면 GitHub에서 연다.
@@ -229,7 +230,7 @@ class GithubRepoCard extends StatelessWidget {
                     spacing: RgSpace.s8,
                     children: [
                       Expanded(
-                        child: Text(r.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.homeTitle),
+                        child: ReaderTextScale(child: Text(r.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.homeTitle)),
                       ),
                       repoActions(r),
                     ],
@@ -243,12 +244,12 @@ class GithubRepoCard extends StatelessWidget {
                   ),
                   if (r.description != null) ...[
                     const SizedBox(height: RgSpace.s8),
-                    KeepAllText(
+                    ReaderTextScale(child: KeepAllText(
                       r.description!,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: RgText.homeSummary.copyWith(color: RgColors.textBody),
-                    ),
+                    )),
                   ],
                   const SizedBox(height: RgSpace.s16),
                   Wrap(

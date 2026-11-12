@@ -12,7 +12,7 @@ String readerModeLabel(ReaderMode m) => switch (m) {
 final readerDefaultMode = ValueNotifier(ReaderMode.together);
 final readerScale = ValueNotifier(1.0);
 
-// 7.4 글자 크기 4단계. 리더 본문과 논문·소식·모델·저장소 상세, X 글, 공지 본문에 곱한다(ReaderTextScale).
+// 7.4 글자 크기 4단계. 리더 본문, 상세 화면 본문, 홈·탐색·보관함 카드의 제목·요약, X 글, 공지 본문에 곱한다(ReaderTextScale). 칩·날짜·버튼은 고정.
 const readerScales = [(0.9, '작게'), (1.0, '기본'), (1.15, '크게'), (1.3, '아주 크게')];
 String readerScaleLabel(double s) => readerScales.firstWhere((e) => e.$1 == s, orElse: () => readerScales[1]).$2;
 

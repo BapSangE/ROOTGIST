@@ -2145,12 +2145,34 @@ void main() {
     expect(scaleOf('AI 요약'), 0.9);
   });
 
-  testWidgets('아이폰 mini(375×812)에서 글자 크기 「아주 크게」: 소식·모델·저장소 상세와 X 글이 커지고 넘치지 않는다', (tester) async {
+  testWidgets('아이폰 mini(375×812)에서 글자 크기 「아주 크게」: 홈·탐색 카드와 소식·모델·저장소 상세, X 글이 커지고 넘치지 않는다', (tester) async {
     tester.view.physicalSize = const Size(375, 812);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await pumpApp(tester);
     readerScale.value = 1.3;
+    await tester.pump();
+    // 홈·탐색 논문·도구 목록 카드: 제목·요약은 커지고(칩·날짜는 그대로), 맨 아래까지 내려도 넘치지 않는다
+    Iterable<double> scales() => find.byWidgetPredicate((w) => w is Text).evaluate().map((e) => MediaQuery.textScalerOf(e).scale(1));
+    Future<void> sweep(String where) async {
+      expect(scales(), contains(1.3), reason: where);
+      expect(scales(), contains(1.0), reason: where); // 칩·날짜·탭 이름은 고정
+      for (var i = 0; i < 4; i++) {
+        await tester.fling(find.byWidgetPredicate((w) => w is Scrollable && w.axisDirection == AxisDirection.down).first, const Offset(0, -1500), 3000);
+        await tester.pumpAndSettle();
+      }
+      expect(tester.takeException(), isNull, reason: where);
+    }
+    await sweep('홈');
+    router.go('/explore');
+    await settle(tester);
+    await sweep('탐색 논문');
+    await tester.tap(find.text('도구'));
+    await slide(tester);
+    await settle(tester);
+    await sweep('탐색 도구');
+    router.go('/home');
+    await settle(tester);
     for (final path in [
       '/news/${Uri.encodeComponent('https://example.com/fixture/releases')}',
       '/model/${Uri.encodeComponent('example-lab/example-coder')}',

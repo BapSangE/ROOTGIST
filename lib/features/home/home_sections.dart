@@ -16,6 +16,7 @@ import '../explore/news_detail.dart' show modelSpec;
 import '../explore/official_news.dart' show newsKey, newsActions;
 import '../explore/trending_models.dart' show VariantsLine, modelActions;
 import 'briefing.dart';
+import '../reader/text_size_sheet.dart';
 
 // 홈 칸들(사용자 제공 home 참고 화면, 2026-11-04).
 // 흰 바탕 위에 [제목 28 · 더보기 ›] + 부제, 그 아래 옅은 경계의 카드. 좌우 여백 24.
@@ -249,11 +250,11 @@ class HomeStoryRow extends StatelessWidget {
             _withActions(explore ? newsActions(n, visualSize: 34) : null, [
               _NewsTime(n, now),
               const SizedBox(height: RgSpace.s6),
-              KeepAllText(n.titleKo ?? n.titleEn, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.homeTitle.copyWith(color: RgColors.textPrimary)),
+              ReaderTextScale(child: KeepAllText(n.titleKo ?? n.titleEn, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.homeTitle.copyWith(color: RgColors.textPrimary))),
             ]),
             if (one != null) ...[
               const SizedBox(height: RgSpace.s6),
-              Text(one, maxLines: explore ? 2 : 1, overflow: TextOverflow.ellipsis, style: RgText.homeSummary.copyWith(color: RgColors.textSecondary)),
+              ReaderTextScale(child: Text(one, maxLines: explore ? 2 : 1, overflow: TextOverflow.ellipsis, style: RgText.homeSummary.copyWith(color: RgColors.textSecondary))),
             ],
             const SizedBox(height: RgSpace.s20),
             Wrap(spacing: RgSpace.s8, runSpacing: RgSpace.s8, children: [
@@ -284,11 +285,11 @@ class HomeTalkCard extends StatelessWidget {
         _withActions(explore ? newsActions(n, visualSize: 34) : null, [
           _NewsTime(n, now),
           const SizedBox(height: RgSpace.s12),
-          KeepAllText(n.titleKo ?? n.titleEn, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.homeTitle.copyWith(color: RgColors.textPrimary)),
+          ReaderTextScale(child: KeepAllText(n.titleKo ?? n.titleEn, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.homeTitle.copyWith(color: RgColors.textPrimary))),
         ]),
         if (explore && n.summaryKo != null) ...[
           const SizedBox(height: RgSpace.s8),
-          KeepAllText(n.summaryKo!, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.homeSummary.copyWith(color: RgColors.textSecondary)),
+          ReaderTextScale(child: KeepAllText(n.summaryKo!, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.homeSummary.copyWith(color: RgColors.textSecondary))),
         ],
         const SizedBox(height: 25),
         // 사이트는 왼쪽, 숫자(Hacker News 추천·댓글, GitHub는 별)는 오른쪽. 큰 글자로 한 줄에 안 들어가면 숫자가 다음 줄로
@@ -333,7 +334,7 @@ class HomeFeaturedPaper extends StatelessWidget {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(label, style: RgText.homeLabel.copyWith(color: white.withValues(alpha: 0.8))),
               const SizedBox(height: RgSpace.s12),
-              HeadingTextScale(child: KeepAllText(p.title, style: (titleStyle ?? RgText.homeFeatured).copyWith(color: white))),
+              HeadingTextScale(child: ReaderTextScale(child: KeepAllText(p.title, style: (titleStyle ?? RgText.homeFeatured).copyWith(color: white)))),
             ]),
           ),
           Transform.translate(
@@ -343,7 +344,7 @@ class HomeFeaturedPaper extends StatelessWidget {
         ]),
         if (p.keyPoints.isNotEmpty) ...[
           const SizedBox(height: RgSpace.s8),
-          KeepAllText(p.keyPoints.first, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.homeSummary.copyWith(color: white.withValues(alpha: 0.7))),
+          ReaderTextScale(child: KeepAllText(p.keyPoints.first, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.homeSummary.copyWith(color: white.withValues(alpha: 0.7)))),
         ],
         if (p.topicLabel != null) ...[
           const SizedBox(height: RgSpace.s20),
@@ -376,7 +377,7 @@ class HomePaperRow extends StatelessWidget {
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: RgSpace.s6, children: [
                   Text(_paperDay(p), style: RgText.homeDate.copyWith(color: RgColors.textBody)),
-                  KeepAllText(p.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.homeTitle.copyWith(color: RgColors.textPrimary)),
+                  ReaderTextScale(child: KeepAllText(p.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.homeTitle.copyWith(color: RgColors.textPrimary))),
                 ]),
               ),
               Transform.translate(
@@ -428,7 +429,7 @@ class HomeUpdateCard extends StatelessWidget {
           ),
         ]),
         const SizedBox(height: RgSpace.s12),
-        KeepAllText(n.titleKo ?? n.titleEn, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.homeSummary.copyWith(color: RgColors.textBody)),
+        ReaderTextScale(child: KeepAllText(n.titleKo ?? n.titleEn, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.homeSummary.copyWith(color: RgColors.textBody))),
       ]),
     );
   }
@@ -471,9 +472,9 @@ class HomeModelCard extends StatelessWidget {
             ],
             // 북마크(누르는 자리 44)가 이름 한 줄보다 높아 설명까지 한 머리로 묶는다(이름과 설명 사이가 벌어지지 않게)
             _withActions(explore ? modelActions(m, visualSize: 34) : null, [
-              Text(m.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.homeTitle.copyWith(color: RgColors.textPrimary)),
+              ReaderTextScale(child: Text(m.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: RgText.homeTitle.copyWith(color: RgColors.textPrimary))),
               const SizedBox(height: RgSpace.s6),
-              Text(modelSpec(m), maxLines: 1, overflow: TextOverflow.ellipsis, style: RgText.homeSummary.copyWith(color: RgColors.textSecondary)),
+              ReaderTextScale(child: Text(modelSpec(m), maxLines: 1, overflow: TextOverflow.ellipsis, style: RgText.homeSummary.copyWith(color: RgColors.textSecondary))),
             ]),
             const SizedBox(height: 25),
             Wrap(alignment: WrapAlignment.end, spacing: RgSpace.s6, runSpacing: RgSpace.s6, children: [

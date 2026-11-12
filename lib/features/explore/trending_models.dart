@@ -16,6 +16,7 @@ import '../common/item_actions.dart';
 import '../home/home_sections.dart';
 import 'date_groups.dart';
 import 'news_detail.dart' show modelSpec;
+import '../reader/text_size_sheet.dart';
 
 // S04 「모델」 칸(PROPOSALS P9 A안): Hugging Face 모델. 「트렌딩 | 새로 나옴」 두 칸. 누르면 모델 상세.
 // 트렌딩: HF 트렌딩 순 10개(홈 모델 카드, 큰 순위 숫자). 새로 나옴: 트렌딩 100위 안에서 최근 14일 안에 공개된 모델, 최신순 10개.
@@ -261,14 +262,14 @@ class _ExploreModelCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          ReaderTextScale(child: Text(
                             m.name,
                             maxLines: 3,
                             overflow: TextOverflow.ellipsis,
                             style: RgText.homeTitle,
-                          ),
+                          )),
                           const SizedBox(height: RgSpace.s6),
-                          Text(
+                          ReaderTextScale(child: Text(
                             fresh
                                 ? '${m.maker} · ${modelSpec(m)}'
                                 : modelSpec(m),
@@ -277,7 +278,7 @@ class _ExploreModelCard extends StatelessWidget {
                             style: RgText.homeSummary.copyWith(
                               color: RgColors.textSecondary,
                             ),
-                          ),
+                          )),
                         ],
                       ),
                     ),

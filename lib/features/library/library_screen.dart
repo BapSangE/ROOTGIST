@@ -9,6 +9,7 @@ import '../../design/widgets/rg_buttons.dart';
 import '../../design/widgets/rg_card.dart';
 import '../../design/widgets/rg_pressable.dart';
 import '../../design/widgets/rg_row_head.dart';
+import '../reader/text_size_sheet.dart';
 
 // S05 보관함 (HANDOFF 7.7). 저장 단위만으로 그리므로 네트워크 없이 동작한다. 논문·공식 소식·모델을 함께 담는다.
 // 빼면 행이 흐려지며 접히고(220ms) 그다음 지운다. 되돌리면 같은 자리에 다시 펼쳐진다.
@@ -109,7 +110,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         _head(b),
                         const SizedBox(height: RgSpace.s6),
-                        KeepAllText(b.title, style: RgText.titleList),
+                        ReaderTextScale(child: KeepAllText(b.title, style: RgText.titleList)),
                       ]),
                     ),
                     ),
