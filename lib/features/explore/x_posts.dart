@@ -89,7 +89,8 @@ class _ClampedText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(builder: (context, c) {
-    final shown = keepAll(text);
+    // 카드는 몇 줄만 보여서 문단 사이 빈 줄이 한 줄을 차지하면 첫 문단 뒤가 빈 줄로 잘린다(2026-11-12). 빈 줄은 줄바꿈 하나로
+    final shown = keepAll(text.trim().replaceAll(RegExp(r'\n\s*\n'), '\n'));
     final painter = TextPainter(
       text: TextSpan(text: shown, style: style),
       maxLines: maxLines,
