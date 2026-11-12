@@ -15,6 +15,7 @@ import '../../design/widgets/rg_row_head.dart';
 import '../../design/widgets/rg_states.dart';
 import '../../data/unread.dart';
 import '../home/home_sections.dart';
+import '../reader/text_size_sheet.dart';
 
 // X 글 화면 조각(2026-11-10). X 표시 규정에 맞춰 늘 작성자 이름·@핸들·시각·원문을 함께 보인다.
 // 번역이 있으면 위에 한국어(「AI 번역」), 아래에 원문을 작게.
@@ -46,19 +47,24 @@ Future<void> showXPostSheet(BuildContext context, XPost p) {
           Flexible(child: Text('@${p.handle} · ${xAgo(p.postedAt, DateTime.now())}', maxLines: 1, overflow: TextOverflow.ellipsis, style: meta)),
         ]),
         const SizedBox(height: RgSpace.s16),
-        KeepAllText(ko ?? p.text, style: RgText.bodyDefinition),
-        if (ko != null) ...[
-          const SizedBox(height: RgSpace.s6),
-          Text('AI 번역', style: RgText.caption.copyWith(color: RgColors.textTertiary)),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: RgSpace.s16),
-            child: Divider(height: 1, thickness: 1, color: RgColors.dividerCard),
-          ),
-          // 원문은 접지 않는다(X 표시 규정: 번역과 함께 원문을 보인다)
-          Text('원문', style: RgText.meta.copyWith(fontWeight: FontWeight.w600, color: RgColors.textSecondary)),
-          const SizedBox(height: RgSpace.s6),
-          Text(p.text, style: RgText.bodySmall.copyWith(color: RgColors.textBody)),
-        ],
+        // 번역·원문 본문은 앱의 「글자 크기」를 따른다(카드도 같게)
+        ReaderTextScale(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            KeepAllText(ko ?? p.text, style: RgText.bodyDefinition),
+            if (ko != null) ...[
+              const SizedBox(height: RgSpace.s6),
+              Text('AI 번역', style: RgText.caption.copyWith(color: RgColors.textTertiary)),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: RgSpace.s16),
+                child: Divider(height: 1, thickness: 1, color: RgColors.dividerCard),
+              ),
+              // 원문은 접지 않는다(X 표시 규정: 번역과 함께 원문을 보인다)
+              Text('원문', style: RgText.meta.copyWith(fontWeight: FontWeight.w600, color: RgColors.textSecondary)),
+              const SizedBox(height: RgSpace.s6),
+              Text(p.text, style: RgText.bodySmall.copyWith(color: RgColors.textBody)),
+            ],
+          ]),
+        ),
         const SizedBox(height: RgSpace.s16),
         Wrap(spacing: RgSpace.s6, runSpacing: RgSpace.s6, children: _stats(p)),
         const SizedBox(height: RgSpace.s24),
@@ -191,22 +197,26 @@ class XPostCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: RgSpace.s12),
-            _ClampedText(
-              ko ?? p.text,
-              maxLines: compact ? 3 : 5,
-              style: RgText.titleList.copyWith(fontSize: 16, height: 25 / 16, fontWeight: FontWeight.w500),
+            ReaderTextScale(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                _ClampedText(
+                  ko ?? p.text,
+                  maxLines: compact ? 3 : 5,
+                  style: RgText.titleList.copyWith(fontSize: 16, height: 25 / 16, fontWeight: FontWeight.w500),
+                ),
+                if (ko != null) ...[
+                  const SizedBox(height: RgSpace.s6),
+                  Text(
+                    p.text,
+                    maxLines: compact ? 1 : 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: RgText.caption.copyWith(color: RgColors.textSecondary),
+                  ),
+                  const SizedBox(height: RgSpace.s4),
+                  Text('AI 번역', style: RgText.caption.copyWith(color: RgColors.textTertiary)),
+                ],
+              ]),
             ),
-            if (ko != null) ...[
-              const SizedBox(height: RgSpace.s6),
-              Text(
-                p.text,
-                maxLines: compact ? 1 : 2,
-                overflow: TextOverflow.ellipsis,
-                style: RgText.caption.copyWith(color: RgColors.textSecondary),
-              ),
-              const SizedBox(height: RgSpace.s4),
-              Text('AI 번역', style: RgText.caption.copyWith(color: RgColors.textTertiary)),
-            ],
             const SizedBox(height: RgSpace.s16),
             Wrap(spacing: RgSpace.s6, runSpacing: RgSpace.s6, children: _stats(p)),
           ],

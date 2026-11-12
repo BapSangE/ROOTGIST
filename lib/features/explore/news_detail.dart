@@ -18,6 +18,7 @@ import 'benchmark_sheet.dart';
 import 'github_rankings.dart';
 import 'official_news.dart';
 import 'trending_models.dart';
+import '../reader/text_size_sheet.dart';
 
 // 공식 소식 상세(실기기 QA 요청): S02처럼 배지·제목 → AI 요약·핵심 내용(근거) → 원문 링크. 글 전체는 옮기지 않는다.
 class NewsDetailScreen extends StatefulWidget {
@@ -72,7 +73,8 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
                   padding: const EdgeInsets.all(RgSpace.gutterText),
                   child: KeepAllText('이 소식을 찾을 수 없어요', style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
                 ),
-              if (n != null) ..._body(n, related),
+              // 앱의 「글자 크기」는 소식·모델·저장소 상세 본문에도(아이폰 mini QA 2026-11-12)
+              if (n != null) for (final w in _body(n, related)) ReaderTextScale(child: w),
             ],
           ));
         },
@@ -218,7 +220,7 @@ class _ModelDetailScreenState extends State<ModelDetailScreen> {
                   padding: const EdgeInsets.all(RgSpace.gutterText),
                   child: KeepAllText('이 모델을 찾을 수 없어요', style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
                 ),
-              if (m != null) ..._body(m),
+              if (m != null) for (final w in _body(m)) ReaderTextScale(child: w),
             ],
           ));
         },
@@ -395,7 +397,7 @@ class _RepoDetailScreenState extends State<RepoDetailScreen> {
                   padding: const EdgeInsets.all(RgSpace.gutterText),
                   child: KeepAllText('이 저장소는 순위에서 빠졌어요', style: RgText.bodySmall.copyWith(color: RgColors.textSecondary)),
                 ),
-              if (hit case (final r, final period)) ..._repoBody(r, period),
+              if (hit case (final r, final period)) for (final w in _repoBody(r, period)) ReaderTextScale(child: w),
             ],
           ));
         },

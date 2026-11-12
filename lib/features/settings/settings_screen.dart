@@ -372,7 +372,7 @@ class ReadingSettingsScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: RgSpace.s12),
-        card('글자 크기', 'AI 요약·핵심 내용과 초록 리더 본문에 적용돼요', const TextSizePicker()),
+        card('글자 크기', '논문·소식·X 글·공지의 본문과 초록 리더에 적용돼요', const TextSizePicker()),
         const SizedBox(height: RgSpace.s12),
         // 화면 모드: 기본은 기기 설정을 따른다
         card(

@@ -811,6 +811,10 @@ void main() {
     await launch();
     expect(find.text(keepAll('새 기능 안내')), findsOneWidget);
     expect(readItems.value, contains('notice:srv:9')); // 열었으니 공지사항 새 글 점은 뗀다
+    expect(find.byType(BottomSheet), findsNothing); // 시트가 아니라 가운데 카드
+    final card = tester.getRect(find.ancestor(of: find.text(keepAll('새 기능 안내')), matching: find.byType(Material)).first);
+    final screen = tester.getRect(find.byType(MaterialApp));
+    expect((card.center.dy - screen.center.dy).abs(), lessThan(40));
     await tester.tap(find.text('확인'));
     await tester.pumpAndSettle();
     expect(find.text(keepAll('새 기능 안내')), findsNothing);
@@ -840,6 +844,11 @@ void main() {
     router.push('/news/${Uri.encodeComponent('https://example.com/fixture/news-thin')}');
     await settle(tester);
     expect(find.text('원문 소개문'), findsOneWidget);
+    readerScale.value = 1.15; // 소식 상세 본문도 앱의 「글자 크기」를 따른다
+    await tester.pump();
+    expect(MediaQuery.textScalerOf(tester.element(find.text(keepAll('가상의 exa-7.5-nova를 모두에게 열어요.')))).scale(1), 1.15);
+    readerScale.value = 1.0;
+    await tester.pump();
     expect(find.text('AI 요약'), findsNothing); // 요약이 있는 척하지 않는다
     expect(find.text(keepAll('가상의 exa-7.5-nova를 모두에게 열어요.')), findsOneWidget);
     expect(find.textContaining(keepAll('소개문만 옮겼어요')), findsOneWidget);
@@ -1377,6 +1386,16 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('원문'), findsOneWidget);
     expect(find.text('X에서 보기'), findsOneWidget);
+    // 앱의 「글자 크기」는 X 글 카드·시트 본문에도(아이폰 mini QA)
+    double scaleOf(Finder f) => MediaQuery.textScalerOf(tester.element(f)).scale(1);
+    expect(scaleOf(find.text('원문')), 1.0);
+    readerScale.value = 1.3;
+    await tester.pump();
+    expect(scaleOf(find.text('원문')), 1.3);
+    expect(scaleOf(find.text("We've reset weekly usage limits for all paid plans. Enjoy the extra room this week, on us.").first), 1.3);
+    expect(scaleOf(find.text('X에서 보기')), 1.0); // 버튼은 본문 배율과 별개
+    readerScale.value = 1.0;
+    await tester.pump();
     expect(find.text("We've reset weekly usage limits for all paid plans. Enjoy the extra room this week, on us."), findsNWidgets(2)); // 카드 + 시트
     await tester.tapAt(const Offset(20, 40)); // 시트 바깥을 눌러 닫기
     await tester.pumpAndSettle();
@@ -2124,6 +2143,51 @@ void main() {
     await revealPaperContent(tester, find.text('핵심 내용'));
     expect(scaleOf('핵심 내용'), 0.9);
     expect(scaleOf('AI 요약'), 0.9);
+  });
+
+  testWidgets('아이폰 mini(375×812)에서 글자 크기 「아주 크게」: 소식·모델·저장소 상세와 X 글이 커지고 넘치지 않는다', (tester) async {
+    tester.view.physicalSize = const Size(375, 812);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(tester);
+    readerScale.value = 1.3;
+    for (final path in [
+      '/news/${Uri.encodeComponent('https://example.com/fixture/releases')}',
+      '/model/${Uri.encodeComponent('example-lab/example-coder')}',
+      '/repo/${Uri.encodeComponent('day-lab/day-tool-1')}',
+    ]) {
+      router.push(path);
+      await settle(tester);
+      final body = find.byWidgetPredicate((w) => w is Text && (w.style?.fontSize ?? 0) > 0).evaluate().map((e) => MediaQuery.textScalerOf(e).scale(1));
+      expect(body, contains(1.3), reason: path);
+      // 맨 아래까지 내려 그리며 넘침(RenderFlex overflow)이 없는지
+      await tester.fling(find.byType(Scrollable).first, const Offset(0, -3000), 3000);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: path);
+      router.pop();
+      await settle(tester);
+    }
+    clock = () => DateTime.utc(2026, 10, 18, 20);
+    router.go('/explore');
+    await settle(tester);
+    await tester.tap(find.text('소식'));
+    await slide(tester);
+    await settle(tester);
+    await tester.tap(find.descendant(of: find.byType(ExploreSectionTabs), matching: find.text('커뮤니티')));
+    await settle(tester);
+    final xChip = find.descendant(of: find.byType(ExploreTextFilters), matching: find.text('X'));
+    await tester.ensureVisible(xChip);
+    await tester.pumpAndSettle();
+    await tester.tap(xChip);
+    await tester.pumpAndSettle();
+    final card = find.byWidgetPredicate((w) => w is XPostCard && w.post.textKo != null).first;
+    await tester.ensureVisible(card);
+    await tester.pumpAndSettle();
+    expect(MediaQuery.textScalerOf(tester.element(find.descendant(of: card, matching: find.text('AI 번역')))).scale(1), 1.3);
+    await tester.tap(card);
+    await tester.pumpAndSettle();
+    expect(MediaQuery.textScalerOf(tester.element(find.text('원문'))).scale(1), 1.3);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('Q02: 더 큰 텍스트에서 세그먼트·칩이 글자 높이만큼 늘고, S03 상단 바 안에 들어간다', (tester) async {

@@ -21,6 +21,7 @@ import 'date_groups.dart';
 import 'x_posts.dart';
 import '../guide/coach_marks.dart';
 import '../../data/guide.dart';
+import '../reader/text_size_sheet.dart';
 
 // S04 「공식 소식」 칸(PROPOSALS P8d·P9 A안). 발표(연구소 블로그) | 업데이트(커뮤니티 공지·릴리스).
 // 글마다 AI 요약과 핵심 내용만 한국어로 보이고, 핵심 내용은 원문의 근거 문단으로, 상세는 원문 링크로 보낸다.
@@ -503,16 +504,15 @@ class _ExploreHotCard extends StatelessWidget {
                   children: [
                     // 칩은 글이 화제가 된 곳(Hacker News), 글이 실린 사이트는 날짜 옆에
                     const RgChip('Hacker News'),
-                    KeepAllText(
-                  n.titleKo ?? n.titleEn,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: RgText.titleList.copyWith(
-                    fontSize: 16,
-                    height: 25 / 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                    // 옆의 X 글 카드처럼 앱의 「글자 크기」를 따른다
+                    ReaderTextScale(
+                      child: KeepAllText(
+                        n.titleKo ?? n.titleEn,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: RgText.titleList.copyWith(fontSize: 16, height: 25 / 16, fontWeight: FontWeight.w500),
+                      ),
+                    ),
                   ],
                 ),
               ),

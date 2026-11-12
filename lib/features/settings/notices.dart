@@ -13,6 +13,7 @@ import '../../data/unread.dart';
 import '../../data/unread.dart' as unread show isNew;
 import '../../design/widgets/rg_new_dot.dart';
 import 'settings_screen.dart';
+import '../reader/text_size_sheet.dart';
 
 // 공지사항(실기기 QA 요청): docs/notices.md의 「## 제목」마다 공지 하나, 바로 아래 줄이 날짜.
 // 목록은 제목·날짜만, 누르면 시트로 내용을 연다.
@@ -180,28 +181,32 @@ class _NoticesScreenState extends State<NoticesScreen> {
 
 // 공지 시트 본문(공지사항 목록에서 열 때·앱 시작 팝업 같은 모양)
 class _NoticeBody extends StatelessWidget {
-  const _NoticeBody(this.n);
+  const _NoticeBody(this.n, {this.top = RgSpace.s4});
   final Notice n;
+  final double top; // 시트는 손잡이(누르는 높이 24) 아래라 4, 가운데 팝업은 카드 위 여백이 따로 있어 0
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    // 공지 본문도 앱의 「글자 크기」를 따른다
+    return ReaderTextScale(child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SizedBox(height: RgSpace.s4), // 손잡이(누르는 높이 24) 아래
+        SizedBox(height: top),
         Text(n.date, style: RgText.caption.copyWith(color: RgColors.textSecondary)),
         const SizedBox(height: RgSpace.s6),
         Semantics(header: true, child: KeepAllText(n.title, style: RgText.titleSection)),
         const SizedBox(height: RgSpace.s16),
         ...markdownWidgets(n.body),
       ],
-    );
+    ));
   }
 }
 
-// 앱 시작 팝업(2026-11-12): 앱을 열면 안 본 새 서버 공지 하나(가장 최근)를 시트로 띄운다.
+// 앱 시작 팝업(2026-11-12): 앱을 열면 안 본 새 서버 공지 하나(가장 최근)를 화면 가운데 카드로 띄운다.
+// · 가운데 카드(2026-11-12, 처음엔 바텀 시트): 앱의 시트는 모두 사용자가 눌러 여는 것이라, 앱이 먼저 띄우는 공지는 모양을 달리 한다.
+//   설정 › 공지사항에서 여는 공지는 그대로 시트.
 // · 대상: popup인 서버 공지 중 이 기기의 기준 시각(첫 실행 3일 전, unread.newSince) 뒤에 게시됐고
-//   「다시 보지 않기」를 누르지 않은 것. 「확인」이나 바깥 탭으로 닫으면 다음에 앱을 열 때 또 뜬다.
+//   「다시 보지 않기」를 누르지 않은 것. 「확인」·바깥 탭·뒤로가기로 닫으면 다음에 앱을 열 때 또 뜬다.
 // · 첫 실행(온보딩을 막 끝낸 직후)에는 띄우지 않는다: 안내가 연달아 두 장 뜨지 않게(noticePopupAllowed).
 // · 앱을 켜 있는 동안 한 번만 확인한다.
 bool _popupChecked = false;
@@ -222,23 +227,101 @@ Future<void> showNoticePopupIfAny(BuildContext context) async {
   final n = popupNotice(await loadNotices());
   if (n == null || !context.mounted) return;
   markRead(n.key); // 내용을 봤으니 설정 › 공지사항의 새 글 점은 뗀다
-  await showRgBottomSheet<void>(
-    context,
-    builder: (sheet) => _NoticeBody(n),
-    footer: (sheet) => Row(
-      spacing: RgSpace.s8,
-      children: [
-        Expanded(
-          child: RgNeutralButton(
-            label: '다시 보지 않기',
-            onTap: () {
-              noticePopupDismissed.value = {...noticePopupDismissed.value, n.key};
-              Navigator.of(sheet).pop();
-            },
+  HapticFeedback.selectionClick(); // 시트가 열릴 때와 같은 가벼운 진동
+  await Navigator.of(context, rootNavigator: true).push(_NoticePopupRoute(n));
+}
+
+// 나타날 때 96%→100% 커지며 페이드(220ms), 닫힐 때는 더 빨리(160ms). 「동작 줄이기」면 바로 뜨고 바로 닫힌다.
+class _NoticePopupRoute extends PopupRoute<void> {
+  _NoticePopupRoute(this.n);
+  final Notice n;
+
+  bool get _still => WidgetsBinding.instance.platformDispatcher.accessibilityFeatures.disableAnimations;
+
+  @override
+  Color get barrierColor => RgColors.overlayDim;
+  @override
+  bool get barrierDismissible => true;
+  @override
+  String get barrierLabel => '닫기';
+  @override
+  Duration get transitionDuration => _still ? Duration.zero : RgMotion.base;
+  @override
+  Duration get reverseTransitionDuration => _still ? Duration.zero : RgMotion.release;
+
+  @override
+  Widget buildPage(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation) =>
+      _NoticePopup(n);
+
+  @override
+  Widget buildTransitions(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation, Widget child) {
+    final a = CurvedAnimation(parent: animation, curve: RgMotion.curve, reverseCurve: Curves.easeInCubic);
+    return FadeTransition(
+      opacity: a,
+      child: ScaleTransition(scale: Tween(begin: 0.96, end: 1.0).animate(a), child: child),
+    );
+  }
+}
+
+class _NoticePopup extends StatelessWidget {
+  const _NoticePopup(this.n);
+  final Notice n;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    return SafeArea(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: RgSpace.s24),
+          child: ConstrainedBox(
+            // 긴 공지는 본문만 스크롤된다. 버튼 줄은 늘 보인다
+            constraints: BoxConstraints(maxWidth: 400, maxHeight: size.height * 0.7),
+            child: Semantics(
+              scopesRoute: true,
+              namesRoute: true,
+              explicitChildNodes: true,
+              label: '공지',
+              child: Material(
+                color: RgColors.surfaceRaised,
+                shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(RgRadius.card))),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Flexible(
+                      child: SingleChildScrollView(
+                        physics: const ClampingScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(24, 28, 24, 12),
+                        child: _NoticeBody(n, top: 0),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                      child: Row(
+                        spacing: RgSpace.s8,
+                        children: [
+                          Expanded(
+                            child: RgNeutralButton(
+                              label: '다시 보지 않기',
+                              onTap: () {
+                                noticePopupDismissed.value = {...noticePopupDismissed.value, n.key};
+                                Navigator.of(context).pop();
+                              },
+                            ),
+                          ),
+                          Expanded(child: RgPrimaryButton(label: '확인', onTap: () => Navigator.of(context).pop())),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
-        Expanded(child: RgPrimaryButton(label: '확인', onTap: () => Navigator.of(sheet).pop())),
-      ],
-    ),
-  );
+      ),
+    );
+  }
 }
