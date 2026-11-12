@@ -8,6 +8,7 @@ import '../../design/widgets/rg_bottom_sheet.dart';
 import '../../design/widgets/rg_buttons.dart';
 import '../../design/widgets/rg_card.dart';
 import '../../design/widgets/rg_pressable.dart';
+import '../../data/repository.dart';
 import '../../data/unread.dart';
 import '../../data/unread.dart' as unread show isNew;
 import '../../design/widgets/rg_new_dot.dart';
@@ -15,16 +16,36 @@ import 'settings_screen.dart';
 
 // 공지사항(실기기 QA 요청): docs/notices.md의 「## 제목」마다 공지 하나, 바로 아래 줄이 날짜.
 // 목록은 제목·날짜만, 누르면 시트로 내용을 연다.
-// ponytail: 앱에 묶인 고정 공지. 자주 바뀌면 PROPOSALS P6대로 서버 테이블로 옮긴다.
+// 서버 공지(2026-11-12, supabase notices 테이블): 앱 업데이트 없이 올린다. 앱에 묶인 공지 위에 최신순으로 붙고,
+// popup인 새 공지는 앱을 열 때 팝업으로 뜬다(showNoticePopupIfAny).
 class Notice {
-  Notice(this.title, this.date, this.body);
+  Notice(this.title, this.date, this.body, {this.id, this.at, this.popup = false});
   final String title;
   final String date; // 2026.10.27
   final List<(MdBlock, String)> body;
+  final String? id; // 서버 공지 id. 앱에 묶인 공지는 null
+  final DateTime? at; // 서버 공지의 게시 시각
+  final bool popup;
 
-  String get key => 'notice:$date $title'; // 읽음 기록(unread.dart)
-  // KST 그날 0시. 날짜가 없으면 아주 옛날(새 글로 치지 않는다)
+  factory Notice.server(Map<String, dynamic> j) {
+    final at = DateTime.parse(j['published_at'] as String);
+    final kst = at.toUtc().add(const Duration(hours: 9));
+    String two(int v) => v.toString().padLeft(2, '0');
+    return Notice(
+      j['title'] as String,
+      '${kst.year}.${two(kst.month)}.${two(kst.day)}',
+      markdownBlocks(j['body'] as String? ?? ''),
+      id: '${j['id']}',
+      at: at,
+      popup: j['popup'] == true,
+    );
+  }
+
+  // 읽음 기록(unread.dart). 서버 공지는 id로: 제목을 고쳐도 읽음이 풀리지 않게
+  String get key => id != null ? 'notice:srv:$id' : 'notice:$date $title';
+  // 서버 공지는 게시 시각, 앱에 묶인 공지는 KST 그날 0시. 날짜가 없으면 아주 옛날(새 글로 치지 않는다)
   DateTime get publishedAt {
+    if (at case final at?) return at;
     final p = date.split('.').map(int.tryParse).toList();
     if (p.length != 3 || p.contains(null)) return DateTime.utc(2000);
     return DateTime.utc(p[0]!, p[1]!, p[2]!).subtract(const Duration(hours: 9));
@@ -33,9 +54,22 @@ class Notice {
   bool get isNew => unread.isNew(key, publishedAt);
 }
 
-// 설정 행·탭바 점도 같은 목록을 쓴다. 앱에 묶인 문서라 한 번만 읽는다.
+// 설정 행·공지 화면·팝업이 같은 목록을 쓴다. 앱을 켜 있는 동안 한 번만 읽는다.
+// 서버 공지를 못 받으면(오프라인·마이그레이션 전) 앱에 묶인 공지만. 받은 적 있으면 저장본(supabase_repository)이 쓰인다.
 Future<List<Notice>>? _notices;
-Future<List<Notice>> loadNotices() => _notices ??= rootBundle.loadString('docs/notices.md').then(parseNotices);
+Future<List<Notice>> loadNotices() => _notices ??= Future.wait([
+      repository
+          .listNotices()
+          .timeout(const Duration(seconds: 25))
+          .then((l) => [for (final j in l) Notice.server(j)])
+          .catchError((Object _) => <Notice>[]),
+      rootBundle.loadString('docs/notices.md').then(parseNotices),
+    ]).then((r) => [...r[0], ...r[1]]);
+
+@visibleForTesting
+void resetNotices() => _notices = null;
+@visibleForTesting
+void setNoticesForTest(List<Notice> notices) => _notices = Future.value(notices);
 
 bool hasNewNotice(List<Notice>? notices) => notices?.any((n) => n.isNew) ?? false;
 
@@ -140,19 +174,71 @@ class _NoticesScreenState extends State<NoticesScreen> {
 
   void _open(BuildContext context, Notice n) {
     markRead(n.key);
-    showRgBottomSheet<void>(
-      context,
-      builder: (sheet) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: RgSpace.s4), // 손잡이(누르는 높이 24) 아래
-          Text(n.date, style: RgText.caption.copyWith(color: RgColors.textSecondary)),
-          const SizedBox(height: RgSpace.s6),
-          Semantics(header: true, child: KeepAllText(n.title, style: RgText.titleSection)),
-          const SizedBox(height: RgSpace.s16),
-          ...markdownWidgets(n.body),
-        ],
-      ),
+    showRgBottomSheet<void>(context, builder: (sheet) => _NoticeBody(n));
+  }
+}
+
+// 공지 시트 본문(공지사항 목록에서 열 때·앱 시작 팝업 같은 모양)
+class _NoticeBody extends StatelessWidget {
+  const _NoticeBody(this.n);
+  final Notice n;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: RgSpace.s4), // 손잡이(누르는 높이 24) 아래
+        Text(n.date, style: RgText.caption.copyWith(color: RgColors.textSecondary)),
+        const SizedBox(height: RgSpace.s6),
+        Semantics(header: true, child: KeepAllText(n.title, style: RgText.titleSection)),
+        const SizedBox(height: RgSpace.s16),
+        ...markdownWidgets(n.body),
+      ],
     );
   }
+}
+
+// 앱 시작 팝업(2026-11-12): 앱을 열면 안 본 새 서버 공지 하나(가장 최근)를 시트로 띄운다.
+// · 대상: popup인 서버 공지 중 이 기기의 기준 시각(첫 실행 3일 전, unread.newSince) 뒤에 게시됐고
+//   「다시 보지 않기」를 누르지 않은 것. 「확인」이나 바깥 탭으로 닫으면 다음에 앱을 열 때 또 뜬다.
+// · 첫 실행(온보딩을 막 끝낸 직후)에는 띄우지 않는다: 안내가 연달아 두 장 뜨지 않게(noticePopupAllowed).
+// · 앱을 켜 있는 동안 한 번만 확인한다.
+bool _popupChecked = false;
+
+@visibleForTesting
+void resetNoticePopup() => _popupChecked = false;
+
+Notice? popupNotice(List<Notice> notices) {
+  for (final n in notices) {
+    if (n.id != null && n.popup && n.publishedAt.isAfter(newSince) && !noticePopupDismissed.value.contains(n.key)) return n;
+  }
+  return null;
+}
+
+Future<void> showNoticePopupIfAny(BuildContext context) async {
+  if (_popupChecked || !noticePopupAllowed) return;
+  _popupChecked = true;
+  final n = popupNotice(await loadNotices());
+  if (n == null || !context.mounted) return;
+  markRead(n.key); // 내용을 봤으니 설정 › 공지사항의 새 글 점은 뗀다
+  await showRgBottomSheet<void>(
+    context,
+    builder: (sheet) => _NoticeBody(n),
+    footer: (sheet) => Row(
+      spacing: RgSpace.s8,
+      children: [
+        Expanded(
+          child: RgNeutralButton(
+            label: '다시 보지 않기',
+            onTap: () {
+              noticePopupDismissed.value = {...noticePopupDismissed.value, n.key};
+              Navigator.of(sheet).pop();
+            },
+          ),
+        ),
+        Expanded(child: RgPrimaryButton(label: '확인', onTap: () => Navigator.of(sheet).pop())),
+      ],
+    ),
+  );
 }

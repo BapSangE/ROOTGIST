@@ -34,3 +34,8 @@ bool enteredModel(String id) {
 // 공식 소식(발표) 목록의 「지난번에 여기까지 봤어요」: 지난번 목록을 열었을 때 맨 위 글의 게시 시각(UTC ISO).
 // 목록을 열면 이번 맨 위 글 시각으로 바꾼다. 처음이면 선을 그리지 않는다.
 final newsSeenAt = ValueNotifier<DateTime?>(null);
+
+// 앱 시작 공지 팝업(notices.dart showNoticePopupIfAny)에서 「다시 보지 않기」를 누른 공지 키.
+final noticePopupDismissed = ValueNotifier<Set<String>>({});
+// 이번 실행이 온보딩을 이미 끝낸 상태로 시작했는지(storage.dart). 첫 실행에는 온보딩 바로 뒤에 팝업을 띄우지 않는다.
+var noticePopupAllowed = false;

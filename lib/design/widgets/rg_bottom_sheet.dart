@@ -14,7 +14,8 @@ import 'rg_pressable.dart';
 // · 손잡이 줄은 스크롤 밖에 둔다 → 거기서 끌면 시트 기본 끌기가 그대로 받는다.
 // · 본문은 튕기지 않는 스크롤 → 짧은 시트는 아무 데나 잡아도 시트가 내려간다.
 // · 긴 시트는 맨 위에서 더 내리면 손가락을 따라 시트가 내려가고, 충분히(80) 내리거나 빠르게 털면 닫힌다. 아니면 제자리로.
-Future<T?> showRgBottomSheet<T>(BuildContext context, {required WidgetBuilder builder}) {
+// footer: 스크롤 밖 맨 아래에 고정되는 줄(앱 시작 공지 팝업의 「다시 보지 않기 · 확인」). 본문이 길어도 늘 보인다.
+Future<T?> showRgBottomSheet<T>(BuildContext context, {required WidgetBuilder builder, WidgetBuilder? footer}) {
   HapticFeedback.selectionClick(); // 시트가 열릴 때 가벼운 진동 한 번(어느 시트든 같게, 2026-11-11)
   return showModalBottomSheet<T>(
     context: context,
@@ -27,13 +28,14 @@ Future<T?> showRgBottomSheet<T>(BuildContext context, {required WidgetBuilder bu
     useSafeArea: true,
     showDragHandle: false,
     constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.85),
-    builder: (context) => _RgSheetBody(child: builder(context)),
+    builder: (context) => _RgSheetBody(footer: footer?.call(context), child: builder(context)),
   );
 }
 
 class _RgSheetBody extends StatefulWidget {
-  const _RgSheetBody({required this.child});
+  const _RgSheetBody({required this.child, this.footer});
   final Widget child;
+  final Widget? footer;
 
   @override
   State<_RgSheetBody> createState() => _RgSheetBodyState();
@@ -116,11 +118,13 @@ class _RgSheetBodyState extends State<_RgSheetBody> with SingleTickerProviderSta
               onNotification: _onScroll,
               child: SingleChildScrollView(
                 physics: const ClampingScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
+                padding: EdgeInsets.fromLTRB(24, 0, 24, widget.footer == null ? 40 : 16),
                 child: widget.child,
               ),
             ),
           ),
+          if (widget.footer case final footer?)
+            Padding(padding: const EdgeInsets.fromLTRB(24, 8, 24, 24), child: footer),
         ],
       ),
       ),

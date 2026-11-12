@@ -126,6 +126,13 @@ class SupabaseRepository extends Repository {
     final j = await _rpc('list_terms', {}, 'terms');
     return [for (final t in j?['terms'] ?? const []) GlossaryTerm.dictionary(t)];
   }
+
+  // 서버 공지(supabase/migrations/20261112090000_notices.sql). 마이그레이션 전이면 404라 notices.dart가 빈 목록으로 다룬다
+  @override
+  Future<List<Map<String, dynamic>>> listNotices() async {
+    final j = await _rpc('list_notices', {}, 'notices');
+    return [for (final n in j?['notices'] ?? const []) (n as Map).cast<String, dynamic>()];
+  }
 }
 
 class _ServerError implements Exception {

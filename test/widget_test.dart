@@ -65,6 +65,7 @@ Future<void> pumpApp(WidgetTester tester) async {
   readItems.value = {};
   modelsSeen.value = {};
   newsSeenAt.value = null;
+  noticePopupAllowed = false; // 앱 시작 공지 팝업은 따로 확인하는 테스트에서 켠다
   tipsSeen.value = {tipReader, tipNews};
   clock = DateTime.now;
   // 홈 키워드 칩이 바로 사전을 부른다: 지난 테스트의 끝나지 않은 요청을 물려받지 않게 새로, 실제 비동기에서 미리 받아 둔다
@@ -754,6 +755,81 @@ void main() {
     expect(Notice('t', '2026.10.27', []).publishedAt, DateTime.utc(2026, 10, 26, 15)); // KST 0시
     clock = DateTime.now;
     readItems.value = {};
+  });
+
+  test('서버 공지: KST 날짜·id 읽음 키·마크다운 본문, 팝업 대상 고르기', () {
+    final n = Notice.server({
+      'id': 7,
+      'title': '서버 점검 안내',
+      'body': '첫 문단이에요.\n\n- 목록 하나',
+      'popup': true,
+      'published_at': '2026-11-11T16:30:00Z',
+    });
+    expect(n.date, '2026.11.12'); // KST로 넘어간 날
+    expect(n.key, 'notice:srv:7');
+    expect(n.publishedAt, DateTime.utc(2026, 11, 11, 16, 30));
+    expect(n.body, [(MdBlock.paragraph, '첫 문단이에요.'), (MdBlock.bullet, '목록 하나')]);
+
+    newSince = DateTime.utc(2026, 11, 1);
+    noticePopupDismissed.value = {};
+    Notice srv(int id, String at, {bool popup = true}) =>
+        Notice.server({'id': id, 'title': 't$id', 'body': '', 'popup': popup, 'published_at': at});
+    final bundled = Notice('앱 공지', '2026.11.12', []);
+    expect(popupNotice([bundled]), isNull); // 앱에 묶인 공지는 팝업하지 않는다
+    expect(popupNotice([srv(1, '2026-11-11T00:00:00Z', popup: false)]), isNull);
+    expect(popupNotice([srv(2, '2026-10-30T00:00:00Z')]), isNull); // 기준 시각 전(새로 설치한 기기에 옛 공지 X)
+    final list = [srv(4, '2026-11-11T00:00:00Z'), srv(3, '2026-11-10T00:00:00Z')];
+    expect(popupNotice(list)?.id, '4'); // 가장 최근 하나
+    noticePopupDismissed.value = {'notice:srv:4'};
+    expect(popupNotice(list)?.id, '3'); // 「다시 보지 않기」 한 공지는 건너뛴다
+    noticePopupDismissed.value = {};
+    newSince = DateTime.utc(2100);
+  });
+
+  testWidgets('앱 시작 공지 팝업: 「확인」은 다음에 또, 「다시 보지 않기」는 다시 안 뜬다, 첫 실행엔 안 뜬다', (tester) async {
+    final n = Notice.server({'id': 9, 'title': '새 기능 안내', 'body': '본문이에요.', 'popup': true, 'published_at': '2026-11-11T00:00:00Z'});
+    newSince = DateTime.utc(2026, 11, 1);
+    readItems.value = {};
+    noticePopupDismissed.value = {};
+    setNoticesForTest([n]);
+    late BuildContext ctx;
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: Builder(builder: (c) => SizedBox.expand(child: Builder(builder: (c2) {
+      ctx = c2;
+      return const SizedBox();
+    }))))));
+    Future<void> launch() async {
+      resetNoticePopup();
+      showNoticePopupIfAny(ctx);
+      await tester.pumpAndSettle();
+    }
+
+    noticePopupAllowed = false; // 첫 실행(온보딩 직후)
+    await launch();
+    expect(find.text(keepAll('새 기능 안내')), findsNothing);
+
+    noticePopupAllowed = true;
+    await launch();
+    expect(find.text(keepAll('새 기능 안내')), findsOneWidget);
+    expect(readItems.value, contains('notice:srv:9')); // 열었으니 공지사항 새 글 점은 뗀다
+    await tester.tap(find.text('확인'));
+    await tester.pumpAndSettle();
+    expect(find.text(keepAll('새 기능 안내')), findsNothing);
+
+    await launch(); // 다음 실행에 또 뜬다
+    expect(find.text(keepAll('새 기능 안내')), findsOneWidget);
+    await tester.tap(find.text('다시 보지 않기'));
+    await tester.pumpAndSettle();
+    expect(noticePopupDismissed.value, {'notice:srv:9'});
+
+    await launch();
+    expect(find.text(keepAll('새 기능 안내')), findsNothing);
+
+    noticePopupAllowed = false;
+    noticePopupDismissed.value = {};
+    readItems.value = {};
+    newSince = DateTime.utc(2100);
+    resetNotices();
+    await tester.runAsync(loadNotices); // 다음 테스트가 fake async에서 에셋 읽기를 시작하지 않게 실제 비동기에서 다시 채운다
   });
 
   testWidgets('짧은 원문(소개문 한 줄)은 「원문 소개문」으로, 이름이 겹치는 관련 소식을 잇는다', (tester) async {

@@ -128,6 +128,10 @@ class AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     currentShell.value = shell;
+    // 앱을 열면 안 본 새 공지를 팝업으로(앱을 켜 있는 동안 한 번만 확인, notices.dart)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (context.mounted) showNoticePopupIfAny(context);
+    });
     return Scaffold(
       body: Stack(
         children: [

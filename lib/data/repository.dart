@@ -32,6 +32,7 @@ abstract class Repository {
   Future<GithubRankings> listGithubRankings(); // GitHub 칸 기간별 순위(일간·주간·월간)
   Future<List<XPost>> listXPosts(); // X 계정 최근 3일 글, 최신순. 못 받으면 빈 목록으로 다룬다
   Future<List<GlossaryTerm>> listTerms(); // 공용 용어 사전(공식 소식·모델 상세 하이라이트). 못 받으면 빈 목록
+  Future<List<Map<String, dynamic>>> listNotices(); // 서버 공지(설정 › 공지사항·앱 시작 팝업), 최신순. 모양은 notices.dart가 읽는다
   Future<Digest?> today() => getDigest();
 }
 
@@ -113,6 +114,11 @@ class FixtureRepository extends Repository {
   @override
   Future<List<GlossaryTerm>> listTerms() async => [
         for (final t in (await _load('terms.json'))['terms']) GlossaryTerm.dictionary(t),
+      ];
+
+  @override
+  Future<List<Map<String, dynamic>>> listNotices() async => [
+        for (final n in (await _load('notices.json'))['notices']) (n as Map).cast<String, dynamic>(),
       ];
 }
 
