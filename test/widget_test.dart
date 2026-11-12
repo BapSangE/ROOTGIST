@@ -1007,7 +1007,7 @@ void main() {
 
     await tester.tap(find.text('AI 생성 안내'));
     await tester.pumpAndSettle();
-    expect(find.text(keepAll(aiNoticeParagraphs.first)), findsOneWidget);
+    expect(find.text(keepAll(byLine(aiNoticeParagraphs.first))), findsOneWidget); // 문장마다 줄을 바꿔 그린다
     await tester.tap(find.bySemanticsLabel('닫기')); // 시트 손잡이(보이는 닫기 버튼은 없다)
     await tester.pumpAndSettle();
 

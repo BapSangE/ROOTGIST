@@ -500,8 +500,10 @@ class DataSourceScreen extends StatelessWidget {
     '그날 upvote가 많은 상위 10편을 골라요. 이 순서는 Hugging Face 이용자들의 반응이고, ROOTGIST가 논문을 평가한 결과가 아니에요.',
     '각 논문의 원문은 상세 화면의 Hugging Face·arXiv 링크에서 확인할 수 있어요. 논문 제목과 초록은 arXiv가 CC0으로 공개한 정보예요.',
     // 공식 소식·모델(docs/RIGHTS.md 3·4장): 출처와 「원문이 아니라 AI 정리」라는 점, 삭제 요청 창구를 밝힌다.
-    '공식 소식은 OpenAI·Anthropic·Google DeepMind·Google Research·Hugging Face·Meta·NVIDIA의 공식 블로그(Hugging Face 블로그에 회사 계정이 쓴 글 포함)와 개발자 공지, Claude Code·SDK·API 릴리스 노트에서 모아요. 데이터센터·AI 인프라 소식은 Google·Microsoft·Amazon 공식 블로그에서 그 주제 글만 골라요. 제목과 요약·핵심 내용은 AI가 원문을 보고 한국어로 정리한 것이고, 글 전체는 각 원문 링크에서 읽을 수 있어요.',
-    '「개발자 화제」는 Hacker News에서 개발자들이 많이 본 AI 글과 GitHub의 새 AI 저장소예요. 숫자는 Hacker News 추천(upvote) 수·GitHub 별 수이고, 요약은 원문 사이트가 허용할 때만 만들어요.',
+    '공식 소식은 OpenAI·Anthropic·Google DeepMind·Google Research·Hugging Face·Meta·NVIDIA의 공식 블로그(Hugging Face 블로그에 IBM·Microsoft·Mistral AI·Qwen·DeepSeek 같은 회사 계정이 쓴 글 포함)와 개발자 공지, Claude Code·Anthropic·OpenAI·xAI SDK와 Claude API 릴리스 노트에서 모아요. 데이터센터·AI 인프라 소식은 Google·Microsoft·Amazon 공식 블로그에서 그 주제 글만 골라요. 제목과 요약·핵심 내용은 AI가 원문을 보고 한국어로 정리한 것이고, 글 전체는 각 원문 링크에서 읽을 수 있어요.',
+    '「개발자 화제」와 커뮤니티는 Hacker News에서 개발자들이 많이 본 AI 글과 GitHub에서 별을 많이 모은 새 AI 저장소예요. 숫자는 Hacker News 추천(upvote) 수·GitHub 별 수이고, 요약은 원문 사이트가 허용할 때만 만들어요. 저장소 소개는 README를 AI가 정리한 것이에요.',
+    // X 글(2026-11-10~): X 표시 규정에 맞춰 작성자·원문을 함께 보인다는 점과 번역이 AI라는 점
+    'X 글은 OpenAI·Anthropic·Google 같은 AI 회사의 공식 계정과 관계자, AI 소식 계정 몇 곳의 공개 게시물을 X API로 받아요. 한국어는 AI가 원문을 그대로 옮긴 번역이고, 작성자와 원문을 늘 함께 보여 드려요. 게시물은 「X에서 보기」로 X에서 볼 수 있어요.',
     '모델은 Hugging Face 트렌딩 순위와 각 모델 카드에 적힌 제작사 설명을 바탕으로 해요. 점수는 제작사가 직접 측정해 밝힌 값이에요.',
     // 출처 배지의 회사 대표 색(RgBrand)과 함께 둔다(docs/RIGHTS.md 4장)
     '표시된 회사·제품 이름은 각 소유자의 상표예요. ROOTGIST는 이 회사들과 제휴하거나 후원받지 않으며, 출처 배지의 색은 출처를 구분하려고 쓴 것이에요.',
@@ -678,7 +680,7 @@ class GuideScreen extends StatelessWidget {
 
   static const _faq = [
     ('새 소식은 언제 올라와요?', '공식 소식과 개발자 화제는 하루 두 번, 아침 6시쯤과 오후 1시쯤 모아요. X 글(회사·소식 계정)은 30분마다 받아 바로 한국어로 옮겨요. 논문은 매일 아침 올라와요. 주말에는 arXiv와 Hugging Face에 새 논문이 거의 올라오지 않아, 일·월요일엔 가장 최근 논문을 보여 드려요. 홈 오른쪽 위에서 다음 수집 시각을 볼 수 있어요.'),
-    ('어디의 소식을 모아요?', 'OpenAI·Anthropic·Google·Meta·NVIDIA 같은 곳의 공식 블로그와 Hacker News·GitHub 화제, Hugging Face 인기 모델이에요. 전체 목록은 설정 › 데이터 출처에 있어요.'),
+    ('어디의 소식을 모아요?', 'OpenAI·Anthropic·Google·Meta·NVIDIA 같은 곳의 공식 블로그와 릴리스 노트, AI 회사·관계자의 X 글, Hacker News·GitHub 화제, Hugging Face 인기 모델이에요. 전체 목록은 설정 › 데이터 출처에 있어요.'),
     ('요약이나 번역이 틀린 것 같아요', '요약과 번역은 AI가 원문을 보고 만들어서 틀릴 수 있어요. 중요한 내용은 원문 링크에서 확인해 주시고, 아래 「문의하기」로 알려 주시면 고칠게요.'),
     ('회원가입이나 로그인이 필요한가요?', '아니요. 설치하면 바로 쓸 수 있고, 이름이나 이메일을 받지 않아요.'),
     ('저장한 글이 사라졌어요', '저장한 글과 읽기 설정은 이 기기에만 남아요. 앱을 지웠다 다시 설치하거나 기기를 바꾸면 옮겨지지 않아요.'),
