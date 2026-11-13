@@ -56,6 +56,8 @@ Future<void> pumpApp(WidgetTester tester) async {
   readerScale.value = 1.0;
   exploreTab.value = 0;
   newsTab.value = 0;
+  hotTab.value = 0;
+  xSortByLikes.value = false;
   toolsTab.value = 0;
   githubPeriod.value = 0;
   fixtureMode.value = FixtureMode.normal;
@@ -1347,7 +1349,7 @@ void main() {
       'url': 'u', 'published_at': '2026-10-29T00:00:00Z', 'points': 331}).reaction, 'HN 추천 331'); // 공식 소식에 붙은 반응
   });
 
-  testWidgets('소식 · 커뮤니티: 「전체 | Hacker News」 반응 순·「X」 최신 순, 카드마다 출처 칩, 저장소 줄은 없다, 상세는 원문·HN 토론 링크', (tester) async {
+  testWidgets('소식 · 커뮤니티: 「Hacker News | X」 두 쪽(전체 없음), HN은 추천 순, X는 최신순·좋아요순, 카드마다 출처 칩, 저장소 줄은 없다, 상세는 원문·HN 토론 링크', (tester) async {
     tester.view.physicalSize = const Size(390, 2400);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -1361,26 +1363,34 @@ void main() {
     await tester.tap(find.descendant(of: find.byType(ExploreSectionTabs), matching: find.text('커뮤니티')));
     await settle(tester);
     expect(find.text(keepAll('Hacker News·X에서 가져온 개발자들의 글이에요. 공식 발표가 아니에요')), findsOneWidget);
-    // 칩은 Hacker News와 X. 저장소는 도구 › GitHub에만
+    // 칩은 Hacker News와 X 두 개뿐(「전체」로 섞지 않는다). 저장소는 도구 › GitHub에만. 처음엔 Hacker News 쪽
     Finder filter(String label) => find.descendant(of: find.byType(ExploreTextFilters), matching: find.text(label));
     expect(filter('GitHub'), findsNothing);
+    expect(filter('전체'), findsNothing);
     expect(filter('Hacker News'), findsOneWidget);
     expect(filter('X'), findsOneWidget);
+    expect(hotTab.value, 0);
+    expect(find.byType(XPostCard), findsNothing);
+    expect(find.text('최신순'), findsNothing); // 정렬은 X 쪽에만
+    await tester.tap(filter('X'));
+    await tester.pumpAndSettle();
     // X 글: 번역이 있으면 한국어 위·원문 아래(「AI 번역」), 없으면 원문. 발표 소식을 단 글(9001)은 HOT에 넣지 않는다
     expect(find.text(keepAll('모든 유료 요금제의 주간 사용량 한도를 초기화했어요. 이번 주는 넉넉하게 써 보세요.')), findsOneWidget);
     expect(find.text("We've reset weekly usage limits for all paid plans. Enjoy the extra room this week, on us."), findsOneWidget);
     expect(find.text(keepAll('Spotted: Example Assistant is testing a new memory panel in its web app. Not live for everyone yet.')), findsOneWidget);
     expect(find.text(keepAll('가장 새로운 예시 모델을 소개해요. 자세히 보기: https://t.co/x')), findsNothing);
     expect(find.text('@ExampleLab · 10시간 전'), findsOneWidget); // 작성자·@핸들·시각을 늘 같이
-    await tester.tap(filter('Hacker News'));
-    await tester.pumpAndSettle();
-    expect(find.byType(XPostCard), findsNothing);
-    await tester.tap(filter('X'));
-    await tester.pumpAndSettle();
     expect(find.byType(XPostCard), findsNWidgets(2));
     expect(find.text(keepAll('LLM 글쓰기 문체에 관한 가상 글')), findsNothing);
     double yx(String id) => tester.getTopLeft(find.byWidgetPredicate((w) => w is XPostCard && w.post.id == id)).dy;
-    expect(yx('9003'), lessThan(yx('9002'))); // 「X」 칩은 같은 날이어도 최신 순(23시 글이 좋아요 많은 19시 글보다 위)
+    expect(yx('9003'), lessThan(yx('9002'))); // 기본은 최신순(23시 글이 좋아요 많은 19시 글보다 위)
+    await tester.tap(find.text('좋아요순'));
+    await tester.pumpAndSettle();
+    expect(xSortByLikes.value, isTrue);
+    expect(yx('9002'), lessThan(yx('9003'))); // 좋아요순이면 거꾸로
+    await tester.tap(find.text('최신순'));
+    await tester.pumpAndSettle();
+    expect(yx('9003'), lessThan(yx('9002')));
     // 카드를 누르면 앱 안 시트: 번역 전문 + 원문(접지 않음) + 「X에서 보기」
     await tester.tap(find.byWidgetPredicate((w) => w is XPostCard && w.post.id == '9002'));
     await tester.pumpAndSettle();
@@ -1400,14 +1410,14 @@ void main() {
     await tester.tapAt(const Offset(20, 40)); // 시트 바깥을 눌러 닫기
     await tester.pumpAndSettle();
     expect(find.text('X에서 보기'), findsNothing);
-    await tester.tap(filter('전체'));
+    await tester.tap(filter('Hacker News'));
     await tester.pumpAndSettle();
+    expect(find.byType(XPostCard), findsNothing);
     expect(find.text('오늘 뜨는 저장소'), findsNothing);
     expect(find.text('day-tool-1'), findsNothing);
     // 어디 글인지: Hacker News 카드도 X 카드도 맨 앞에 출처 칩
     Finder chip(String l) => find.byWidgetPredicate((w) => w is RgChip && w.label == l);
     expect(chip('Hacker News'), findsWidgets);
-    expect(chip('X'), findsWidgets);
     for (final title in ['Example-4 가중치 공개', 'LLM 글쓰기 문체에 관한 가상 글']) {
       expect(find.text(keepAll(title)), findsOneWidget);
     }
@@ -1671,25 +1681,6 @@ void main() {
     expect(find.text(keepAll('6편이 올라왔어요')), findsOneWidget); // 보던 홈 그대로
   });
 
-  test('X 화제 순: 계정별 평소 대비 반응 + 약한 시간 감쇠', () {
-    final now = DateTime.utc(2026, 11, 11, 12);
-    XPost post(String id, String handle, int likes, int hoursAgo) => XPost.fromJson({
-      'id': id, 'handle': handle, 'text': id, 'url': '', 'likes': likes,
-      'posted_at': now.subtract(Duration(hours: hoursAgo)).toIso8601String(),
-    });
-    final big = [post('big-usual-1', 'Big', 10000, 10), post('big-usual-2', 'Big', 10000, 12), post('big-new', 'Big', 10000, 3)];
-    final small = [post('small-usual', 'Small', 100, 10), post('small-hit', 'Small', 900, 3)];
-    final old = post('big-old-hit', 'Big', 30000, 40);
-    final all = [...big, ...small, old];
-    final ranked = rankXBuzz(all, baseline: all, now: now).map((p) => p.id).toList();
-    // 작은 계정이 평소의 9배 뜬 글이 큰 계정의 평범한 글(좋아요는 11배 많음)보다 위
-    expect(ranked.indexOf('small-hit'), lessThan(ranked.indexOf('big-new')));
-    // 같은 계정·같은 반응이면 새 글이 위
-    expect(ranked.indexOf('big-new'), lessThan(ranked.indexOf('big-usual-2')));
-    // 이틀 묵은 큰 화제 글(평소의 3배)도 감쇠가 약해 평범한 새 글보다는 위
-    expect(ranked.indexOf('big-old-hit'), lessThan(ranked.indexOf('big-usual-1')));
-  });
-
   testWidgets('C02: 약어는 정식 명칭 한 줄, 원어와 같은 대응어는 숨김', (tester) async {
     final slam = GlossaryTerm.fromJson({
       'term': 'SLAM', 'definition_ko': '가상 정의.', 'sentence_ids': ['A01'], 'highlight': true,
@@ -1881,7 +1872,7 @@ void main() {
     expect(scaffoldBg(), RgPalette.white.bgApp);
   });
 
-  testWidgets('옆으로 밀기: 홈 → 논문 → 소식 발표·업데이트·커뮤니티 → 도구 트렌딩 모델·새 모델·GitHub → 보관함 → 설정, 반대로 밀면 거꾸로', (tester) async {
+  testWidgets('옆으로 밀기: 홈 → 논문 → 소식 발표·업데이트·커뮤니티(Hacker News·X) → 도구 트렌딩 모델·새 모델·GitHub → 보관함 → 설정, 반대로 밀면 거꾸로', (tester) async {
     tester.view.physicalSize = const Size(390, 2400);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -1889,7 +1880,7 @@ void main() {
     String where() {
       final path = router.routerDelegate.currentConfiguration.uri.path;
       final sub = switch (exploreTab.value) {
-        1 => const [' 발표', ' 업데이트', ' 커뮤니티'][newsTab.value],
+        1 => newsTab.value == 2 ? const [' 커뮤니티 HN', ' 커뮤니티 X'][hotTab.value] : const [' 발표', ' 업데이트'][newsTab.value],
         2 => const [' 트렌딩 모델', ' 새 모델', ' GitHub'][toolsTab.value],
         _ => '',
       };
@@ -1903,7 +1894,7 @@ void main() {
       await settle(tester);
     }
 
-    const forward = ['explore 0', 'explore 1 발표', 'explore 1 업데이트', 'explore 1 커뮤니티', 'explore 2 트렌딩 모델', 'explore 2 새 모델',
+    const forward = ['explore 0', 'explore 1 발표', 'explore 1 업데이트', 'explore 1 커뮤니티 HN', 'explore 1 커뮤니티 X', 'explore 2 트렌딩 모델', 'explore 2 새 모델',
       'explore 2 GitHub', '/library', '/settings'];
     for (final w in forward) {
       await swipe(-300);

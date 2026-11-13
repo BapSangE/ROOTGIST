@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -38,7 +39,6 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
       exploreJump.value?.newsTab ?? 0; // 0 발표, 1 업데이트, 2 화제
   bool get _updates => _tab == 1;
   String? _source; // null = 전체
-  String? _hot; // HOT 칸 칩: null 전체, 'hn', 'x'
   final _x = Reloadable(loadXPosts); // X 글: HOT 칸에 섞고 발표에 반응으로 붙인다
   final _chipsKey = GlobalKey(); // 처음 안내: 회사 칩 줄
 
@@ -72,7 +72,7 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
       setState(() {
         _tab = newsTab.value = j.newsTab;
         _source = null;
-        _hot = null;
+        if (j.hot) hotTab.value = j.x ? 1 : 0;
       });
     }
   }
@@ -125,7 +125,7 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([_req, _x]),
+      listenable: Listenable.merge([_req, _x, hotTab, xSortByLikes]),
       builder: (context, _) => FutureBuilder(
         key: ValueKey(_req.generation), // 다시 시도면 빈 자리 표시부터, 당겨서 새로고침이면 보던 내용 유지
         future: _req.future,
@@ -142,7 +142,6 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
               onTap: (i) => setState(() {
                 _tab = newsTab.value = i;
                 _source = null;
-                _hot = null;
               }),
             ),
             Expanded(
@@ -286,44 +285,34 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
     ];
   }
 
-  // 개발자 화제 칸(2026-11-10): 맨 위 「오늘 뜨는 저장소」 카드 줄(GitHub 칸 일간 순위, 옆으로 넘김) →
-  // 「전체 | Hacker News | X」 Hacker News 글과 X 글(최근 3일). 점수 단위가 달라(HN 추천 · X 좋아요) 한 줄로 섞어 세우지 않고
-  // 각자 반응 순, 「전체」는 둘을 한 개씩 번갈아 놓는다. 발표 소식을 단 X 글은 발표 카드의 반응으로 가므로 여기서는 뺀다.
-  // X 글은 좋아요 그대로가 아니라 계정별 상대 반응 + 약한 시간 감쇠(rankXBuzz, x_posts.dart). HN은 추천 순 그대로.
-  // 「X」 칩만 최신 순(2026-11-11): 한도 초기화 같은 소식은 빨리 봐야 하는데, 30분마다 막 들어온 글은 좋아요가 적어 아래로 밀렸다.
+  // 커뮤니티 칸(2026-11-13): 「Hacker News | X」 두 쪽. 「전체」로 섞던 것은 뺐다(점수 단위가 달라 한 줄로 세우기 어렵고,
+  // 두 출처뿐이라 나눠 보는 편이 낫다). 두 쪽 모두 옆으로 밀기 자리라 밀면 HN → X → 도구로 넘어간다(app_shell tabStops).
+  // Hacker News는 추천 순. X는 30분마다 들어와 유일하게 자주 바뀌므로 최신순(기본)·좋아요순을 고른다.
+  // 발표 소식을 단 X 글은 발표 카드의 반응으로 가므로 여기서는 뺀다.
   List<Widget> _hotList(BuildContext context, List<OfficialNews> all, List<XPost> xs) {
     final now = clock();
+    final onX = hotTab.value == 1;
     final hn = [
       for (final n in all)
         if (n.isHot && !n.isGithub) n,
     ]..sort((a, b) => (b.points ?? 0).compareTo(a.points ?? 0));
     final official = {for (final n in all) if (!n.isHot) normUrl(n.url)};
-    final x = rankXBuzz(
-      [for (final p in xs) if (!p.links.any((l) => official.contains(normUrl(l)))) p],
-      baseline: xs,
-      now: now,
-    );
-    final keys = [null, if (hn.isNotEmpty) 'hn', if (x.isNotEmpty) 'x'];
-    final List<Object> shown = switch (_hot) {
-      'hn' => hn,
-      'x' => <XPost>[...x]..sort((a, b) => b.postedAt.compareTo(a.postedAt)),
-      _ => [
-        for (var i = 0; i < hn.length || i < x.length; i++) ...[
-          if (i < hn.length) hn[i],
-          if (i < x.length) x[i],
-        ],
-      ],
-    };
+    final byLikes = xSortByLikes.value;
+    final x = [for (final p in xs) if (!p.links.any((l) => official.contains(normUrl(l)))) p]
+      ..sort((a, b) => byLikes ? b.likes.compareTo(a.likes) : b.postedAt.compareTo(a.postedAt));
+    final List<Object> shown = onX ? x : hn;
     return [
-      if (keys.length > 2)
-        ExploreTextFilters(
-          labels: ['전체', if (hn.isNotEmpty) 'Hacker News', if (x.isNotEmpty) 'X'],
-          selected: keys.indexOf(_hot).clamp(0, keys.length - 1),
-          onTap: (i) => setState(() => _hot = keys[i]),
-        ),
+      ExploreTextFilters(
+        labels: const ['Hacker News', 'X'],
+        selected: hotTab.value,
+        onTap: (i) => hotTab.value = i,
+      ),
+      if (onX && x.isNotEmpty)
+        _XSortRow(byLikes: byLikes, onPick: (v) => xSortByLikes.value = v)
+      else
       const SizedBox(height: RgSpace.s16), // 칩 줄이 없어도 칸 설명과 첫 카드 사이를 띄운다
       RgFilterSwitch(
-        switchKey: (_tab, _hot),
+        switchKey: (_tab, onX, onX && byLikes),
         child: shown.isEmpty
             ? Padding(
                 padding: const EdgeInsets.fromLTRB(
@@ -333,14 +322,14 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
                   0,
                 ),
                 child: KeepAllText(
-                  '아직 모은 커뮤니티 글이 없어요',
+                  onX ? '아직 모은 X 글이 없어요' : '아직 모은 Hacker News 글이 없어요',
                   style: RgText.bodySmall.copyWith(
                     color: RgColors.textSecondary,
                   ),
                 ),
               )
             : DateGroups<Object>(
-                key: ValueKey(_hot),
+                key: ValueKey((onX, byLikes)),
                 items: shown,
                 at: (o) => o is XPost ? o.postedAt : (o as OfficialNews).publishedAt,
                 tag: (o) => o is XPost ? 'X' : (o as OfficialNews).sourceLabel,
@@ -377,7 +366,9 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
             ),
             Expanded(
               child: KeepAllText(
-                '각 사이트·계정에 올라온 글이에요. 숫자는 Hacker News 추천(upvote)·댓글 수와 X 좋아요 수예요. 새 저장소 순위는 도구 › GitHub에 있어요. X 글은 30분마다 모으고, 받을 때 바로 옮긴 AI 번역을 원문과 함께 보여 줘요. 누르면 X에서 열려요.',
+                onX
+                    ? 'AI 회사·관계자 계정의 X 글이에요. 30분마다 모으고, 받을 때 바로 옮긴 AI 번역을 원문과 함께 보여 줘요. 숫자는 X 좋아요·재게시·답글 수예요.'
+                    : 'Hacker News에서 개발자들이 많이 본 AI 글이에요. 숫자는 추천(upvote)·댓글 수예요. 새 저장소 순위는 도구 › GitHub에 있어요.',
                 perSentence: true,
                 style: RgText.caption.copyWith(color: RgColors.textSecondary),
               ),
@@ -386,6 +377,60 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
         ),
       ),
     ];
+  }
+}
+
+// 커뮤니티 X 쪽의 정렬: 오른쪽 위 「최신순 · 좋아요순」 글자 두 개. 고른 쪽만 진하게(색은 150ms로 바뀜, 동작 줄이기면 바로).
+// 칩 줄 아래 한 줄이라 크게 두지 않고, 글자는 작아도 누르는 자리는 44pt.
+class _XSortRow extends StatelessWidget {
+  const _XSortRow({required this.byLikes, required this.onPick});
+  final bool byLikes;
+  final ValueChanged<bool> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget option(String label, bool value) {
+      final on = byLikes == value;
+      return Semantics(
+        button: true,
+        selected: on,
+        child: RgPressable(
+          onTap: () {
+            if (on) return;
+            HapticFeedback.selectionClick();
+            onPick(value);
+          },
+          child: Container(
+            constraints: const BoxConstraints(minHeight: RgSpace.minTouch, minWidth: RgSpace.minTouch),
+            padding: const EdgeInsets.symmetric(horizontal: RgSpace.s6),
+            alignment: Alignment.center,
+            child: AnimatedDefaultTextStyle(
+              duration: RgMotion.of(context, RgMotion.fast),
+              curve: RgMotion.curve,
+              style: RgText.caption.copyWith(
+                fontWeight: on ? FontWeight.w600 : FontWeight.w400,
+                color: on ? RgColors.textPrimary : RgColors.textTertiary,
+              ),
+              child: Text(label),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return ChromeTextScale(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s4, RgSpace.gutterText - RgSpace.s6, 0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            option('최신순', false),
+            ExcludeSemantics(child: Text('·', style: RgText.caption.copyWith(color: RgColors.textTertiary))),
+            option('좋아요순', true),
+          ],
+        ),
+      ),
+    );
   }
 }
 

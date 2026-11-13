@@ -210,11 +210,11 @@ class _WithTabBar extends StatelessWidget {
 }
 
 // 옆으로 밀어 탭 넘기기(실기기 QA 요청). 한 줄로 이어진 자리를 차례로 넘는다:
-// 홈 → 탐색·논문 → 탐색·소식(발표) → 소식(업데이트) → 소식(커뮤니티) → 탐색·도구(트렌딩 모델) → 도구(새 모델)
+// 홈 → 탐색·논문 → 탐색·소식(발표) → 소식(업데이트) → 커뮤니티(Hacker News) → 커뮤니티(X) → 탐색·도구(트렌딩 모델) → 도구(새 모델)
 // → 도구(GitHub) → 보관함 → 설정. GitHub 기간(24시간·7일·30일)은 칩이라 밀기 자리가 아니다.
 // 왼쪽으로 밀면 다음, 오른쪽으로 밀면 이전. 하단 탭바 선택도 같이 옮겨 간다.
 // 탭의 첫 화면에서만: 지난 날짜·설정 하위 화면에서는 가장자리 밀기(뒤로)가 먼저다. 가로로 넘기는 칩 목록은 칩이 먼저 넘어간다.
-typedef TabStop = (int branch, int exploreTab, int sub); // sub: 소식은 발표·업데이트·커뮤니티, 도구는 트렌딩 모델·새 모델·GitHub
+typedef TabStop = (int branch, int exploreTab, int sub); // sub: 소식은 발표·업데이트·커뮤니티 HN·커뮤니티 X, 도구는 트렌딩 모델·새 모델·GitHub
 
 const tabStops = <TabStop>[
   (0, 0, 0),
@@ -222,6 +222,7 @@ const tabStops = <TabStop>[
   (1, 1, 0),
   (1, 1, 1),
   (1, 1, 2),
+  (1, 1, 3),
   (1, 2, 0),
   (1, 2, 1),
   (1, 2, 2),
@@ -282,7 +283,7 @@ class _TabSwipeState extends State<_TabSwipe> with SingleTickerProviderStateMixi
     final shell = widget.shell;
     final at = currentStop(shell.currentIndex, exploreTab.value, switch (exploreTab.value) {
       2 => toolsTab.value,
-      _ => newsTab.value,
+      _ => newsTab.value == 2 ? 2 + hotTab.value : newsTab.value,
     });
     final next = at + ((dx != 0 ? dx : v) < 0 ? 1 : -1);
     if (at < 0 || next < 0 || next >= tabStops.length) return;
@@ -290,7 +291,7 @@ class _TabSwipeState extends State<_TabSwipe> with SingleTickerProviderStateMixi
     HapticFeedback.selectionClick();
     if (branch == 1) {
       exploreJump.value = ExploreJump(tab,
-          updates: tab == 1 && sub == 1, hot: tab == 1 && sub == 2, fresh: tab == 2 && sub == 1,
+          updates: tab == 1 && sub == 1, hot: tab == 1 && sub >= 2, x: tab == 1 && sub == 3, fresh: tab == 2 && sub == 1,
           github: tab == 2 && sub == 2, animate: shell.currentIndex == 1);
     }
     if (branch != shell.currentIndex) {

@@ -175,10 +175,11 @@ void restoreBookmark(Bookmark b) {
 // 홈 「더 보기」·옆으로 밀기 → 탐색의 그 칸으로. (칸, 업데이트 선택 여부). 같은 칸을 다시 눌러도 알리도록 매번 새 값.
 // animate: 탐색 안에서 밀어 넘길 때는 칸이 미끄러져 넘어간다(다른 탭에서 들어올 때는 바로).
 class ExploreJump {
-  const ExploreJump(this.tab, {this.updates = false, this.hot = false, this.fresh = false, this.github = false, this.animate = false});
+  const ExploreJump(this.tab, {this.updates = false, this.hot = false, this.x = false, this.fresh = false, this.github = false, this.animate = false});
   final int tab; // 0 논문, 1 소식, 2 도구(모델·GitHub)
   final bool updates; // 소식: 업데이트 칸
   final bool hot; // 소식: 커뮤니티 칸
+  final bool x; // 커뮤니티: X 쪽(아니면 Hacker News)
   final bool fresh; // 도구: 새 모델 칸
   final bool github; // 도구: GitHub 칸
   int get newsTab => hot ? 2 : (updates ? 1 : 0);
@@ -191,5 +192,7 @@ final exploreJump = ValueNotifier<ExploreJump?>(null);
 // 지금 보이는 탐색 칸과 공식 소식의 발표·업데이트. 쉘의 옆으로 밀기가 다음·이전 자리를 정할 때 읽는다.
 final exploreTab = ValueNotifier(0);
 final newsTab = ValueNotifier(0); // 소식 칸의 발표(0) | 업데이트(1) | 커뮤니티(2)
+final hotTab = ValueNotifier(0); // 커뮤니티의 Hacker News(0) | X(1). 둘 다 옆으로 밀기 자리(2026-11-13)
+final xSortByLikes = ValueNotifier(false); // 커뮤니티 X: 최신순(false) | 좋아요순(true)
 final toolsTab = ValueNotifier(0); // 도구 칸의 트렌딩 모델(0) | 새 모델(1) | GitHub(2)
 final githubPeriod = ValueNotifier(0); // GitHub 칩의 오늘(0) | 이번 주(1) | 이번 달(2). 옆으로 밀기 자리는 아니다
