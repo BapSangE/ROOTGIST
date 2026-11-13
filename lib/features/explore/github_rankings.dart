@@ -44,13 +44,16 @@ class _GithubRankingsSectionState extends State<GithubRankingsSection> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: _req,
+      listenable: Listenable.merge([_req, githubNewest]),
       builder: (context, _) => FutureBuilder(
         future: _req.future,
         initialData: _last,
         builder: (context, snap) {
           final data = snap.data;
           final period = data?.periods[githubPeriods[_period]];
+          // 최신순(2026-11-13): 받아 둔 순위 안에서 생긴 시각 순. 순위 번호는 순서와 안 맞아 숨긴다(카드에 「N일 전 생성」이 있다)
+          final newest = githubNewest.value;
+          final repos = newest ? newestFirst(period?.repos ?? const []) : [...?period?.repos];
           return ListView(
             padding: const EdgeInsets.only(bottom: RgSpace.bottomScrollInset),
             children: [
@@ -60,8 +63,10 @@ class _GithubRankingsSectionState extends State<GithubRankingsSection> {
                 selected: _period,
                 onTap: (i) => setState(() => _period = githubPeriod.value = i),
               ),
+              if (repos.length > 1)
+                ExploreSortRow(labels: const ['별순', '최신순'], selected: newest ? 1 : 0, onPick: (i) => githubNewest.value = i == 1),
               RgFilterSwitch(
-                switchKey: _period,
+                switchKey: (_period, newest),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -73,7 +78,7 @@ class _GithubRankingsSectionState extends State<GithubRankingsSection> {
                         child: Padding(padding: EdgeInsets.only(top: RgSpace.s20), child: RgSkeletonRows(count: 5)),
                       )
                     else ...[
-                      if (period != null) PeriodNote(period: period, collectedAt: data!.collectedAt),
+                      if (period != null) PeriodNote(period: period, collectedAt: data!.collectedAt, newest: newest),
                       if (period == null || period.repos.isEmpty)
                         Padding(
                           padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s24, RgSpace.gutterText, 0),
@@ -88,7 +93,7 @@ class _GithubRankingsSectionState extends State<GithubRankingsSection> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             spacing: RgSpace.s16,
-                            children: [for (final r in period.repos) GithubRepoCard(repo: r, now: clock())],
+                            children: [for (final r in repos) GithubRepoCard(repo: r, now: clock(), showRank: !newest)],
                           ),
                         ),
                       Padding(
@@ -103,7 +108,7 @@ class _GithubRankingsSectionState extends State<GithubRankingsSection> {
                             ),
                             Expanded(
                               child: KeepAllText(
-                                '이름·설명·주제에 llm·agent·ai·claude·mcp가 들어간 저장소를 모았어요. 링크 모음, 거의 빈 저장소, 포크 없이 별만 많은 저장소, 광고·치트 저장소는 뺐어요. '
+                                '이름·설명·주제에 llm·agent·ai·claude·mcp·gpt·codex·rag 같은 낱말이 들어간 저장소를 모았어요. 링크 모음, 거의 빈 저장소, 포크 없이 별만 많은 저장소, 광고·치트 저장소는 뺐어요. '
                                 '설명은 AI가 옮긴 것이고, 도구를 검증한 결과가 아니에요.',
                                 perSentence: true,
                                 style: RgText.caption.copyWith(color: RgColors.textSecondary),
@@ -124,13 +129,20 @@ class _GithubRankingsSectionState extends State<GithubRankingsSection> {
   }
 }
 
+// 최신순: 생긴 시각이 늦은 것부터. 생긴 시각을 모르면 맨 뒤, 같으면 순위 순
+List<GithubRepo> newestFirst(List<GithubRepo> repos) => [...repos]..sort((a, b) {
+  final c = (b.createdAt ?? DateTime(0)).compareTo(a.createdAt ?? DateTime(0));
+  return c != 0 ? c : a.rank.compareTo(b.rank);
+});
+
 // 「11월 3일 15:17 ~ 11월 10일 15:17 사이에 생긴 저장소」 + 「별 많은 순 · 11월 10일 15:17 기준」
 String periodRange(GithubPeriod p) => '${kstDateTime(p.start)} ~ ${kstDateTime(p.end)}';
 
 class PeriodNote extends StatelessWidget {
-  const PeriodNote({super.key, required this.period, this.collectedAt});
+  const PeriodNote({super.key, required this.period, this.collectedAt, this.newest = false});
   final GithubPeriod period;
   final DateTime? collectedAt;
+  final bool newest; // 최신순으로 보는 중
 
   @override
   Widget build(BuildContext context) {
@@ -158,7 +170,9 @@ class PeriodNote extends StatelessWidget {
                   ),
                   KeepAllText(
                     // 7일·30일은 별 총합만 보면 기간 초반 저장소가 늘 위라, 별이 비슷하면 최근에 생긴 쪽을 위로(worker gh_rankings)
-                    period.end.difference(period.start) <= const Duration(hours: 25)
+                    newest
+                        ? '이 사이에 생긴 저장소 중 순위에 든 곳을 최근에 생긴 순으로 보여 줘요. 별 수는 ${kstDateTime(collectedAt ?? period.end)}에 모은 값이에요.'
+                        : period.end.difference(period.start) <= const Duration(hours: 25)
                         ? '이 사이에 생긴 저장소를 별 많은 순으로 세웠어요. 별 수는 ${kstDateTime(collectedAt ?? period.end)}에 모은 값이에요.'
                         : '이 사이에 생긴 저장소를 별 수와 생긴 시기로 세웠어요. 별이 비슷하면 최근에 생긴 쪽이 위예요. 별 수는 ${kstDateTime(collectedAt ?? period.end)}에 모은 값이에요.',
                     style: RgText.caption.copyWith(color: RgColors.textSecondary),
@@ -193,9 +207,10 @@ void openRepo(BuildContext context, GithubRepo r) {
 
 // 순위 카드: 모델 칸 트렌딩 카드와 같은 틀(순위 칸 폭 고정 30/46 → 이름 시작점이 맞는다)
 class GithubRepoCard extends StatelessWidget {
-  const GithubRepoCard({super.key, required this.repo, required this.now});
+  const GithubRepoCard({super.key, required this.repo, required this.now, this.showRank = true});
   final GithubRepo repo;
   final DateTime now;
+  final bool showRank; // 최신순이면 순위 번호를 숨긴다(번호가 뒤섞여 보인다)
 
   @override
   Widget build(BuildContext context) {
@@ -211,7 +226,7 @@ class GithubRepoCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           spacing: RgSpace.s16,
           children: [
-            SizedBox(
+            if (showRank) SizedBox(
               width: r.rank < 10 ? 30 : 46,
               child: Semantics(
                 label: '${r.rank}위',

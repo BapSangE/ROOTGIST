@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -308,7 +307,7 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
         onTap: (i) => hotTab.value = i,
       ),
       if (onX && x.isNotEmpty)
-        _XSortRow(byLikes: byLikes, onPick: (v) => xSortByLikes.value = v)
+        ExploreSortRow(labels: const ['최신순', '좋아요순'], selected: byLikes ? 1 : 0, onPick: (i) => xSortByLikes.value = i == 1)
       else
       const SizedBox(height: RgSpace.s16), // 칩 줄이 없어도 칸 설명과 첫 카드 사이를 띄운다
       RgFilterSwitch(
@@ -377,60 +376,6 @@ class _OfficialNewsSectionState extends State<OfficialNewsSection> {
         ),
       ),
     ];
-  }
-}
-
-// 커뮤니티 X 쪽의 정렬: 오른쪽 위 「최신순 · 좋아요순」 글자 두 개. 고른 쪽만 진하게(색은 150ms로 바뀜, 동작 줄이기면 바로).
-// 칩 줄 아래 한 줄이라 크게 두지 않고, 글자는 작아도 누르는 자리는 44pt.
-class _XSortRow extends StatelessWidget {
-  const _XSortRow({required this.byLikes, required this.onPick});
-  final bool byLikes;
-  final ValueChanged<bool> onPick;
-
-  @override
-  Widget build(BuildContext context) {
-    Widget option(String label, bool value) {
-      final on = byLikes == value;
-      return Semantics(
-        button: true,
-        selected: on,
-        child: RgPressable(
-          onTap: () {
-            if (on) return;
-            HapticFeedback.selectionClick();
-            onPick(value);
-          },
-          child: Container(
-            constraints: const BoxConstraints(minHeight: RgSpace.minTouch, minWidth: RgSpace.minTouch),
-            padding: const EdgeInsets.symmetric(horizontal: RgSpace.s6),
-            alignment: Alignment.center,
-            child: AnimatedDefaultTextStyle(
-              duration: RgMotion.of(context, RgMotion.fast),
-              curve: RgMotion.curve,
-              style: RgText.caption.copyWith(
-                fontWeight: on ? FontWeight.w600 : FontWeight.w400,
-                color: on ? RgColors.textPrimary : RgColors.textTertiary,
-              ),
-              child: Text(label),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return ChromeTextScale(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s4, RgSpace.gutterText - RgSpace.s6, 0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            option('최신순', false),
-            ExcludeSemantics(child: Text('·', style: RgText.caption.copyWith(color: RgColors.textTertiary))),
-            option('좋아요순', true),
-          ],
-        ),
-      ),
-    );
   }
 }
 

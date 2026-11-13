@@ -58,6 +58,7 @@ Future<void> pumpApp(WidgetTester tester) async {
   newsTab.value = 0;
   hotTab.value = 0;
   xSortByLikes.value = false;
+  githubNewest.value = false;
   toolsTab.value = 0;
   githubPeriod.value = 0;
   fixtureMode.value = FixtureMode.normal;
@@ -1461,6 +1462,13 @@ void main() {
     clock = DateTime.now;
   });
 
+  test('도구 › GitHub 최신순: 생긴 시각이 늦은 것부터, 모르면 맨 뒤, 같으면 순위 순', () {
+    GithubRepo r(int rank, String? at) => GithubRepo.fromJson({'rank': rank, 'full_name': 'x/r$rank', 'url': 'u$rank', 'stars': 1,
+      'created_at': at});
+    final got = newestFirst([r(1, '2026-11-01T00:00:00Z'), r(2, null), r(3, '2026-11-05T00:00:00Z'), r(4, '2026-11-01T00:00:00Z')]);
+    expect(got.map((x) => x.rank), [3, 1, 4, 2]);
+  });
+
   testWidgets('도구 › GitHub: 「24시간 · 7일 · 30일」 칩, 기간 시작·끝과 모은 시각, 순위 기준 안내(24시간은 별 순, 7일·30일은 별 수와 생긴 시기)', (tester) async {
     tester.view.physicalSize = const Size(390, 2400);
     tester.view.devicePixelRatio = 1;
@@ -1488,6 +1496,24 @@ void main() {
     double y(String t) => tester.getTopLeft(find.text(t)).dy;
     expect(y('week-tool-1'), lessThan(y('week-tool-2'))); // 워커가 정한 순위 그대로
     expect(find.textContaining(keepAll('별이 비슷하면 최근에 생긴 쪽이 위예요')), findsOneWidget);
+    // 「별순 · 최신순」: 최신순이면 생긴 시각 순, 순위 번호는 숨긴다. 기간을 바꿔도 고른 정렬은 그대로
+    expect(find.text('별순'), findsOneWidget);
+    final cards = find.byType(GithubRepoCard);
+    List<GithubRepo> shownRepos() => [
+      for (final e in cards.evaluate()) (e.widget as GithubRepoCard).repo,
+    ]..sort((a, b) => tester.getTopLeft(find.byWidgetPredicate((w) => w is GithubRepoCard && w.repo == a)).dy
+        .compareTo(tester.getTopLeft(find.byWidgetPredicate((w) => w is GithubRepoCard && w.repo == b)).dy));
+    expect(tester.widget<GithubRepoCard>(cards.first).showRank, isTrue);
+    await tester.tap(find.text('최신순'));
+    await tester.pumpAndSettle();
+    expect(githubNewest.value, isTrue);
+    final created = [for (final r in shownRepos()) r.createdAt!];
+    expect(created, [...created]..sort((a, b) => b.compareTo(a)));
+    expect(tester.widget<GithubRepoCard>(cards.first).showRank, isFalse);
+    expect(find.textContaining(keepAll('최근에 생긴 순으로 보여 줘요')), findsOneWidget);
+    await tester.tap(find.text('별순'));
+    await tester.pumpAndSettle();
+    expect(y('week-tool-1'), lessThan(y('week-tool-2')));
     expect(find.text('day-tool-1'), findsNothing);
     // 설명이 아직 옮겨지지 않은 저장소는 원문 설명
     expect(find.text(keepAll('An open-source agent toolkit #4 for running LLM workflows locally')), findsOneWidget);

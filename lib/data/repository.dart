@@ -195,4 +195,5 @@ final newsTab = ValueNotifier(0); // 소식 칸의 발표(0) | 업데이트(1) |
 final hotTab = ValueNotifier(0); // 커뮤니티의 Hacker News(0) | X(1). 둘 다 옆으로 밀기 자리(2026-11-13)
 final xSortByLikes = ValueNotifier(false); // 커뮤니티 X: 최신순(false) | 좋아요순(true)
 final toolsTab = ValueNotifier(0); // 도구 칸의 트렌딩 모델(0) | 새 모델(1) | GitHub(2)
+final githubNewest = ValueNotifier(false); // GitHub 칸: 별순(false) | 최신순(true). 기간을 바꿔도 그대로
 final githubPeriod = ValueNotifier(0); // GitHub 칩의 오늘(0) | 이번 주(1) | 이번 달(2). 옆으로 밀기 자리는 아니다

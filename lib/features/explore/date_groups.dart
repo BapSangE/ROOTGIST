@@ -671,3 +671,60 @@ class ExploreTextFilters extends StatelessWidget {
     ),
   );
 }
+
+// 목록 정렬: 칩 줄 아래 오른쪽에 「최신순 · 좋아요순」처럼 글자 두세 개(커뮤니티 X, 도구 › GitHub).
+// 고른 쪽만 진하게, 색은 150ms로 바뀐다(동작 줄이기면 바로). 글자는 작아도 누르는 자리는 44pt.
+class ExploreSortRow extends StatelessWidget {
+  const ExploreSortRow({super.key, required this.labels, required this.selected, required this.onPick});
+  final List<String> labels;
+  final int selected;
+  final ValueChanged<int> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget option(int i) {
+      final on = i == selected;
+      return Semantics(
+        button: true,
+        selected: on,
+        child: RgPressable(
+          onTap: () {
+            if (on) return;
+            HapticFeedback.selectionClick();
+            onPick(i);
+          },
+          child: Container(
+            // 가로는 최소 폭 대신 좌우 여백으로 44pt를 채운다(「별순」처럼 짧은 글자가 가운데 떠서 「·」와 사이가 벌어졌다)
+            constraints: const BoxConstraints(minHeight: RgSpace.minTouch),
+            padding: const EdgeInsets.symmetric(horizontal: RgSpace.s10),
+            alignment: Alignment.center,
+            child: AnimatedDefaultTextStyle(
+              duration: RgMotion.of(context, RgMotion.fast),
+              curve: RgMotion.curve,
+              style: RgText.caption.copyWith(
+                fontWeight: on ? FontWeight.w600 : FontWeight.w400,
+                color: on ? RgColors.textPrimary : RgColors.textTertiary,
+              ),
+              child: Text(labels[i]),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return ChromeTextScale(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(RgSpace.gutterText, RgSpace.s4, RgSpace.gutterText - RgSpace.s10, 0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            for (var i = 0; i < labels.length; i++) ...[
+              if (i > 0) ExcludeSemantics(child: Text('·', style: RgText.caption.copyWith(color: RgColors.textTertiary))),
+              option(i),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
