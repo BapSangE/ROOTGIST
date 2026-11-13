@@ -399,8 +399,15 @@ def from_github(now: datetime, hn_urls: set[str] = frozenset()) -> list[dict]:
 # 주제(topic)로만 찾으면 갓 생긴 저장소는 주제를 아직 안 달아 하루치가 2~4개뿐이었다(실데이터) → 이름·설명·주제의 낱말로 찾는다
 # (GitHub 검색은 OR를 다섯 개까지만 받는다). 갓 생긴 저장소는 별이 적어 기간이 짧을수록 최소 별 수를 낮춘다.
 GH_PERIODS = (("day", timedelta(days=1), 10), ("week", timedelta(days=7), 50), ("month", timedelta(days=30), 100))
-GH_RANK_WORDS = "llm OR agent OR ai OR claude OR mcp in:name,description,topics"
+# 낱말은 묶음 셋으로 나눠 찾는다(2026-11-13): GitHub 검색은 OR를 다섯 개까지만 받아, 한 묶음이면 gpt·codex·agentic·rag 같은 낱말로만
+# 소개한 저장소가 빠졌다(실데이터 7일: 둘째 묶음이 58개를 더 찾았고 gpt2.s·OpenProgram 같은 도구가 들어왔다).
+GH_RANK_WORDS = ("llm OR agent OR ai OR claude OR mcp", "gpt OR copilot OR codex OR multimodal OR agentic",
+                 "rag OR embedding OR inference OR diffusion OR vlm")
 GH_RANK_TOP = 20
+GH_RANK_PAGES = 2  # 한 번에 100개까지라 결과가 많은 7일·30일은 둘째 쪽까지(7일 첫 묶음이 177개였다)
+# 7일·30일은 별 총합이 아니라 별 ÷ √(생긴 뒤 날 수 + 3)로 세운다: 총합이면 별을 오래 모은 기간 초반 저장소가 늘 위에 남는다.
+# 홈 「개발자 화제」의 뜨는 속도(1.5제곱)만큼 세게 깎으면 30일 칸이 7일 칸과 같아지므로 약하게(√). 24시간 칸은 별 순 그대로.
+GH_RANK_AGE_PAD_D = 3
 # 낱말 검색에는 게임 치트·「무료 정품 인증」 같은 홍보 저장소가 섞인다(포크 0개로 별 40개씩, 실데이터 2026-11-10)
 GH_SPAM = re.compile(r"\b(cheats?|hacks?|crack(ed)?|keygen|aimbot|esp|pre-?activated|free[- ]?(claude|gpt|chatgpt|opus))\b", re.I)
 
@@ -412,17 +419,27 @@ def gh_rank_ok(r: dict) -> bool:
 
 
 def gh_rankings(now: datetime) -> dict[str, dict]:
-    """{기간: {"start", "end", "repos": [...]}}. 기간 안에 생긴 AI 저장소를 별 많은 순으로 받아,
-    거르기(gh_rank_ok)를 지난 것 20개. 한 기간이 실패해도 나머지는 돌려준다."""
+    """{기간: {"start", "end", "repos": [...]}}. 기간 안에 생긴 AI 저장소를 낱말 묶음마다 받아 합치고, 거르기(gh_rank_ok)를
+    지난 것 20개(24시간은 별 순, 7일·30일은 별 ÷ √(날 수 + 3) 순). 한 기간(모든 묶음)이 실패해도 나머지는 돌려준다."""
     out: dict[str, dict] = {}
     for period, span, min_stars in GH_PERIODS:
         start = now - span
         since = start.strftime("%Y-%m-%dT%H:%M:%SZ")
-        q = urllib.parse.urlencode({"q": f"{GH_RANK_WORDS} created:>={since} stars:>={min_stars}", "sort": "stars",
-                                    "order": "desc", "per_page": 100})
-        try:
-            items = json.loads(fetch(f"{GH_SEARCH}?{q}"))["items"]
-        except Exception:
+        items: list[dict] = []
+        ok = False
+        for words in GH_RANK_WORDS:
+            for page in range(1, GH_RANK_PAGES + 1):
+                q = urllib.parse.urlencode({"q": f"{words} in:name,description,topics created:>={since} stars:>={min_stars}",
+                                            "sort": "stars", "order": "desc", "per_page": 100, "page": page})
+                try:
+                    j = json.loads(fetch(f"{GH_SEARCH}?{q}"))
+                except Exception:
+                    break  # 이 묶음만 건너뛴다(검색 한도 등). 다른 묶음은 계속
+                ok = True
+                items += j["items"]
+                if period == "day" or j.get("total_count", 0) <= page * 100:
+                    break
+        if not ok:
             continue
         found: dict[str, dict] = {}
         for r in items:
@@ -432,7 +449,13 @@ def gh_rankings(now: datetime) -> dict[str, dict]:
                 "full_name": r["full_name"], "url": r["html_url"], "description_en": r["description"].strip()[:300],
                 "language": r.get("language"), "stars": r.get("stargazers_count") or 0,
                 "forks": r.get("forks_count") or 0, "created_at": _date(r["created_at"])}
-        repos = sorted(found.values(), key=lambda x: (-x["stars"], x["full_name"]))[:GH_RANK_TOP]
+        def rank_key(x: dict) -> tuple:
+            if period == "day":
+                return (-x["stars"], x["full_name"])
+            days = max((now - x["created_at"]).total_seconds() / 86400, 0)
+            return (-x["stars"] / (days + GH_RANK_AGE_PAD_D) ** 0.5, x["full_name"])
+
+        repos = sorted(found.values(), key=rank_key)[:GH_RANK_TOP]
         for i, x in enumerate(repos):
             x["rank"] = i + 1
         out[period] = {"start": start, "end": now, "repos": repos}

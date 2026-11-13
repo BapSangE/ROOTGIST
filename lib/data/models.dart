@@ -417,7 +417,7 @@ String? benchmarkKo(String name) {
   return null;
 }
 
-// GitHub 칸의 기간별 순위(2026-11-10). 일간·주간·월간마다 「언제부터 언제 사이에 생긴 저장소」를 별 많은 순으로.
+// GitHub 칸의 기간별 순위(2026-11-10). 일간·주간·월간마다 「언제부터 언제 사이에 생긴 저장소」를 순위대로(순서는 워커가 정한다).
 // 모양은 list_github_rankings(supabase/migrations/20261110090000_github_rankings.sql) = worker/official_news.py rankings_doc.
 class GithubRankings {
   GithubRankings.fromJson(Map<String, dynamic> j)

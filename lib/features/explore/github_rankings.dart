@@ -15,7 +15,8 @@ import '../common/item_actions.dart';
 import 'date_groups.dart';
 import '../reader/text_size_sheet.dart';
 
-// 탐색 「도구 › GitHub」 칸(2026-11-10): 「24시간 · 7일 · 30일」 칩. 그 기간 안에 생긴 AI 저장소를 별 많은 순으로(worker gh_rankings).
+// 탐색 「도구 › GitHub」 칸(2026-11-10): 「24시간 · 7일 · 30일」 칩. 그 기간 안에 생긴 AI 저장소를 24시간은 별 많은 순으로,
+// 7일·30일은 생긴 지 오래될수록 조금씩 깎아(별 ÷ √(날 수 + 3), 2026-11-13) 세운다(worker gh_rankings).
 // 기간이 언제부터 언제인지, 별 수는 언제 모은 값인지를 목록 위에 그대로 적는다. 저장소를 누르면 GitHub에서 연다.
 // 기간을 바꾸면 목록이 RgFilterSwitch로 바뀐다(페이드, 「동작 줄이기」면 바로).
 const githubPeriods = ['day', 'week', 'month'];
@@ -53,7 +54,7 @@ class _GithubRankingsSectionState extends State<GithubRankingsSection> {
           return ListView(
             padding: const EdgeInsets.only(bottom: RgSpace.bottomScrollInset),
             children: [
-              const ExploreSectionNote('GitHub에서 가져온, 새로 생긴 AI 저장소예요. 별 많은 순이에요'),
+              const ExploreSectionNote('GitHub에서 가져온, 새로 생긴 AI 저장소예요'),
               ExploreTextFilters(
                 labels: githubPeriodLabels,
                 selected: _period,
@@ -156,7 +157,10 @@ class PeriodNote extends StatelessWidget {
                     style: RgText.bodySmall.copyWith(fontWeight: FontWeight.w600, color: RgColors.textPrimary),
                   ),
                   KeepAllText(
-                    '이 사이에 생긴 저장소를 별 많은 순으로 세웠어요. 별 수는 ${kstDateTime(collectedAt ?? period.end)}에 모은 값이에요.',
+                    // 7일·30일은 별 총합만 보면 기간 초반 저장소가 늘 위라, 별이 비슷하면 최근에 생긴 쪽을 위로(worker gh_rankings)
+                    period.end.difference(period.start) <= const Duration(hours: 25)
+                        ? '이 사이에 생긴 저장소를 별 많은 순으로 세웠어요. 별 수는 ${kstDateTime(collectedAt ?? period.end)}에 모은 값이에요.'
+                        : '이 사이에 생긴 저장소를 별 수와 생긴 시기로 세웠어요. 별이 비슷하면 최근에 생긴 쪽이 위예요. 별 수는 ${kstDateTime(collectedAt ?? period.end)}에 모은 값이에요.',
                     style: RgText.caption.copyWith(color: RgColors.textSecondary),
                   ),
                 ],

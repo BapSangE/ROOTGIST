@@ -1461,7 +1461,7 @@ void main() {
     clock = DateTime.now;
   });
 
-  testWidgets('도구 › GitHub: 「24시간 · 7일 · 30일」 칩, 기간 시작·끝과 모은 시각, 별 많은 순 순위', (tester) async {
+  testWidgets('도구 › GitHub: 「24시간 · 7일 · 30일」 칩, 기간 시작·끝과 모은 시각, 순위 기준 안내(24시간은 별 순, 7일·30일은 별 수와 생긴 시기)', (tester) async {
     tester.view.physicalSize = const Size(390, 2400);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -1479,13 +1479,15 @@ void main() {
     expect(tab('24시간'), findsOneWidget);
     expect(find.text(keepAll('10월 18일 15:17 ~ 10월 19일 15:17')), findsOneWidget);
     expect(find.textContaining(keepAll('별 수는 10월 19일 15:17에 모은 값이에요.')), findsOneWidget);
+    expect(find.textContaining(keepAll('별 많은 순으로 세웠어요')), findsOneWidget);
     expect(find.text('day-tool-1'), findsOneWidget);
     await tester.tap(tab('7일'));
     await tester.pumpAndSettle();
     expect(githubPeriod.value, 1);
     expect(find.text(keepAll('10월 12일 15:17 ~ 10월 19일 15:17')), findsOneWidget);
     double y(String t) => tester.getTopLeft(find.text(t)).dy;
-    expect(y('week-tool-1'), lessThan(y('week-tool-2'))); // 별 많은 순
+    expect(y('week-tool-1'), lessThan(y('week-tool-2'))); // 워커가 정한 순위 그대로
+    expect(find.textContaining(keepAll('별이 비슷하면 최근에 생긴 쪽이 위예요')), findsOneWidget);
     expect(find.text('day-tool-1'), findsNothing);
     // 설명이 아직 옮겨지지 않은 저장소는 원문 설명
     expect(find.text(keepAll('An open-source agent toolkit #4 for running LLM workflows locally')), findsOneWidget);
